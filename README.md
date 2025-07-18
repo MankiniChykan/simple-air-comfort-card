@@ -1,129 +1,124 @@
 # Simple Air Comfort Card
 
-> A fully dynamic, visually responsive Home Assistant Lovelace card for visualizing thermal and humidity comfort using temperature, humidity, and dew point.
+> A standalone, animated Lovelace card visualizing thermal comfort using temperature, humidity, dew point, and optionally CO₂ or feels-like temperature — now powered entirely by JavaScript + Lit.
+
+---
 
 <img width="573" height="859" alt="image" src="https://github.com/user-attachments/assets/0317339d-cf8a-41f0-867b-54cec6dc7f0b" />
 
 ---
 
-## ✨ Features
+## 🔥 Features
 
-- Animated floating dot that reflects live comfort readings
-- Blinking warning for uncomfortable conditions
-- Dew point, temperature, and humidity comfort text labels
-- Radial gradient visuals for temperature and dew point zones
-- Customizable color overrides via card config
-- Optional CO₂ sensor chip display
-- Fully standalone: no `picture-elements`, no Jinja2 templates
-- Built with LitElement + JavaScript for optimal performance
-- HACS-ready: includes release automation and CI/CD pipeline
+- Dynamic floating dot — animates based on live temperature/humidity
+- Dew point, temperature, and humidity comfort indicators
+- Optional fourth chip for `feels_like` or `co2` entity
+- "Feels like" internally computed using Australian Apparent Temperature formula if no entity is provided
+- Ring gradient (dew point), background (temperature), inner alert zone (extreme)
+- Optional blink animation when outside comfort zone
+- Fully responsive, minimal, fast
+- Built using LitElement — no templates or `picture-elements`
 
 ---
 
-## 🛠 Installation
+## 📦 Installation
 
-### Recommended: HACS
+### HACS (Recommended)
 
 1. Go to **HACS > Frontend > Custom Repositories**
-2. Add `https://github.com/MankiniChykan/simple-air-comfort-card` as a *Lovelace* repo
+2. Add:  
+   `https://github.com/MankiniChykan/simple-air-comfort-card`  
+   as type `Lovelace`
 3. Install **Simple Air Comfort Card**
-4. Add to your Lovelace resources:
+4. Add to Lovelace resources:
 
 ```yaml
 url: /hacsfiles/simple-air-comfort-card/simple-air-comfort-card.js
 type: module
 ```
 
-### Manual
-
-1. Download `simple-air-comfort-card.js` from the `dist/` folder
-2. Place it in `www/simple-air-comfort-card/`
-3. Reference in Lovelace:
-
-```yaml
-url: /local/simple-air-comfort-card/simple-air-comfort-card.js
-type: module
-```
-
 ---
 
-## 🧾 Example Lovelace YAML
+## 🧾 Example Card Configuration
 
 ```yaml
 type: custom:simple-air-comfort-card
 temperature: sensor.living_room_temperature
 humidity: sensor.living_room_humidity
-co2: sensor.living_room_co2
+wind: sensor.living_room_wind_speed       # optional, for feels like
+feels_like: sensor.living_room_feelslike  # optional, overrides calculated
+# co2: sensor.living_room_co2            # alternative to feels_like
 colorOverrides:
-  dotNormal: "#00ff00"
-  dotAlert: "#ff0000"
+  dotNormal: "#4CAF50"
+  dotAlert: "#F44336"
   temperatureMap:
     HOT: "#ff5722"
-    PERFECT: "#00e676"
+    PERFECT: "#4caf50"
+    COLD: "#2196f3"
   dewpointMap:
-    "MUGGY": "#ffa500"
-    "VERY DRY": "#1e88e5"
+    MUGGY: "#ef6c00"
+    DRY: "#00acc1"
+    IDEAL: "#81c784"
 ```
 
 ---
 
 ## 📋 Required Entities
 
-- `sensor.living_room_temperature`: in °C
-- `sensor.living_room_humidity`: in %
-- Optional: `sensor.living_room_co2`: in ppm
-
-The dew point is calculated internally using the Arden Buck formula — no extra sensor needed.
-
----
-
-## 🎨 Configuration Options
-
-| Option             | Description                                  | Required |
-|--------------------|----------------------------------------------|----------|
-| `temperature`      | Entity ID for temperature sensor             | ✅       |
-| `humidity`         | Entity ID for humidity sensor                | ✅       |
-| `co2`              | CO₂ sensor (ppm)                             | ❌       |
-| `colorOverrides`   | Customize colors and gradients               | ❌       |
+| Sensor       | Units | Required | Description                      |
+|--------------|-------|----------|----------------------------------|
+| `temperature`| °C    | ✅       | Room temperature                 |
+| `humidity`   | %     | ✅       | Room relative humidity           |
+| `wind`       | km/h  | ❌       | Used to compute apparent temp    |
+| `feels_like` | °C    | ❌       | Overrides internal feels-like    |
+| `co2`        | ppm   | ❌       | Used if feels_like not set       |
 
 ---
 
-## 🧠 Internal Logic
+## 💡 Logic & Visuals
 
-- **Floating Dot Position**: Scales temperature (15–35°C) and humidity (40–60%) onto card grid
-- **Dot Blink Alert**: Activates outside 18–26.4°C or humidity outside 40–60%
-- **Dew Point Calculation**: Buck formula
-- **Comfort Levels**: Derived from ranges and rendered via chip text and gradients
-- **Gradient Backgrounds**: Dynamically colored for temperature and dew point zones
+- **Dot Animation**: Live-mapped to temp/humidity
+- **Dew Point Zone**: Renders outer comfort circle
+- **Temperature Background**: Gradient SVG-style
+- **Inner Alert Ring**: Highlights extreme values
+- **Blinking Dot**: Activates if outside comfort zone (e.g. <18°C or >26.4°C, or humidity <40% or >60%)
+- **Apparent Temp (Feels Like)**:  
+  Formula:  
+  `AT = T + 0.33×e − 0.70×wind − 4.0`  
+  where `e = RH/100 × 6.105 × exp(17.27×T / (237.7 + T))`
 
 ---
 
-## 🧑‍💻 Development
-
-Clone this repo, install dependencies, and run the build script:
+## 🛠 Development
 
 ```bash
 npm install
 npm run build
 ```
 
-The output is written to `/dist`.
+Minified output goes to `dist/simple-air-comfort-card.js`.
 
 ---
 
-## 📦 HACS Release Workflow
+## 🚀 Release Notes
 
-- A GitHub tag (e.g., `v1.0.0`) automatically builds and publishes a release
-- `simple-air-comfort-card.js` is minified and output to `dist/`
-- `hacs.json` and `release.yml` are included for CI compatibility
+- Uses `release.yml` to auto-build and tag releases via GitHub Actions
+- `hacs.json` and `package.json` included for HACS compatibility
 
----
-
-## 📮 Feedback
-
-Open an issue or pull request — feedback and contributions welcome.
+To publish a new release:
+1. Bump version in `package.json`
+2. Push a tag like `v1.0.0`
+3. GitHub Actions will take care of the build and release artifacts
 
 ---
 
-**License:** MIT  
-**Author:** [Hunter](https://github.com/MankiniChykan)
+## 🙌 Credits
+
+Created by **Hunter**  
+Inspired by the original Jinja2 + `picture-elements` concept
+
+---
+
+## 📄 License
+
+MIT
