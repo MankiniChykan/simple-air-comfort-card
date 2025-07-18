@@ -2,13 +2,13 @@
   "name": "simple-air-comfort-card",
   "version": "1.0.1",
   "description": "A Home Assistant card to visualise your sensor data, based on tile card",
-  "author": "neponn",
+  "author": "mankinichykan",
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/neponn/simple-air-comfort-card.git"
+    "url": "https://github.com/MankiniChykan/simple-air-comfort-card.git"
   },
-  "source": "src/ring-tile-card.js",
+  "source": "src/simple-air-comfort-card.js",
   "scripts": {
     "start": "parcel",
     "build": "parcel build --no-source-maps"
@@ -21,7 +21,7 @@
     "lit": "^3.1.0"
   },
   "bugs": {
-    "url": "https://github.com/neponn/simple-air-comfort-card/issues"
+    "url": "https://github.com/MankiniChykan/simple-air-comfort-card/issues"
   },
-  "homepage": "https://github.com/neponn/simple-air-comfort-card#readme"
+  "homepage": "https://github.com/MankiniChykan/simple-air-comfort-card#readme"
 }
