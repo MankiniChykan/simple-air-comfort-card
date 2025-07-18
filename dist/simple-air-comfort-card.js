@@ -180,6 +180,17 @@ class SimpleAirComfortCard extends LitElement {
     return t + 0.33 * rh / 100 * 6.105 * Math.exp(17.27 * t / (237.7 + t)) - 0.7 * wind - 4.0;
   }
 
+  _computeDotPosition(temp, humid) {
+    const tempMin = 10, tempMax = 30;
+    const humidMin = 20, humidMax = 80;
+    const tNorm = Math.min(1, Math.max(0, (temp - tempMin) / (tempMax - tempMin)));
+    const hNorm = Math.min(1, Math.max(0, (humid - humidMin) / (humidMax - humidMin)));
+    return {
+      top: `${22 + 56 * tNorm}%`,
+      left: `${22 + 56 * hNorm}%`
+    };
+  }
+
   // Additional methods like _calculateDewPoint, _getDewpointComfortText, etc. remain here
 }
 
