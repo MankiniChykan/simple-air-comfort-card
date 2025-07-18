@@ -1,124 +1,117 @@
 # Simple Air Comfort Card
 
-> A standalone, animated Lovelace card visualizing thermal comfort using temperature, humidity, dew point, and optionally CO₂ or feels-like temperature — now powered entirely by JavaScript + Lit.
+A high-visibility, responsive Lovelace custom card for Home Assistant that visualizes thermal comfort using temperature, humidity, dew point, and apparent temperature (feels like). The floating dot moves dynamically and blinks when conditions are outside the comfort zone.
 
 ---
 
-<img width="573" height="859" alt="image" src="https://github.com/user-attachments/assets/0317339d-cf8a-41f0-867b-54cec6dc7f0b" />
+## 💡 Features
+
+- 🎯 Floating **comfort dot** that tracks temp/humidity in real time
+- 🌡️ Dynamic **apparent temperature** (feels like), calculated with temp, humidity, and wind
+- 🫁 Optional CO₂ sensor display overrides apparent temp if defined
+- 💬 Comfort descriptors: dew point, temperature, humidity
+- 🎨 Color-coded gradients for temperature and dew point
+- 🔁 Blinking indicator when outside comfort zone
+- 🧊 Fully passive visual card (no tap actions)
+- 🧱 Configurable color overrides via YAML
 
 ---
 
-## 🔥 Features
+## 📊 Required Sensors
 
-- Dynamic floating dot — animates based on live temperature/humidity
-- Dew point, temperature, and humidity comfort indicators
-- Optional fourth chip for `feels_like` or `co2` entity
-- "Feels like" internally computed using Australian Apparent Temperature formula if no entity is provided
-- Ring gradient (dew point), background (temperature), inner alert zone (extreme)
-- Optional blink animation when outside comfort zone
-- Fully responsive, minimal, fast
-- Built using LitElement — no templates or `picture-elements`
+| Sensor       | Units  | Required | Description                                                   |
+|--------------|--------|----------|---------------------------------------------------------------|
+| `temperature`| °C     | ✅       | Room temperature                                              |
+| `humidity`   | %      | ✅       | Room relative humidity                                        |
+| `wind`       | km/h   | ❌       | Optional: for calculating apparent temperature (feels like)   |
+| `co2`        | ppm    | ❌       | Optional: overrides feels like chip if defined                |
+
+> ⚠️ Apparent temperature is **always calculated** from temp, humidity, and optional wind unless overridden by `co2`.
 
 ---
 
-## 📦 Installation
+## 🧮 Apparent Temperature Formula
 
-### HACS (Recommended)
+Used when `co2` is not defined:
 
-1. Go to **HACS > Frontend > Custom Repositories**
-2. Add:  
-   `https://github.com/MankiniChykan/simple-air-comfort-card`  
-   as type `Lovelace`
-3. Install **Simple Air Comfort Card**
-4. Add to Lovelace resources:
-
-```yaml
-url: /hacsfiles/simple-air-comfort-card/simple-air-comfort-card.js
-type: module
+```
+Apparent = T + 0.33 × RH × 6.105 × e^(17.27×T / (237.7+T)) − 0.7 × Wind − 4.0
 ```
 
 ---
 
-## 🧾 Example Card Configuration
+## 🧾 YAML Configuration Example
 
 ```yaml
 type: custom:simple-air-comfort-card
-temperature: sensor.living_room_temperature
-humidity: sensor.living_room_humidity
-wind: sensor.living_room_wind_speed       # optional, for feels like
-feels_like: sensor.living_room_feelslike  # optional, overrides calculated
-# co2: sensor.living_room_co2            # alternative to feels_like
+title: Master Bedroom
+temperature: sensor.master_temp
+humidity: sensor.master_humidity
+wind: sensor.master_wind_speed        # Optional
+co2: sensor.master_co2                # Optional override
 colorOverrides:
-  dotNormal: "#4CAF50"
-  dotAlert: "#F44336"
-  temperatureMap:
-    HOT: "#ff5722"
-    PERFECT: "#4caf50"
-    COLD: "#2196f3"
-  dewpointMap:
-    MUGGY: "#ef6c00"
-    DRY: "#00acc1"
-    IDEAL: "#81c784"
+  comfort: "#00FFAA"
+  warning: "#FFAA00"
+  danger: "#FF3300"
 ```
 
 ---
 
-## 📋 Required Entities
+## 🧪 Example with Multiple Cards
 
-| Sensor       | Units | Required | Description                      |
-|--------------|-------|----------|----------------------------------|
-| `temperature`| °C    | ✅       | Room temperature                 |
-| `humidity`   | %     | ✅       | Room relative humidity           |
-| `wind`       | km/h  | ❌       | Used to compute apparent temp    |
-| `feels_like` | °C    | ❌       | Overrides internal feels-like    |
-| `co2`        | ppm   | ❌       | Used if feels_like not set       |
-
----
-
-## 💡 Logic & Visuals
-
-- **Dot Animation**: Live-mapped to temp/humidity
-- **Dew Point Zone**: Renders outer comfort circle
-- **Temperature Background**: Gradient SVG-style
-- **Inner Alert Ring**: Highlights extreme values
-- **Blinking Dot**: Activates if outside comfort zone (e.g. <18°C or >26.4°C, or humidity <40% or >60%)
-- **Apparent Temp (Feels Like)**:  
-  Formula:  
-  `AT = T + 0.33×e − 0.70×wind − 4.0`  
-  where `e = RH/100 × 6.105 × exp(17.27×T / (237.7 + T))`
-
----
-
-## 🛠 Development
-
-```bash
-npm install
-npm run build
+```yaml
+type: vertical-stack
+cards:
+  - type: custom:simple-air-comfort-card
+    title: "Upstairs"
+    temperature: sensor.temp_upstairs
+    humidity: sensor.humidity_upstairs
+    wind: sensor.wind_upstairs
+  - type: custom:simple-air-comfort-card
+    title: "Master Bedroom"
+    temperature: sensor.master_temp
+    humidity: sensor.master_humidity
+    co2: sensor.master_co2
 ```
 
-Minified output goes to `dist/simple-air-comfort-card.js`.
+---
+
+## 🖼 Dot Positioning
+
+- Temperature range: **10°C – 30°C** → affects vertical axis (`top`)
+- Humidity range: **20% – 80%** → affects horizontal axis (`left`)
+- Comfort zone: dot stays still; outside zone: dot blinks
 
 ---
 
-## 🚀 Release Notes
+## 🔧 Manual Installation
 
-- Uses `release.yml` to auto-build and tag releases via GitHub Actions
-- `hacs.json` and `package.json` included for HACS compatibility
+1. Copy `simple-air-comfort-card.js` into `www/community/simple-air-comfort-card/`
+2. Add to Lovelace resources:
 
-To publish a new release:
-1. Bump version in `package.json`
-2. Push a tag like `v1.0.0`
-3. GitHub Actions will take care of the build and release artifacts
+```yaml
+resources:
+  - url: /local/community/simple-air-comfort-card/simple-air-comfort-card.js
+    type: module
+```
 
 ---
 
-## 🙌 Credits
+## 🧱 HACS Installation
 
-Created by **Hunter**  
-Inspired by the original Jinja2 + `picture-elements` concept
+1. In HACS, go to *Frontend → Custom Repositories*
+2. Add `https://github.com/yourname/simple-air-comfort-card`
+3. Choose category: **Lovelace**
+4. Click **Install**, then restart UI
+
+---
+
+## 🖥 Screenshot
+
+![Card Preview](https://your-repo-url/preview.png)
 
 ---
 
 ## 📄 License
 
-MIT
+MIT License © Hunter
