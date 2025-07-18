@@ -1,27 +1,14 @@
 {
   "name": "simple-air-comfort-card",
-  "version": "1.0.1",
-  "description": "A Home Assistant card to visualise your sensor data, based on tile card",
-  "author": "mankinichykan",
-  "license": "MIT",
-  "repository": {
-    "type": "git",
-    "url": "https://github.com/MankiniChykan/simple-air-comfort-card.git"
-  },
-  "source": "src/simple-air-comfort-card.js",
+  "version": "1.0.0",
+  "description": "A custom Lovelace card that visualizes air comfort using temperature, humidity, and dew point with dynamic styling.",
+  "main": "simple-air-comfort-card.js",
   "scripts": {
-    "start": "parcel",
-    "build": "parcel build --no-source-maps"
+    "build": "esbuild simple-air-comfort-card.js --bundle --minify --outfile=simple-air-comfort-card.min.js"
   },
-  "type": "module",
+  "author": "Hunter",
+  "license": "MIT",
   "devDependencies": {
-    "parcel": "^2.15.2"
-  },
-  "dependencies": {
-    "lit": "^3.1.0"
-  },
-  "bugs": {
-    "url": "https://github.com/MankiniChykan/simple-air-comfort-card/issues"
-  },
-  "homepage": "https://github.com/MankiniChykan/simple-air-comfort-card#readme"
+    "esbuild": "^0.21.0"
+  }
 }
