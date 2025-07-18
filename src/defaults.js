@@ -1,7 +1,7 @@
 import { IND, ME, RT, SCALE, TE, BE, HA_COLOURS } from "./const";
 
 /*
-Default handling for the ring-tile-card, with the following priority:
+Default handling for the simple-air-comfort-card, with the following priority:
   - DEFAULTS apply to all configurations
   - if the ring_size is 2, ovverride with MEDIUM_DEFAULTS
   - if the ring_size ≥ 3, override with LARGE_DEFAULTS

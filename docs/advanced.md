@@ -2,11 +2,11 @@
 
 # Advanced configuration
 
-`ring-tile` doesn't support templating. To avoid too much configuration complexity, `ring-tile` has been designed to work well with [`card-mod`](https://github.com/thomasloven/lovelace-card-mod), which supports templating very well. 
+`simple-air-comfort` doesn't support templating. To avoid too much configuration complexity, `simple-air-comfort` has been designed to work well with [`card-mod`](https://github.com/thomasloven/lovelace-card-mod), which supports templating very well. 
 
 If you haven't used it before, `card-mod` is an awesome plugin that enables you to dynamically manipulate the styling of any Home Assistant card. Make sure you are familiar with it before reading on.
 
-There are two ways in which `ring-tile` has been designed for `card-mod` use: [overriding CSS colour variables](#overriding-css-colour-variables) and [manipulating `ring-tile` HTML / SVG elements](#manipulating-ring-tile-html--svg-elements).
+There are two ways in which `simple-air-comfort` has been designed for `card-mod` use: [overriding CSS colour variables](#overriding-css-colour-variables) and [manipulating `simple-air-comfort` HTML / SVG elements](#manipulating-simple-air-comfort-html--svg-elements).
 
 ## Overriding CSS colour variables
 
@@ -15,7 +15,7 @@ Best to start with an example.
 <img src="img/ad-battery-charging.png" width="250">
 
 ```yaml
-type: custom:ring-tile
+type: custom:simple-air-comfort
 entity: sensor.iphone_battery_level
 card_mod:
   style: |
@@ -35,7 +35,7 @@ Another example: you can statically change the opacity of the ring background.
 <img src="img/ad-ring-background.png" width="250">
 
 ```yaml
-type: custom:ring-tile
+type: custom:simple-air-comfort
 entity: sensor.humidity
 ring_size: 2
 card_mod:
@@ -47,7 +47,7 @@ card_mod:
 
 ### CSS variables available
 
-`ring-tile` offers the following CSS variables:
+`simple-air-comfort` offers the following CSS variables:
 
 | CSS variable | Purpose | Type | Default |
 |--------------|---------|------|---------|
@@ -61,11 +61,11 @@ card_mod:
 
 ### Home Assistant friendly colours
 
-Note that [colour shortcuts](config.md/#home-assistant-friendly-colour-shortcuts) provided by `ring-tile` **do not** work with `card_mod`. You can achieve a similar result using Home Assistant built in CSS colour variables, [see below](#ha-friendly-colour-alternatives).
+Note that [colour shortcuts](config.md/#home-assistant-friendly-colour-shortcuts) provided by `simple-air-comfort` **do not** work with `card_mod`. You can achieve a similar result using Home Assistant built in CSS colour variables, [see below](#ha-friendly-colour-alternatives).
 
-## Manipulating ring-tile HTML / SVG elements
+## Manipulating simple-air-comfort HTML / SVG elements
 
-You can get even more dynamic control over `ring-tile` by directly manipulating the HTML / SVG elements themselves. 
+You can get even more dynamic control over `simple-air-comfort` by directly manipulating the HTML / SVG elements themselves. 
 
 ### Example
 
@@ -74,7 +74,7 @@ You can get even more dynamic control over `ring-tile` by directly manipulating 
 My study is only heated if I am working at home. To show when my study is being heated, I only show the thermostat setpoint as a marker when I am working at home. To do this, I target the `visibility` attribute of the `g.marker` SVG element, which sits below the `rt-ring-svg` element, separated by a shadow-root (`$`). Config as follows:
 
 ```yaml
-type: custom:ring-tile
+type: custom:simple-air-comfort
 entity: sensor.temperature_study
 marker: input_number.study_boost_temperature
 bottom_element: none
@@ -91,9 +91,9 @@ card_mod:
 
 ### Ring tile DOM structure
 
-`ring-tile` uses structured class names to make it easier to select elements for targeted `card-mod` styling. Here are a few guidelines.
+`simple-air-comfort` uses structured class names to make it easier to select elements for targeted `card-mod` styling. Here are a few guidelines.
 
-* The top level element is `ring-tile`
+* The top level element is `simple-air-comfort`
 * Ring elements live in a shadow-root inside `rt-ring-svg`
   * To access ring elements, use `rt-ring-svg $: |` before selecting the targeted elements (like in the example above)
 * Icons are rendered as HTML, top level `ha-state-icon` (a Home Assistant component, which actually renders the icon as SVG in the end)
@@ -109,9 +109,9 @@ card_mod:
 
 The easiest way to find your way around the DOM is to use a browser inspector (F12 / ⌘-shift-C).
 
-## Handy custom sensors for use with ring-tiles
+## Handy custom sensors for use with simple-air-comforts
 
-I have made a few custom sensors to help with certain `ring-tile` use cases. Fair warning: there might be better ways to do these things, but here is how I did it.
+I have made a few custom sensors to help with certain `simple-air-comfort` use cases. Fair warning: there might be better ways to do these things, but here is how I did it.
 
 ### Pressure 6 hours ago
 
