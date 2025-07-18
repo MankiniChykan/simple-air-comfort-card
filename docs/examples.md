@@ -4,20 +4,20 @@
 
 This page has examples to get you started.
 
-`ring-tile` card is designed to be easy to use. `ring-tile` card automatically configures itself based on a [sensor's `device_type`](config.md/#default-handling). Often, it is enough to just configure the `entity` and `ring-tile` card will take care of the rest. You can tweak it with extra config to make it look just right.
+`simple-air-comfort` card is designed to be easy to use. `simple-air-comfort` card automatically configures itself based on a [sensor's `device_type`](config.md/#default-handling). Often, it is enough to just configure the `entity` and `simple-air-comfort` card will take care of the rest. You can tweak it with extra config to make it look just right.
 
-Note that `ring-tile` does not yet support the visual editor, so config must be entered as YAML (which you can do in the visual editor - just search for `ring-tile` card). 
+Note that `simple-air-comfort` does not yet support the visual editor, so config must be entered as YAML (which you can do in the visual editor - just search for `simple-air-comfort` card). 
 
 ## Standard tiles
 
-`ring-tile` card can be used as a drop in replacement for the inbuilt Home Assistant [`tile` card](https://www.home-assistant.io/dashboards/tile/). Here are some examples.
+`simple-air-comfort` card can be used as a drop in replacement for the inbuilt Home Assistant [`tile` card](https://www.home-assistant.io/dashboards/tile/). Here are some examples.
 
 This is how a humidity sensor looks out of the box:
 
 <img src="img/humidity.png" width="250">
 
 ```yaml
-type: custom:ring-tile
+type: custom:simple-air-comfort
 entity: sensor.outside_humidity
 ```
 
@@ -48,7 +48,7 @@ Temperature sensors get a ring set up for indoor comfort temperatures:
 <img src="img/temperature.png" width="250">
 
 ```yaml
-type: custom:ring-tile
+type: custom:simple-air-comfort
 entity: sensor.bedroom_temperature
 ```
 
@@ -57,7 +57,7 @@ You can adjust the min and max like this:
 <img src="img/outside-temperature.png" width="250">
 
 ```yaml
-type: custom:ring-tile
+type: custom:simple-air-comfort
 entity: sensor.outside_temperature
 min: 1
 max: 10
@@ -68,7 +68,7 @@ Notice how the colouring of the ring automatically adjusts to reflect the new mi
 You can also use other sensor entities to set the `min` and `max` dynamically. For example:
 
 ```yaml
-type: custom:ring-tile
+type: custom:simple-air-comfort
 entity: sensor.outside_temperature
 min: sensor.minimum_temperature_today
 max: sensor.forecast_maximum_temperature
@@ -81,7 +81,7 @@ Barometric pressure sensors look like this:
 <img src="img/pressure-1.png" width="250">
 
 ```yaml
-type: custom:ring-tile
+type: custom:simple-air-comfort
 entity: sensor.pressure
 ```
 
@@ -90,7 +90,7 @@ Barometers look even better bigger. It can be handy to add a marker to see how a
 <img src="img/pressure-2.png" width="250">
 
 ```yaml
-type: custom:ring-tile
+type: custom:simple-air-comfort
 entity: sensor.pressure
 ring_size: 2
 marker: sensor.pressure_6_hours_ago
@@ -100,7 +100,7 @@ If you'd like to make your own `pressure_6_hours_ago` sensor, [see how I did it]
 
 ## Big tiles
 
-You can make `ring-tile` bigger to feature your sensor data more prominently. The `ring_size` parameter can be set from 1 to 6, which translates to the number of standard tile rows `ring-tile` will take up vertically. Using `ring-tile` with a mix of sizes and colours can help to draw attention to the most important data, giving each sensor visual uniqueness.
+You can make `simple-air-comfort` bigger to feature your sensor data more prominently. The `ring_size` parameter can be set from 1 to 6, which translates to the number of standard tile rows `simple-air-comfort` will take up vertically. Using `simple-air-comfort` with a mix of sizes and colours can help to draw attention to the most important data, giving each sensor visual uniqueness.
 
 ### Default big tiles
 
@@ -128,7 +128,7 @@ The `compass` `ring_type` is great for showing wind speed and direction at the s
 <img src="img/compass.png" width="250">
 
 ```yaml
-type: custom:ring-tile
+type: custom:simple-air-comfort
 entity: sensor.wind_speed_kmh
 marker: sensor.wind_direction_15_min
 ring_type: compass_n
@@ -142,7 +142,7 @@ You can add a scale to any ring, although they generally work better with larger
 <img src="img/temperature-scale.png" width="250">
 
 ```yaml
-type: custom:ring-tile
+type: custom:simple-air-comfort
 entity: sensor.climate_upstairs_current_temperature
 marker: sensor.climate_upstairs_temperature
 min: 19
@@ -159,7 +159,7 @@ Not all sensors in your setup will have a `device_class`, which might mean a bit
 <img src="img/cpu.png" width="250">
 
 ```yaml
-type: custom:ring-tile
+type: custom:simple-air-comfort
 entity: sensor.nas_cpu_used
 ring_type: open
 ring_size: 3
@@ -173,12 +173,12 @@ scale: ticks
 
 ### Ring and display entities
 
-By default, `ring-tile` uses the same entity to plot the ring and display information inside the ring and in the info area. But sometimes you may wish to use a different entity to determine the state of the ring.
+By default, `simple-air-comfort` uses the same entity to plot the ring and display information inside the ring and in the info area. But sometimes you may wish to use a different entity to determine the state of the ring.
 
 <img src="img/split-entities.png" width="250">
 
 ```yaml
-type: custom:ring-tile
+type: custom:simple-air-comfort
 entity: sensor.nas_zpoolused_tarn
 ring_entity: sensor.nas_zpool_tarn_percent
 ring_size: 2
@@ -202,19 +202,19 @@ grid_options:
   rows: auto
 square: false
 cards:
-  - type: custom:ring-tile
+  - type: custom:simple-air-comfort
     entity: sensor.temperature_kitchen
     middle_element: value_with_unit
     bottom_element: name
     indicator: arc
     ring_only: true
-  - type: custom:ring-tile
+  - type: custom:simple-air-comfort
     entity: sensor.temperature_bedroom
     middle_element: value_with_unit
     bottom_element: name
     indicator: arc
     ring_only: true
-  - type: custom:ring-tile
+  - type: custom:simple-air-comfort
     entity: sensor.temperature_study
     middle_element: value_with_unit
     bottom_element: name

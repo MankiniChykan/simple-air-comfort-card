@@ -6,11 +6,11 @@ This page describes the configuration options and how they work.
 
 ## Configuration options
 
-`ring-tile` configuration options are as follows. 
+`simple-air-comfort` configuration options are as follows. 
 
 | Name | Type | Default | Description |
 |------|------|---------|-------------|
-| `type` **(required)** | string | | `custom:ring-tile` |
+| `type` **(required)** | string | | `custom:simple-air-comfort` |
 | `entity` **(required)** | string | | The sensor entity to visualise |
 | `ring_entity` | string | | An optional sensor entity used only to determine the state of the ring, separate from the main `entity` |
 | `name` | string | | Override the `entity`'s `friendly_name`, if it has one. Used in both the ring and the info area |
@@ -71,7 +71,7 @@ A scale can be applied to a ring. Note that the scale is rendered *on top* of th
 
 ### Ring element options
 
-You can decide what is displayed inside the ring. The interior is divided into three areas: top, middle and bottom. `ring-tile` will scale and position elements into each of these areas as best it can. Smaller rings benefit from fewer elements.
+You can decide what is displayed inside the ring. The interior is divided into three areas: top, middle and bottom. `simple-air-comfort` will scale and position elements into each of these areas as best it can. Smaller rings benefit from fewer elements.
 
 | Option | `top _element` | `middle _element` | `bottom _element` | Comment |
 |--------|:-----:|:--------:|:--------:|---------|
@@ -156,11 +156,11 @@ hide_state: true
 
 ## Setting ring colours
 
-`ring-tile` colours can be used to give emphasis to the nature and current state of your sensor entities. Solid colours can be useful to suggest the type of sensor (eg blue for water related sensors), while gradients help to emphasise sensor state.
+`simple-air-comfort` colours can be used to give emphasis to the nature and current state of your sensor entities. Solid colours can be useful to suggest the type of sensor (eg blue for water related sensors), while gradients help to emphasise sensor state.
 
 ### Solid colour
 
-The colour of a `ring-tile` ring is determined by the `colour` parameter. It can be a solid colour, for example:
+The colour of a `simple-air-comfort` ring is determined by the `colour` parameter. It can be a solid colour, for example:
 
 <img src="img/rc-solid.png" width="250">
 
@@ -228,7 +228,7 @@ Gradients defined using **percentage** values will always result in the same col
 <img src="img/rc-percentage.png" width="500">
 
 ```yaml
-type: custom:ring-tile
+type: custom:simple-air-comfort
 entity: sensor.root_used       # entity: sensor.home_used
 max: 42                        # max: 130
 indicator: dot
@@ -243,7 +243,7 @@ On the other hand, gradients defined using **absolute** values always map relati
 <img src="img/rc-absolute.png" width="500">
 
 ```yaml
-type: custom:ring-tile
+type: custom:simple-air-comfort
 entity: sensor.outside_temperature
 ring_size: 3
 min: sensor.todays_minimum
@@ -259,9 +259,9 @@ colour:
 
 ### Default ring gradients
 
-If `ring-tile` can identify the sensor's `device_class`, a gradient appropriate for the typical operating range of that sensor will be chosen. For example, `temperature` sensors get a default gradient typical of indoor comfort temperatures. You may of course define your own gradient for `temperature` sensors used in other contexts.
+If `simple-air-comfort` can identify the sensor's `device_class`, a gradient appropriate for the typical operating range of that sensor will be chosen. For example, `temperature` sensors get a default gradient typical of indoor comfort temperatures. You may of course define your own gradient for `temperature` sensors used in other contexts.
 
-If `ring-tile` is unable to determine the sensor `device_type`, a default gradient useful for sensors where a warning / critical level is indicated as the value approaches `max`:
+If `simple-air-comfort` is unable to determine the sensor `device_type`, a default gradient useful for sensors where a warning / critical level is indicated as the value approaches `max`:
 
 ```yaml
 colour:
@@ -288,7 +288,7 @@ As noted above, you can use any CSS colour coding or you can use any of the foll
 
 ## Default handling
 
-As noted above, default settings are matched to the sensor. This makes `ring-tile` easy to use out-of-the-box: often, it's enough to just supply the `entity` name. `ring-tile` examines the [`device_class`](https://www.home-assistant.io/integrations/sensor/#device-class) of your entity, if it has one, to get the right defaults.
+As noted above, default settings are matched to the sensor. This makes `simple-air-comfort` easy to use out-of-the-box: often, it's enough to just supply the `entity` name. `simple-air-comfort` examines the [`device_class`](https://www.home-assistant.io/integrations/sensor/#device-class) of your entity, if it has one, to get the right defaults.
 
 Defaults are also adjusted according to the configured `ring-size`. `ring-size: 1` defaults tend to feature just the icon and the ring itself, whereas larger rings can fit more elements.
 

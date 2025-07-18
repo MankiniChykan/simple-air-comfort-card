@@ -5,7 +5,7 @@ body:
   - type: markdown
     attributes:
       value: |
-        Let me know if you have an idea to improve ring-tile.
+        Let me know if you have an idea to improve simple-air-comfort.
   - type: textarea
     id: problem
     attributes:
