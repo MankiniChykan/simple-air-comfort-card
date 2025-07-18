@@ -18,13 +18,13 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Pre check
-        run: ls -al /home/runner/work/ring-tile-card/ring-tile-card/
+        run: ls -al /home/runner/work/simple-air-comfort-card/simple-air-comfort-card/
 
       - name: Build
         run: |
-          cd /home/runner/work/ring-tile-card/ring-tile-card
+          cd /home/runner/work/simple-air-comfort-card/simple-air-comfort-card
           npm install
           npm run build
 
       - name: Post check
-        run: ls -al /home/runner/work/ring-tile-card/ring-tile-card/dist/
+        run: ls -al /home/runner/work/simple-air-comfort-card/simple-air-comfort-card/dist/
