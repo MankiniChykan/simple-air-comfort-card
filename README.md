@@ -1,3 +1,5 @@
+# IN DEVELOPMENT NOT WORKING YET
+
 # Simple Air Comfort Card
 
 A high-visibility, responsive Lovelace custom card for Home Assistant that visualizes thermal comfort using temperature, humidity, dew point, and apparent temperature (feels like). The floating dot moves dynamically and blinks when conditions are outside the comfort zone.
