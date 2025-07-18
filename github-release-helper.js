@@ -1,38 +1,39 @@
-// github-release-helper.js
+#!/usr/bin/env node
 
-const { execSync } = require('child_process');
+/**
+ * GitHub Release Helper Script
+ * Usage: node github-release-helper.js <version>
+ */
+
 const fs = require('fs');
+const { execSync } = require('child_process');
 
 const version = process.argv[2];
-
 if (!version) {
-  console.error('❌ Please provide a version number. Example: node github-release-helper.js 1.0.0');
+  console.error('❌ You must specify a version number. Example: node github-release-helper.js 1.0.0');
   process.exit(1);
 }
 
 try {
-  console.log(`\n🔄 Updating package.json to version ${version}`);
-  const pkg = JSON.parse(fs.readFileSync('package.json'));
-  pkg.version = version;
-  fs.writeFileSync('package.json', JSON.stringify(pkg, null, 2));
+  console.log(`📦 Updating package.json to version ${version}...`);
+  const packageJson = JSON.parse(fs.readFileSync('package.json', 'utf-8'));
+  packageJson.version = version;
+  fs.writeFileSync('package.json', JSON.stringify(packageJson, null, 2) + '\n');
 
-  console.log('✅ Committing version bump');
-  execSync(`git add package.json`);
-  execSync(`git commit -m "release: bump version to ${version}"`);
+  console.log(`📁 Committing and tagging release v${version}...`);
+  execSync(`git add package.json`, { stdio: 'inherit' });
+  execSync(`git commit -m "chore(release): v${version}"`, { stdio: 'inherit' });
+  execSync(`git tag v${version}`, { stdio: 'inherit' });
 
-  console.log(`🏷 Tagging version v${version}`);
-  execSync(`git tag v${version}`);
+  console.log('🚀 Pushing changes and tag to GitHub...');
+  execSync(`git push origin main`, { stdio: 'inherit' });
+  execSync(`git push origin v${version}`, { stdio: 'inherit' });
 
-  console.log('⬆️ Pushing commit and tag');
-  execSync(`git push`);
-  execSync(`git push origin v${version}`);
+  console.log('🏷  Creating GitHub release...');
+  execSync(`gh release create v${version} --title "v${version}" --notes "Auto release for v${version}"`, { stdio: 'inherit' });
 
-  console.log('🚀 Creating GitHub release');
-  execSync(`gh release create v${version} --title "v${version}" --generate-notes`);
-
-  console.log(`\n🎉 Release v${version} complete!`);
-
+  console.log(`✅ Release v${version} created successfully.`);
 } catch (err) {
-  console.error(`❌ Failed: ${err.message}`);
+  console.error('❌ An error occurred during release process:', err.message);
   process.exit(1);
 }
