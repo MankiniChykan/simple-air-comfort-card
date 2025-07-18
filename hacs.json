@@ -1,7 +1,13 @@
 {
   "name": "Simple Air Comfort Card",
-  "filename": "dist/simple-air-comfort-card.js",
-  "type": "plugin",
+  "content_in_root": false,
+  "filename": "simple-air-comfort-card.js",
   "render_readme": true,
-  "description": "Visualize comfort using temperature, humidity, and wind."
+  "documentation": "https://github.com/MankiniChykan/simple-air-comfort-card",
+  "domain": "simple-air-comfort-card",
+  "country": "au",
+  "homeassistant": "2024.0.0",
+  "persistent_directory": "dist",
+  "type": "module",
+  "version": "v1.0.0"
 }
