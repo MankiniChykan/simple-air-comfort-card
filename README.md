@@ -1,110 +1,129 @@
-Simple Air Comfort Card
-A fully dynamic, visually responsive Home Assistant Lovelace card for visualizing thermal and humidity comfort using temperature, humidity, and dew point.
+# Simple Air Comfort Card
 
+> A fully dynamic, visually responsive Home Assistant Lovelace card for visualizing thermal and humidity comfort using temperature, humidity, and dew point.
 
+![screenshot](https://raw.githubusercontent.com/MankiniChykan/simple-air-comfort-card/main/assets/example-card.png)
 
-✨ Features
-Comfort zone visualization with animated floating dot
+---
 
-Blinking alert when readings are outside the comfort zone
+## ✨ Features
 
-Dynamic background and ring gradients for temperature and dew point
+- Animated floating dot that reflects live comfort readings
+- Blinking warning for uncomfortable conditions
+- Dew point, temperature, and humidity comfort text labels
+- Radial gradient visuals for temperature and dew point zones
+- Customizable color overrides via card config
+- Optional CO₂ sensor chip display
+- Fully standalone: no `picture-elements`, no Jinja2 templates
+- Built with LitElement + JavaScript for optimal performance
+- HACS-ready: includes release automation and CI/CD pipeline
 
-Custom comfort texts for temperature, humidity, and dew point
+---
 
-Responsive layout with metric chips
+## 🛠 Installation
 
-CO₂ display (optional)
+### Recommended: HACS
 
-Full JavaScript (LitElement) rewrite — no templates or picture-elements required
+1. Go to **HACS > Frontend > Custom Repositories**
+2. Add `https://github.com/MankiniChykan/simple-air-comfort-card` as a *Lovelace* repo
+3. Install **Simple Air Comfort Card**
+4. Add to your Lovelace resources:
 
-Color overrides via card config
-
-HACS-ready structure with GitHub Actions CI and release workflow
-
-🛠 Installation
-Via HACS (recommended)
-Go to HACS > Frontend > Custom Repositories
-
-Add: https://github.com/MankiniChykan/simple-air-comfort-card as a Lovelace repo
-
-Install Simple Air Comfort Card
-
-Add to your Lovelace resources:
-
-yaml
-Copy
-Edit
+```yaml
 url: /hacsfiles/simple-air-comfort-card/simple-air-comfort-card.js
 type: module
-Manual
-Download simple-air-comfort-card.js from the dist/ folder
+```
 
-Place it in www/simple-air-comfort-card/ inside Home Assistant config
+### Manual
 
-Add to Lovelace resources:
+1. Download `simple-air-comfort-card.js` from the `dist/` folder
+2. Place it in `www/simple-air-comfort-card/`
+3. Reference in Lovelace:
 
-yaml
-Copy
-Edit
+```yaml
 url: /local/simple-air-comfort-card/simple-air-comfort-card.js
 type: module
-🧾 Lovelace Example
-yaml
-Copy
-Edit
+```
+
+---
+
+## 🧾 Example Lovelace YAML
+
+```yaml
 type: custom:simple-air-comfort-card
-temperature: sensor.living_temperature
-humidity: sensor.living_humidity
-co2: sensor.living_co2
+temperature: sensor.living_room_temperature
+humidity: sensor.living_room_humidity
+co2: sensor.living_room_co2
 colorOverrides:
   dotNormal: "#00ff00"
   dotAlert: "#ff0000"
   temperatureMap:
     HOT: "#ff5722"
+    PERFECT: "#00e676"
   dewpointMap:
     "MUGGY": "#ffa500"
-🔧 Required Sensors
-sensor.living_temperature → temperature in °C
+    "VERY DRY": "#1e88e5"
+```
 
-sensor.living_humidity → relative humidity %
+---
 
-Optional: sensor.living_co2
+## 📋 Required Entities
 
-For dew point, no separate sensor is required — the card computes it internally.
+- `sensor.living_room_temperature`: in °C
+- `sensor.living_room_humidity`: in %
+- Optional: `sensor.living_room_co2`: in ppm
 
-🎨 Configuration Options
-Option	Description	Required
-temperature	Entity ID for temperature sensor	✅
-humidity	Entity ID for humidity sensor	✅
-co2	CO₂ sensor (ppm)	❌
-colorOverrides	Customize alert and gradient colors	❌
+The dew point is calculated internally using the Arden Buck formula — no extra sensor needed.
 
-🧠 How It Works
-Uses Buck dew point formula internally
+---
 
-Categorizes comfort levels based on temperature/humidity breakpoints
+## 🎨 Configuration Options
 
-Dot moves according to live readings and blinks on alert
+| Option             | Description                                  | Required |
+|--------------------|----------------------------------------------|----------|
+| `temperature`      | Entity ID for temperature sensor             | ✅       |
+| `humidity`         | Entity ID for humidity sensor                | ✅       |
+| `co2`              | CO₂ sensor (ppm)                             | ❌       |
+| `colorOverrides`   | Customize colors and gradients               | ❌       |
 
-Radial gradients adapt the background and outer ring
+---
 
-Entire UI is rendered in Lit without dependencies
+## 🧠 Internal Logic
 
-📦 Developer Notes
-This card is built using LitElement and bundled via esbuild.
+- **Floating Dot Position**: Scales temperature (15–35°C) and humidity (40–60%) onto card grid
+- **Dot Blink Alert**: Activates outside 18–26.4°C or humidity outside 40–60%
+- **Dew Point Calculation**: Buck formula
+- **Comfort Levels**: Derived from ranges and rendered via chip text and gradients
+- **Gradient Backgrounds**: Dynamically colored for temperature and dew point zones
 
-To build:
+---
 
-bash
-Copy
-Edit
+## 🧑‍💻 Development
+
+Clone this repo, install dependencies, and run the build script:
+
+```bash
 npm install
 npm run build
-📮 Feedback & Contributions
-Open issues or PRs directly on GitHub.
+```
 
-This project is tailored for serious climate tinkerers — if you're using advanced climate macros, this card is for you.
+The output is written to `/dist`.
 
-Would you like me to generate the assets/example-card.png or include GitHub badges (build status, HACS compatibility, license, etc.)?
+---
 
+## 📦 HACS Release Workflow
+
+- A GitHub tag (e.g., `v1.0.0`) automatically builds and publishes a release
+- `simple-air-comfort-card.js` is minified and output to `dist/`
+- `hacs.json` and `release.yml` are included for CI compatibility
+
+---
+
+## 📮 Feedback
+
+Open an issue or pull request — feedback and contributions welcome.
+
+---
+
+**License:** MIT  
+**Author:** [Hunter](https://github.com/MankiniChykan)
