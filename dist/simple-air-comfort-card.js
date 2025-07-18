@@ -1,3 +1,7 @@
+// simple-air-comfort-card.js
+// Full JavaScript rewrite of the Simple Air Comfort Card
+// Author: Hunter
+
 import { LitElement, html, css } from 'lit';
 
 class SimpleAirComfortCard extends LitElement {
@@ -88,21 +92,8 @@ class SimpleAirComfortCard extends LitElement {
       writing-mode: vertical-rl;
       transform: translate(-50%, -50%) scale(0.7);
     }
-    .info-container {
-      position: absolute;
-      bottom: 0;
-      left: 50%;
-      transform: translateX(-50%);
-      z-index: 5;
-      font-size: clamp(0.7rem, 1.5vw, 0.9rem);
-      color: #fff;
-      background-color: rgba(0, 0, 0, 0.4);
-      padding: 4px 12px;
-      border-radius: 8px;
-    }
     .metric-chip {
       position: absolute;
-      bottom: 10%;
       width: clamp(45px, 10vw, 60px);
       text-align: center;
       font-size: clamp(0.6rem, 1vw, 0.75rem);
@@ -112,10 +103,31 @@ class SimpleAirComfortCard extends LitElement {
       padding: 2px;
       z-index: 5;
     }
-    .chip-temp { left: 10%; }
-    .chip-humid { left: 30%; }
-    .chip-dew { left: 50%; transform: translateX(-50%); }
-    .chip-alt { left: 70%; }
+    .chip-dew {
+      left: 10%;
+      top: 25%;
+    }
+    .chip-alt {
+      right: 10%;
+      top: 25%;
+    }
+    .chip-temp {
+      left: 10%;
+      bottom: 10%;
+    }
+    .chip-humid {
+      right: 10%;
+      bottom: 10%;
+    }
+    .title {
+      position: absolute;
+      top: 5%;
+      left: 50%;
+      transform: translateX(-50%);
+      font-size: clamp(0.8rem, 2vw, 1.2rem);
+      color: silver;
+      z-index: 6;
+    }
   `;
 
   setConfig(config) {
@@ -133,8 +145,8 @@ class SimpleAirComfortCard extends LitElement {
     const humid = parseFloat(this.hass.states[this.config.humidity]?.state);
     const wind = this.config.wind ? parseFloat(this.hass.states[this.config.wind]?.state || 0) : 0;
     const feelsLike = this._calculateApparentTemperature(temp, humid, wind);
-    const altEntity = this.config.feels_like || this.config.co2;
-    const altValue = altEntity ? this.hass.states[altEntity]?.state : feelsLike.toFixed(1);
+    const altValue = this.config.co2 ? this.hass.states[this.config.co2]?.state : feelsLike.toFixed(1);
+    const altIcon = this.config.co2 ? '🫁' : '🤒';
     const dewPoint = this._calculateDewPoint(temp, humid);
     const dewText = this._getDewpointComfortText(dewPoint);
     const tempText = this._getTemperatureComfortText(temp);
@@ -152,14 +164,15 @@ class SimpleAirComfortCard extends LitElement {
       <div class="ring" style="background-image: ${ringGradient};"></div>
       <div class="inner-zone" style="background: ${alertGradient};"></div>
       <div class="${dotClass}" style="top: ${pos.top}; left: ${pos.left}; background-color: ${dotColor};"></div>
+      <div class="title">${this.config.title || ''}</div>
       <div class="label warm">Warm</div>
       <div class="label cold">Cold</div>
       <div class="label dry">Dry</div>
       <div class="label humid">Humid</div>
+      <div class="metric-chip chip-dew">💦 ${dewText}</div>
+      <div class="metric-chip chip-alt">${altIcon} ${altValue}</div>
       <div class="metric-chip chip-temp">🌡 ${tempText}</div>
       <div class="metric-chip chip-humid">💧 ${humidText}</div>
-      <div class="metric-chip chip-dew">💦 ${dewText}</div>
-      <div class="metric-chip chip-alt">🤒 ${altValue}</div>
     `;
   }
 
