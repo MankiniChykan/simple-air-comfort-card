@@ -2,7 +2,7 @@
 
 > A fully dynamic, visually responsive Home Assistant Lovelace card for visualizing thermal and humidity comfort using temperature, humidity, and dew point.
 
-![screenshot](https://raw.githubusercontent.com/MankiniChykan/simple-air-comfort-card/main/assets/example-card.png)
+<img width="573" height="859" alt="image" src="https://github.com/user-attachments/assets/0317339d-cf8a-41f0-867b-54cec6dc7f0b" />
 
 ---
 
