@@ -1,14 +1,18 @@
 {
   "name": "simple-air-comfort-card",
   "version": "1.0.0",
-  "description": "A custom Lovelace card that visualizes air comfort using temperature, humidity, and dew point with dynamic styling.",
-  "main": "simple-air-comfort-card.js",
+  "description": "Dynamic Lovelace card for visualizing indoor comfort using temperature, humidity, and dew point.",
+  "main": "dist/simple-air-comfort-card.js",
   "scripts": {
-    "build": "esbuild simple-air-comfort-card.js --bundle --minify --outfile=simple-air-comfort-card.min.js"
+    "build": "rollup -c",
+    "watch": "rollup -c -w"
   },
   "author": "Hunter",
   "license": "MIT",
   "devDependencies": {
-    "esbuild": "^0.21.0"
+    "rollup": "^3.26.3",
+    "rollup-plugin-terser": "^7.0.2",
+    "rollup-plugin-node-resolve": "^5.2.0",
+    "rollup-plugin-commonjs": "^10.1.0"
   }
 }
