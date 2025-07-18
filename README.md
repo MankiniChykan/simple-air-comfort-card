@@ -4,6 +4,8 @@ It's a [Home Assistant](https://www.home-assistant.io) `tile` card! With a ring!
 
 A card based on the fabulous inbuilt [`tile` card](https://www.home-assistant.io/dashboards/tile/) to visualise your sensor data. Use `simple-air-comfort` cards to bring your sensor `tile` cards to life. Gain insights from your home's data at a glance.
 
+<img src="docs/img/basic.png" alt="Simple Air Comfort Card screenshot" width="400">
+
 ## Using Simple Air Comfort Card
 
 `simple-air-comfort` card has been designed for ease of use: it requires minimal configuration to get a great looking result. You can use it as a drop-in replacement for the inbuilt `tile` card (**Note!** at the moment, `simple-air-comfort` card only works properly with `sensor` entities. Not all native `tile` card options are supported). 
