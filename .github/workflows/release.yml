@@ -1,20 +1,18 @@
-name: Release HACS Package
+name: Release
 
 on:
   push:
     tags:
-      - 'v*.*.*'
+      - 'v*'
 
 jobs:
   release:
-    name: Build and release
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout Code
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v3
 
-      - name: Setup Node.js
+      - name: Install Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '20'
@@ -22,17 +20,18 @@ jobs:
       - name: Install Dependencies
         run: npm ci
 
-      - name: Build Card
+      - name: Build
         run: npm run build
+
+      - name: Commit built file
+        run: |
+          git config user.name github-actions
+          git config user.email github-actions@github.com
+          git add dist/simple-air-comfort-card.js
+          git commit -m "Build release"
+          git push
 
       - name: Create Release
         uses: softprops/action-gh-release@v2
         with:
-          files: |
-            simple-air-comfort-card.js
-            simple-air-comfort-card.min.js
-            hacs.json
-            LICENSE
-            README.md
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          files: dist/simple-air-comfort-card.js
