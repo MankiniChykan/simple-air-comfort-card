@@ -11,7 +11,7 @@
   "source": "src/ring-tile-card.js",
   "scripts": {
     "start": "parcel",
-    "build": "parcel build --no-source-maps"
+    "build": "parcel build --no-source-maps && cp dist/ring-tile-card.js dist/simple-air-comfort-card.js"
   },
   "type": "module",
   "devDependencies": {
