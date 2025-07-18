@@ -1,5 +1,7 @@
 {
-  "name": "Ring Tile Card",
-  "homeassistant": "2025.5.0",
-  "render_readme": true
+  "name": "Simple Air Comfort Card",
+  "filename": "dist/simple-air-comfort-card.js",
+  "type": "plugin",
+  "render_readme": true,
+  "description": "Visualize comfort using temperature, humidity, and wind."
 }
