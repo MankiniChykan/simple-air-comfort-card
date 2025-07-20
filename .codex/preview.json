@@ -1,0 +1,9 @@
+{
+  "element": "simple-air-comfort-card",
+  "attributes": {
+    "temperature": "22.5",
+    "humidity": "48",
+    "dew-point": "12.6"
+  },
+  "style": "width: 400px; height: 300px;"
+}
