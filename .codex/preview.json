@@ -1,9 +1,17 @@
+// .codex/preview.json
 {
   "element": "simple-air-comfort-card",
-  "attributes": {
-    "temperature": "22.5",
-    "humidity": "48",
-    "dew-point": "12.6"
+  "hass": {
+    "states": {
+      "sensor.living_room_temperature": { "state": "22" },
+      "sensor.living_room_humidity": { "state": "55" }
+    }
   },
-  "style": "width: 400px; height: 300px;"
+  "attributes": {
+    "temperature": "sensor.living_room_temperature",
+    "humidity": "sensor.living_room_humidity",
+    "title": "Living Room"
+  },
+  "style": "width: 400px; height: 400px;"
 }
+
