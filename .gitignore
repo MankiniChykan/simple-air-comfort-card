@@ -1,5 +1,8 @@
 node_modules/
-dist/
+- dist/
++ !dist/
++ !dist/simple-air-comfort-card.js
++ !dist/*.map
 build/
 .parcel-cache/
 .vscode/
