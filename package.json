@@ -7,7 +7,6 @@
   "scripts": {
     "build": "rollup -c",
     "clean": "rimraf dist",
-    "build": "rollup -c",
     "postbuild": "gzip -kf dist/simple-air-comfort-card.js",
     "watch": "rollup -c -w",
     "serve": "npx http-server . -c-1 -p 5173",
@@ -22,6 +21,7 @@
     "@rollup/plugin-terser": "^0.4.4",
     "eslint": "^9.33.0",
     "rollup": "^3.29.5",
+    "rollup-plugin-gzip": "^4.1.1",
     "typescript": "^5.9.2"
   },
   "dependencies": {
