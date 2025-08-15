@@ -6,7 +6,11 @@
   "main": "dist/simple-air-comfort-card.js",
   "scripts": {
     "build": "rollup -c",
-    "watch": "rollup -c -w"
+    "clean": "rimraf dist",
+    "build": "rollup -c",
+    "watch": "rollup -c -w",
+    "serve": "npx http-server . -c-1 -p 5173",
+    "dev": "npm-run-all --parallel watch serve"
   },
   "author": "Hunter",
   "license": "MIT",
