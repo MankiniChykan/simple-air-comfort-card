@@ -1,5 +1,5 @@
-// github-release-helper.js (ESM)
 #!/usr/bin/env node
+// github-release-helper.js (ESM)
 import { readFileSync, writeFileSync } from 'node:fs';
 import { execSync } from 'node:child_process';
 
