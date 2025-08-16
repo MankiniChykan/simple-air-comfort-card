@@ -80,10 +80,11 @@ class SimpleAirComfortCard extends LitElement {
       color: rgba(255,255,255,0.70);
     }
 
-    /* Two-column layout: left labels, right dial */
+    /* grid: 2 columns, with a second row where the dial spans both columns */
     .grid {
       display: grid;
       grid-template-columns: 1fr 1fr;
+      grid-template-rows: auto auto;     /* <— add this */
       gap: 12px 16px;
       align-items: start;
       margin-top: 16px;
@@ -106,17 +107,21 @@ class SimpleAirComfortCard extends LitElement {
       font-size: 1.1rem;
     }
 
-    /* Dial area at right column */
+    /* center the dial and make it occupy the second row across both columns */
     .dial-wrap {
       position: relative;
       width: 100%;
-      aspect-ratio: 1 / 1;
-      display: grid;
-      place-items: center;
+      grid-column: 1 / 3;                /* <— span both columns */
+      grid-row: 2;                       /* <— second row */
+      display: flex;                     /* <— center */
+      justify-content: center;
+      align-items: center;
     }
+
     .dial {
       position: relative;
-      width: min(82%, 360px);
+      width: min(56vmin, 420px);         /* a bit bigger and truly centered */
+      max-width: 92%;
       aspect-ratio: 1 / 1;
     }
 
@@ -158,31 +163,35 @@ class SimpleAirComfortCard extends LitElement {
       z-index: 3;
     }
 
-    /* Axis labels around the ring (fixed) */
+    /* axis labels anchored to the dial */
     .axis {
       position: absolute;
       left: 50%;
       transform: translateX(-50%);
-      top: -26px;
-      color: rgba(255,255,255,0.85);
+      top: -24px;                        /* Warm on the outside of the rim */
+      color: rgba(255,255,255,0.9);
       font-weight: 700;
+      text-shadow: 0 1px 2px rgba(0,0,0,0.45);
     }
     .axis-bottom {
       top: auto;
-      bottom: -26px;
+      bottom: -24px;                     /* Cold */
     }
     .axis-left,
     .axis-right {
       top: 50%;
-      transform: translateY(-50%);
-      left: -28px;
+      transform: translateY(-50%);       /* center vertically */
       writing-mode: vertical-rl;
+      color: rgba(255,255,255,0.9);
+      font-weight: 700;
+      text-shadow: 0 1px 2px rgba(0,0,0,0.45);
+    }
+    .axis-left {
+      left: -28px;                       /* Dry (rotated to read upright) */
       rotate: 180deg;
     }
     .axis-right {
-      left: auto;
-      right: -28px;
-      rotate: 0deg;
+      right: -28px;                      /* Humid */
     }
 
     /* Bottom row: BL temperature comfort text, BR humidity comfort text */
@@ -288,13 +297,13 @@ class SimpleAirComfortCard extends LitElement {
           <div class="subtitle">${dewText}</div>
 
           <div class="grid">
-            <!-- Left (TL) Dew point value -->
+            <!-- TL: Dew point -->
             <div class="corner">
               <div class="label">Dew point</div>
               <div class="value">${dewOut}</div>
             </div>
 
-            <!-- Right column: the dial -->
+            <!-- Dial: centered row 2 spanning both columns -->
             <div class="dial-wrap">
               <div class="dial">
                 <div class="axis">Warm</div>
@@ -310,11 +319,10 @@ class SimpleAirComfortCard extends LitElement {
               </div>
             </div>
 
-            <!-- Right (TR) Feels like -->
-            <div class="corner" style="grid-column: 2 / 3; grid-row: 1 / 2; justify-self:end; text-align:right;">
-              <div class="label">Feels like</div>
-              <div class="value">${atOut}</div>
-            </div>
+          <!-- TR: Feels like -->
+          <div class="corner" style="justify-self:end; text-align:right;">
+            <div class="label">Feels like</div>
+            <div class="value">${atOut}</div>
           </div>
 
           <div class="bottom-row">
