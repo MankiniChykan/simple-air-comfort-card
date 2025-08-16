@@ -104,15 +104,15 @@ class SimpleAirComfortCard extends LitElement {
     .bl { left: 8%; bottom: 8%; transform: translate(0%, 0%); text-align: left; }
     .br { right: 8%; bottom: 8%; transform: translate(0%, 0%); text-align: right; }
 
-    /* Right-side graphic group (matches your YAML proportions) */
+    /* Center graphic: centered concentric circles */
     .graphic {
       position: absolute;
       top: 50%;
-      right: 4.5%;
-      transform: translate(0, -50%);
-      width: 45%;
-      height: 45%;
-      min-width: 120px; /* keep it visible on small cards */
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: 56%;
+      height: 56%;
+      min-width: 120px;
       min-height: 120px;
     }
 
