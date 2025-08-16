@@ -1,6 +1,6 @@
 {
   "name": "Simple Air Comfort Card",
-  "filename": "dist/simple-air-comfort-card.js",
+  "filename": "simple-air-comfort-card.js",
   "render_readme": true,
   "homeassistant": "2024.6.0",
   "zip_release": true,
