@@ -1,27 +1,20 @@
 #!/usr/bin/env node
 /**
- * GitHub Release Helper
+ * GitHub Release Helper (ESM)
  * Usage: node github-release-helper.js 1.2.3
- *
- * - Bumps package.json version
- * - npm ci && npm run build (produces dist/*.js and dist/*.js.gz)
- * - Commits version + dist artifacts (force-add even if ignored)
- * - Tags vX.Y.Z and pushes
- * - Creates a GitHub release with assets + checksums
  */
+import fs from 'node:fs';
+import path from 'node:path';
+import crypto from 'node:crypto';
+import zlib from 'node:zlib';
+import { execSync } from 'node:child_process';
+import { fileURLToPath } from 'node:url';
 
-const fs = require('fs');
-const path = require('path');
-const crypto = require('crypto');
-const { execSync } = require('child_process');
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
-const fail = (msg, code = 1) => {
-  console.error(`❌ ${msg}`);
-  process.exit(code);
-};
-
+const fail = (msg, code = 1) => { console.error(`❌ ${msg}`); process.exit(code); };
 const run = (cmd, opts = {}) => execSync(cmd, { stdio: 'inherit', ...opts });
-
 const read = (p) => fs.readFileSync(p);
 const write = (p, s) => fs.writeFileSync(p, s);
 
@@ -30,14 +23,12 @@ if (!input) fail('You must specify a version. Example: node github-release-helpe
 const version = input.replace(/^v/i, '');
 const tag = `v${version}`;
 
-// Paths
 const distDir = path.join(__dirname, 'dist');
 const jsOut = path.join(distDir, 'simple-air-comfort-card.js');
 const gzOut = `${jsOut}.gz`;
 const checksumFile = path.join(distDir, 'checksums.txt');
 
 try {
-  // Preflight
   try { run('gh --version'); } catch { fail('GitHub CLI (gh) is not installed or not on PATH.'); }
   const branch = execSync('git rev-parse --abbrev-ref HEAD').toString().trim();
   if (branch !== 'main') fail(`Please release from "main" (current: "${branch}").`);
@@ -54,17 +45,12 @@ try {
   console.log('🔨 Building …');
   run('npm run build');
 
-  // Verify outputs
   if (!fs.existsSync(jsOut)) fail(`Build artifact missing: ${jsOut}`);
   if (!fs.existsSync(gzOut)) {
-    // If postbuild didn’t gzip for some reason, do it here as a fallback.
     console.log('🗜️  Creating gzip fallback …');
-    const zlib = require('zlib');
-    const data = read(jsOut);
-    write(gzOut, zlib.gzipSync(data));
+    write(gzOut, zlib.gzipSync(read(jsOut)));
   }
 
-  // Checksums
   console.log('🧮 Writing checksums …');
   const sha256 = (buf) => crypto.createHash('sha256').update(buf).digest('hex');
   const lines = [
@@ -74,9 +60,8 @@ try {
   write(checksumFile, lines);
 
   console.log(`📁 Committing and tagging ${tag} …`);
-  // Force-add dist even if ignored
   run(`git add package.json package-lock.json || true`);
-  run(`git add -f ${escapePath(jsOut)} ${escapePath(gzOut)} ${escapePath(checksumFile)}`);
+  run(`git add -f "${jsOut}" "${gzOut}" "${checksumFile}"`);
   try {
     run(`git commit -m "chore(release): ${tag}"`);
   } catch {
@@ -89,10 +74,10 @@ try {
   run(`git push origin ${tag}`);
 
   console.log('🏷  Creating GitHub release …');
-  // Try a short changelog from commits since previous tag (best-effort)
   let notesFlag = `--notes "Auto release for ${tag}"`;
   try {
-    const prev = execSync('git describe --tags --abbrev=0 --always --match "v*" 2>/dev/null || true').toString().trim();
+    const prev = execSync('git describe --tags --abbrev=0 --always --match "v*" 2>/dev/null || true')
+      .toString().trim();
     if (prev && prev !== tag) {
       const notes = execSync(`git log --pretty=format:"- %s (%h)" ${prev}..HEAD`).toString().trim();
       if (notes) {
@@ -101,22 +86,10 @@ try {
         notesFlag = `--notes-file "${tmp}"`;
       }
     }
-  } catch {
-    // ignore
-  }
+  } catch { /* ignore */ }
 
-  run(
-    `gh release create ${tag} ` +
-      `"${jsOut}" "${gzOut}" "${checksumFile}" ` +
-      `--title "${tag}" ${notesFlag}`
-  );
-
+  run(`gh release create ${tag} "${jsOut}" "${gzOut}" "${checksumFile}" --title "${tag}" ${notesFlag}`);
   console.log(`✅ Release ${tag} created successfully.`);
 } catch (err) {
   fail(err.message || String(err));
-}
-
-function escapePath(p) {
-  // crude path escaper for spaces
-  return `"${p.replace(/"/g, '\\"')}"`;
 }
