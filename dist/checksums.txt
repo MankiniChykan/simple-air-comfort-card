@@ -1,0 +1,2 @@
+simple-air-comfort-card.js  37a8a3b1829c8947d82edbf6ecfa9d149304c3dc2af5fc6c04b14bedd5b991e2
+simple-air-comfort-card.js.gz  d7c03b6ea6c1e9be05504a498d09fc79206cf24d68ab2774784da9e9f3ae3e1c
