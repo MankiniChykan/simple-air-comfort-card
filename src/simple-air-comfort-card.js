@@ -2,46 +2,26 @@ import { LitElement, html, css } from 'lit';
 
 /**
  * Simple Air Comfort Card
- * ------------------------------------------------------------
+ *
+ * Face:
+ *  - Title (room name) at top, dewpoint comfort text as subtitle.
+ *  - TL: Dew point (°C)
+ *  - TR: Apparent temperature (AT, °C)
+ *  - BL: Temperature comfort text
+ *  - BR: Humidity comfort text
+ *  - Right side graphic: outer white ring (dewpoint gradient), inner black comfort circle (humidity/temperature gradient),
+ *    and a floating white dot that moves per humidity (X) & temperature (Y) and blinks when outside limits.
+ *
  * Physics:
- *   Apparent Temp (BoM): AT = T + 0.33·e − 0.70·ws − 4.0
- *     - T in °C
- *     - e in hPa using Arden Buck saturation vapour pressure
- *     - ws in m/s (optional wind entity; else default_wind_speed)
+ *  - Apparent Temperature (Australian BoM):
+ *      AT = T + 0.33·e − 0.70·ws − 4.0
+ *    where T in °C, e in hPa (Arden Buck vapour pressure from RH & T), ws in m/s
+ *  - Dew point via Arden Buck inverse (numeric bisection).
  *
- *   e = RH/100 * es(T)
- *   es(T) [Buck 1981]:
- *      T >= 0°C : 6.1121 * exp((18.678 - T/234.5) * (T/(257.14 + T)))
- *      T <  0°C : 6.1115 * exp((23.036 - T/333.7) * (T/(279.82 + T)))
+ * GUI Editor:
+ *  - Pick temperature, humidity, optional wind. Set decimals, default wind, temp/humidity limits.
  *
- *   Dew point is solved by numeric inverse of es(T).
- *
- * UI:
- *   - Room name at the top (card title).
- *   - Right side: dial (outer ring + inner comfort circle + moving pupil).
- *     Dial markers: Warm (top), Cold (bottom), Dry (left), Humid (right).
- *   - Left side numbers:
- *       • Feels like (AT)
- *       • Dew point
- *       • Temperature
- *       • Humidity
- *     and the three text comfort lines below.
- *   - Wind & vapour pressure are NOT shown on the face (wind stays in editor).
- *
- * Config:
- *   type: custom:simple-air-comfort-card
- *   name: Aircomfort
- *   temperature: sensor.room_temp         (required)
- *   humidity: sensor.room_humidity        (required)
- *   windspeed: sensor.room_wind_speed     (optional)
- *   default_wind_speed: 0                 (m/s; default 0)
- *   decimals: 1
- *   temp_min: 10                          (°C; for pupil vertical scaling)
- *   temp_max: 35                          (°C; for pupil vertical scaling)
- *
- * Notes:
- *   - “Text comfort” strings use simple, readable bands. Adjust below or
- *     make them config if you want exact parity with your Jinja macros.
+ * No vapour pressure or wind readouts on face (wind still used in AT).
  */
 
 const fireEvent = (node, type, detail, options) => {
@@ -62,220 +42,268 @@ class SimpleAirComfortCard extends LitElement {
   };
 
   static styles = css`
-    ha-card { padding: 12px 12px 16px; overflow: hidden; }
-
-    .header {
-      display: flex; align-items: center; justify-content: space-between;
-      margin-bottom: 4px;
-    }
-    .title { font-weight: 700; font-size: 1.05rem; letter-spacing: .2px; }
-
-    .wrap {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 8px 12px;
-      align-items: center;
-    }
-
-    /* Left column: numbers + text lines */
-    .metrics { display: grid; gap: 10px; }
-    .primary {
-      font-size: 2.0rem; font-weight: 800; line-height: 1;
-      display: flex; align-items: baseline; gap: 6px;
-    }
-    .unit { opacity: .7; font-weight: 600; }
-
-    .grid2 {
-      display: grid; grid-template-columns: 1fr 1fr; gap: 6px 16px;
-      font-variant-numeric: tabular-nums;
-    }
-    .label { opacity: .8; }
-    .val { justify-self: end; font-weight: 600; }
-
-    .comfort {
-      margin-top: 2px;
-      display: grid; gap: 2px;
-      font-size: .95rem;
-    }
-    .comfort .line { display: flex; justify-content: space-between; gap: 8px; }
-    .comfort .k { opacity: .75; }
-    .comfort .v { font-weight: 600; }
-
-    /* Right column: dial */
-    .dialWrap { position: relative; height: 0; padding-top: 100%; } /* square */
-    .dial {
-      position: absolute; inset: 0;
-      display: grid; place-items: center;
-    }
-
-    /* Outer ring (thin border), inner comfort disc */
-    .ring {
+    ha-card {
       position: relative;
-      width: 86%;
-      height: 86%;
-      border-radius: 50%;
-      border: 2.5px solid rgba(255,255,255,0.9);
-      /* subtle radial background so it looks like a dial even w/out the SVG */
-      background:
-        radial-gradient(closest-side, rgba(255,255,255,0.06), transparent 65%),
-        radial-gradient(farthest-side, rgba(255,255,255,0.08), transparent 70%);
-    }
-    .inner {
-      position: absolute; inset: 0;
-      margin: 17%;
-      border-radius: 50%;
-      /* inner comfort zone colour — tweak if you want dynamic colour mapping */
-      background: rgba(255,255,255,0.10);
-      border: 0 solid transparent;
+      padding: 12px 12px 14px;
+      overflow: hidden;
     }
 
-    /* Pupil (floating dot) */
-    .pupil {
+    /* Maintain a square canvas for the graphic so percentages match your YAML layout */
+    .canvas {
+      position: relative;
+      width: 100%;
+      aspect-ratio: 1 / 1;
+      /* Background = temperature color mapping (matches your comfort bands) */
+      background: var(--sac-temp-bg, #2a2a2a);
+      border-radius: 8px;
+    }
+
+    /* Title + subtitle row */
+    .header {
       position: absolute;
-      width: 14%; height: 14%;
-      border-radius: 50%;
-      display: grid; place-items: center;
+      top: 6%;
+      left: 50%;
       transform: translate(-50%, -50%);
-      /* Ringed dot to read well on any background */
-      background: white;
-      box-shadow:
-        0 0 0 3px rgba(0,0,0,0.25),
-        0 0 0 6px rgba(255,255,255,0.6);
+      width: 100%;
+      text-align: center;
+      pointer-events: none;
+    }
+    .title {
+      font-weight: 700;
+      font-size: 1.05rem;
+      color: white;
+      text-shadow: 0 1px 2px rgba(0,0,0,0.35);
+      line-height: 1.15;
+    }
+    .subtitle {
+      font-weight: 600;
+      font-size: 0.9rem;
+      color: silver;
+      margin-top: 0.15rem;
     }
 
-    /* Dial markers */
-    .marker {
+    /* The four text corners (TL/TR/BL/BR), using your picture-element style placements */
+    .corner {
       position: absolute;
-      font-size: .85rem; color: grey; font-weight: 600;
-      user-select: none;
-      text-shadow: 0 1px 0 rgba(0,0,0,0.15);
+      color: white;
+      text-shadow: 0 1px 2px rgba(0,0,0,0.35);
+      font-weight: 700;
+      letter-spacing: 0.2px;
     }
-    .m-warm  { top: 4%; left: 50%; transform: translateX(-50%); }
-    .m-cold  { bottom: 4%; left: 50%; transform: translateX(-50%); }
-    .m-dry   { left: 4%; top: 50%; transform: translateY(-50%) rotate(180deg); writing-mode: vertical-rl; }
-    .m-humid { right: 4%; top: 50%; transform: translateY(-50%); writing-mode: vertical-rl; }
+    .corner .label {
+      font-size: 0.75rem;
+      opacity: 0.85;
+      display: block;
+      font-weight: 600;
+    }
+    .corner .value {
+      font-size: 1.05rem;
+    }
+    .tl { left: 8%; top: 18%; transform: translate(-0%, -50%); text-align: left; }
+    .tr { right: 8%; top: 18%; transform: translate(0%, -50%); text-align: right; }
+    .bl { left: 8%; bottom: 8%; transform: translate(0%, 0%); text-align: left; }
+    .br { right: 8%; bottom: 8%; transform: translate(0%, 0%); text-align: right; }
 
-    /* Fine print / muted */
-    .muted { opacity: .7; }
+    /* Right-side graphic group (matches your YAML proportions) */
+    .graphic {
+      position: absolute;
+      top: 50%;
+      right: 4.5%;
+      transform: translate(0, -50%);
+      width: 45%;
+      height: 45%;
+      min-width: 120px; /* keep it visible on small cards */
+      min-height: 120px;
+    }
+
+    /* Outer ring: white border + dewpoint gradient fill (your ring macro colors) */
+    .outer-ring {
+      position: absolute;
+      inset: 0;
+      border-radius: 50%;
+      border: 2.5px solid white;
+      background: var(--sac-dewpoint-ring, radial-gradient(circle, dimgray, 55%, rgba(100,100,100,0.15), rgba(100,100,100,0.15)));
+    }
+
+    /* Inner comfort circle: black base + humidity/temperature gradient per your macro */
+    .inner-circle {
+      position: absolute;
+      /* From your YAML: inner ~21% within a 45% ring -> centered circle sized ~21% of canvas. */
+      /* We’ll center it within the outer ring using 50% and translate. */
+      left: 50%;
+      top: 50%;
+      transform: translate(-50%, -50%);
+      width: 46.5%;
+      height: 46.5%;
+      border-radius: 50%;
+      background: var(--sac-inner-gradient, radial-gradient(circle, black 0%, black 60%));
+      border: 0;
+      box-shadow: inset 0 0 12px rgba(0,0,0,0.6);
+    }
+
+    /* Floating dot and its blink aura when outside limits */
+    .dot {
+      position: absolute;
+      width: 15%;
+      height: 15%;
+      border-radius: 50%;
+      background: white;
+      box-shadow: 0 0 6px rgba(0,0,0,0.45);
+      transform: translate(-50%, 50%); /* Match your macro’s translate */
+      transition: left 0.8s ease-in-out, bottom 0.8s ease-in-out;
+      z-index: 2;
+    }
+    .dot.outside::before {
+      content: "";
+      position: absolute;
+      inset: -20%;
+      border-radius: 50%;
+      background: radial-gradient(circle,
+        rgba(255,0,0,0.8) 20%,
+        rgba(255,0,0,0.3) 50%,
+        rgba(255,0,0,0.1) 70%,
+        rgba(255,0,0,0) 100%
+      );
+      animation: sac-blink 1s infinite alternate;
+      z-index: -1;
+    }
+    @keyframes sac-blink {
+      0% { opacity: 1; }
+      100% { opacity: 0.3; }
+    }
   `;
 
   setConfig(config) {
-    if (!config?.temperature || !config?.humidity) {
+    if (!config || !config.temperature || !config.humidity) {
       throw new Error('simple-air-comfort-card: "temperature" and "humidity" entities are required.');
     }
     this._config = {
-      name: config.name ?? 'Aircomfort',
+      name: config.name ?? 'Air Comfort',
       temperature: config.temperature,
       humidity: config.humidity,
-      windspeed: config.windspeed, // optional
+      windspeed: config.windspeed, // optional; used in AT only
       decimals: Number.isFinite(config.decimals) ? config.decimals : 1,
-      default_wind_speed:
-        Number.isFinite(config.default_wind_speed) ? config.default_wind_speed : 0.0,
-      temp_min: Number.isFinite(config.temp_min) ? config.temp_min : 10,  // for pupil vertical scaling
-      temp_max: Number.isFinite(config.temp_max) ? config.temp_max : 35,  // for pupil vertical scaling
+      default_wind_speed: Number.isFinite(config.default_wind_speed) ? config.default_wind_speed : 0.0,
+
+      // Limits & warnings (used for dot motion + blink + scaling)
+      temp_min: Number.isFinite(config.temp_min) ? config.temp_min : 15,
+      temp_max: Number.isFinite(config.temp_max) ? config.temp_max : 35,
+      temp_min_warning: Number.isFinite(config.temp_min_warning) ? config.temp_min_warning : 18,
+      temp_max_warning: Number.isFinite(config.temp_max_warning) ? config.temp_max_warning : 26.4,
+      humidity_min: Number.isFinite(config.humidity_min) ? config.humidity_min : 40,
+      humidity_max: Number.isFinite(config.humidity_max) ? config.humidity_max : 60,
     };
   }
 
-  /* ----------------------------- RENDER ---------------------------------- */
+  // ---- Rendering -----------------------------------------------------------
 
   render() {
     if (!this.hass || !this._config) return html``;
 
-    const tState = this.hass.states[this._config.temperature];
-    const hState = this.hass.states[this._config.humidity];
-    const wState = this._config.windspeed ? this.hass.states[this._config.windspeed] : undefined;
+    const t = this.hass.states[this._config.temperature];
+    const h = this.hass.states[this._config.humidity];
+    const w = this._config.windspeed ? this.hass.states[this._config.windspeed] : undefined;
 
-    if (!tState || !hState) {
+    if (!t || !h) {
       return html`<ha-card>
-        <div class="header"><div class="title">${this._config.name}</div></div>
-        <div class="muted">
-          Entity not found: ${!tState ? this._config.temperature : this._config.humidity}
-        </div>
+        <div class="canvas"></div>
+        <div style="padding: 8px; color: var(--primary-text-color)">Missing entity:
+          ${!t ? this._config.temperature : this._config.humidity}</div>
       </ha-card>`;
     }
 
-    /* Units and raw values */
-    const tUnitIn = (tState.attributes.unit_of_measurement || '°C').trim();
-    const tempC   = this.#toCelsius(parseFloat(tState.state), tUnitIn);
-    const rh      = this.#clampRH(parseFloat(hState.state));
-    const ws_mps  = this.#resolveWind(wState, this._config.default_wind_speed);
+    // Raw sensor values
+    const unitT = (t.attributes.unit_of_measurement || '°C').trim();
+    const T_C = this.#toC(parseFloat(t.state), unitT);
+    const RH = this.#clampRH(parseFloat(h.state));
 
-    /* Physics */
-    const es_hPa  = this.#buck_es_hPa(tempC);           // saturation vapour pressure
-    const e_hPa   = (rh / 100) * es_hPa;                // actual vapour pressure
-    const dewC    = this.#dewpoint_from_e_hPa(e_hPa);   // numeric inverse of Buck es()
-    const atC     = this.#apparent_T(tempC, e_hPa, ws_mps);
+    // Wind (m/s) resolution (hidden on face, used in AT)
+    const WS = this.#resolveWind(w, this._config.default_wind_speed);
 
-    /* Presentation units */
-    const outU    = tUnitIn; // follow sensor unit (°C or °F)
-    const valAT   = this.#fromCelsius(atC, outU);
-    const valT    = this.#fromCelsius(tempC, outU);
-    const valDew  = this.#fromCelsius(dewC, outU);
+    // Buck vapour pressure (hPa) and dew point (°C)
+    const es_hPa = this.#buckEs_hPa(T_C);
+    const e_hPa = (RH / 100) * es_hPa;
+    const dew_C = this.#dewFromE_hPa(e_hPa);
 
+    // Apparent Temperature (BoM)
+    const AT_C = this.#apparentTemperatureC(T_C, e_hPa, WS);
+
+    // Texts per your macros (EXACT thresholds)
+    const textDew = this.#dewpointTextFromMacro(dew_C);
+    const textTemp = this.#temperatureTextFromMacro(T_C);
+    const textHum = this.#humidityTextFromMacro(RH);
+
+    // Visual colors/gradients from your macros
+    const dewRing = this.#dewpointRingGradient(textDew);
+    const innerGrad = this.#innerCircleGradient(RH, T_C);
+
+    // Card background color from temperature comfort bands (approximate mapping)
+    const tempBg = this.#temperatureBackground(T_C);
+
+    // Floating dot position + blink (exact macro behavior)
+    const {
+      leftPct, bottomPct, outsideLimits,
+    } = this.#floatingDot(T_C, RH,
+      this._config.temp_min, this._config.temp_max,
+      this._config.temp_min_warning, this._config.temp_max_warning,
+      this._config.humidity_min, this._config.humidity_max
+    );
+
+    // Format numbers
     const d = this._config.decimals;
+    const dewOut = this.#fmt(this.#fromC(dew_C, unitT), d);
+    const atOut  = this.#fmt(this.#fromC(AT_C, unitT), d);
 
-    /* Pupil placement tuned to “macro-like” rules:
-     *  - X axis driven by RH (Dry ← 0 … 100 → Humid)
-     *  - Y axis driven by Temp scaled by temp_min/temp_max (Cold bottom … Warm top)
-     *  - Then clamped into a circle to stay inside ring
-     */
-    const pupil = this.#pupilPosition(tempC, rh, this._config.temp_min, this._config.temp_max);
-
-    /* Text “comfort” strings — simple bands (adjust to mirror your macros) */
-    const txtDew = this.#dewpointComfortText(dewC);
-    const txtT   = this.#temperatureComfortText(tempC, this._config.temp_min, this._config.temp_max);
-    const txtRH  = this.#humidityComfortText(rh);
+    // Inline CSS vars for gradients & bg
+    const styleVars = `
+      --sac-temp-bg: ${tempBg};
+      --sac-dewpoint-ring: ${dewRing};
+      --sac-inner-gradient: ${innerGrad};
+    `;
 
     return html`
       <ha-card>
-        <div class="header">
-          <div class="title">${this._config.name}</div>
-        </div>
+        <div class="canvas" style=${styleVars}>
 
-        <div class="wrap">
-          <!-- LEFT: Values -->
-          <div class="metrics">
-            <div class="primary">
-              ${this.#num(valAT, d)} <span class="unit">${outU}</span>
-            </div>
-            <div class="muted">Apparent temperature</div>
-
-            <div class="grid2">
-              <div class="label">Dew point</div>
-              <div class="val">${this.#num(valDew, d)} ${outU}</div>
-
-              <div class="label">Air temperature</div>
-              <div class="val">${this.#num(valT, d)} ${outU}</div>
-
-              <div class="label">Humidity</div>
-              <div class="val">${this.#num(rh, d)} %</div>
-            </div>
-
-            <!-- Text comfort lines (replacing external template sensors) -->
-            <div class="comfort">
-              <div class="line"><span class="k">Dew-point comfort</span><span class="v">${txtDew}</span></div>
-              <div class="line"><span class="k">Temperature comfort</span><span class="v">${txtT}</span></div>
-              <div class="line"><span class="k">Humidity comfort</span><span class="v">${txtRH}</span></div>
-            </div>
+          <!-- Title + subtitle (dewpoint comfort text) -->
+          <div class="header">
+            <div class="title">${this._config.name}</div>
+            <div class="subtitle">${textDew}</div>
           </div>
 
-          <!-- RIGHT: Dial -->
-          <div class="dialWrap">
-            <div class="dial">
-              <div class="ring">
-                <div class="inner"></div>
+          <!-- TL: Dew point -->
+          <div class="corner tl">
+            <span class="label">Dew point</span>
+            <span class="value">${dewOut} ${unitT}</span>
+          </div>
 
-                <!-- Pupil (hidden if NaN) -->
-                ${Number.isFinite(pupil.left) && Number.isFinite(pupil.top) ? html`
-                  <div class="pupil" style="left:${pupil.left}%; top:${pupil.top}%"></div>
-                ` : html``}
+          <!-- TR: Apparent temperature -->
+          <div class="corner tr">
+            <span class="label">Feels like</span>
+            <span class="value">${atOut} ${unitT}</span>
+          </div>
 
-                <!-- Markers -->
-                <div class="marker m-warm">Warm</div>
-                <div class="marker m-cold">Cold</div>
-                <div class="marker m-dry">Dry</div>
-                <div class="marker m-humid">Humid</div>
-              </div>
+          <!-- BL: Temperature comfort text -->
+          <div class="corner bl">
+            <span class="label">Temperature</span>
+            <span class="value">${textTemp}</span>
+          </div>
+
+          <!-- BR: Humidity comfort text -->
+          <div class="corner br">
+            <span class="label">Humidity</span>
+            <span class="value">${textHum}</span>
+          </div>
+
+          <!-- Right graphic: outer dewpoint ring + inner comfort circle + floating dot -->
+          <div class="graphic">
+            <div class="outer-ring"></div>
+            <div class="inner-circle"></div>
+
+            <!-- Floating dot -->
+            <div
+              class="dot ${outsideLimits ? 'outside' : ''}"
+              style="left:${leftPct}%; bottom:${bottomPct}%;">
             </div>
           </div>
         </div>
@@ -285,26 +313,24 @@ class SimpleAirComfortCard extends LitElement {
 
   getCardSize() { return 3; }
 
-  /* ----------------------------- PHYSICS ---------------------------------- */
+  // ---- Physics -------------------------------------------------------------
 
-  #apparent_T(Tc, e_hPa, ws_mps) {
+  #apparentTemperatureC(Tc, e_hPa, ws_mps) {
     return Tc + 0.33 * e_hPa - 0.70 * ws_mps - 4.0;
   }
 
-  #buck_es_hPa(Tc) {
+  #buckEs_hPa(Tc) {
     if (!Number.isFinite(Tc)) return NaN;
-    if (Tc >= 0) {
-      return 6.1121 * Math.exp((18.678 - Tc / 234.5) * (Tc / (257.14 + Tc)));
-    }
+    if (Tc >= 0) return 6.1121 * Math.exp((18.678 - Tc / 234.5) * (Tc / (257.14 + Tc)));
     return 6.1115 * Math.exp((23.036 - Tc / 333.7) * (Tc / (279.82 + Tc)));
   }
 
-  #dewpoint_from_e_hPa(e_hPa) {
+  #dewFromE_hPa(e_hPa) {
     if (!Number.isFinite(e_hPa) || e_hPa <= 0) return NaN;
     let lo = -80, hi = 60, mid = 0;
     for (let i = 0; i < 60; i++) {
       mid = (lo + hi) / 2;
-      const es = this.#buck_es_hPa(mid);
+      const es = this.#buckEs_hPa(mid);
       if (!Number.isFinite(es)) break;
       if (es > e_hPa) hi = mid; else lo = mid;
       if (Math.abs(hi - lo) < 1e-4) break;
@@ -312,154 +338,219 @@ class SimpleAirComfortCard extends LitElement {
     return mid;
   }
 
-  /* ---------------------------- TEXT LINES -------------------------------- */
+  // ---- Macro-matching texts ------------------------------------------------
 
-  #dewpointComfortText(dewC) {
-    if (!Number.isFinite(dewC)) return '—';
-    // Typical indoor-feel bands
-    if (dewC < 8)   return 'Very dry';
-    if (dewC < 12)  return 'Dry';
-    if (dewC < 16)  return 'Comfy';
-    if (dewC < 20)  return 'Mildly humid';
-    if (dewC < 24)  return 'Humid';
-    return 'Very humid';
+  #dewpointTextFromMacro(dpC) {
+    if (!Number.isFinite(dpC)) return 'Unknown';
+    if (dpC < 5) return 'Very Dry';
+    if (dpC <= 10) return 'Dry';
+    if (dpC <= 12.79) return 'Pleasant';
+    if (dpC <= 15.49) return 'Comfortable';
+    if (dpC <= 18.39) return 'Sticky Humid';
+    if (dpC <= 21.19) return 'Muggy';
+    if (dpC <= 23.9) return 'Sweltering';
+    return 'Stifling';
   }
 
-  #temperatureComfortText(Tc, tmin, tmax) {
-    if (!Number.isFinite(Tc)) return '—';
-    const midLo = tmin + 0.35*(tmax - tmin);
-    const midHi = tmin + 0.65*(tmax - tmin);
-    if (Tc < tmin)  return 'Cold';
-    if (Tc < midLo) return 'Cool';
-    if (Tc < midHi) return 'Comfy';
-    if (Tc < tmax)  return 'Warm';
-    return 'Hot';
+  #temperatureTextFromMacro(Tc) {
+    if (!Number.isFinite(Tc)) return 'N/A';
+    if (Tc < 3) return 'FROSTY';
+    if (Tc <= 4.99) return 'COLD';
+    if (Tc <= 8.99) return 'CHILLY';
+    if (Tc <= 13.99) return 'COOL';
+    if (Tc <= 18.99) return 'MILD';
+    if (Tc <= 23.99) return 'PERFECT';
+    if (Tc <= 27.99) return 'WARM';
+    if (Tc <= 34.99) return 'HOT';
+    return 'BOILING';
   }
 
-  #humidityComfortText(rh) {
-    if (!Number.isFinite(rh)) return '—';
-    if (rh < 30) return 'Dry';
-    if (rh <= 60) return 'Comfy';
-    if (rh <= 70) return 'Mildly humid';
-    return 'Humid';
+  #humidityTextFromMacro(RH) {
+    if (!Number.isFinite(RH)) return 'N/A';
+    if (RH < 40) return 'DRY';
+    if (RH <= 60) return 'COMFY';
+    return 'HUMID';
   }
 
-  /* ----------------------------- PUPIL ------------------------------------ */
+  // ---- Visual mappings (match your macros) ---------------------------------
 
-  /**
-   * Map T and RH to a position inside the dial circle.
-   * - X from RH (0..100 → 0..100%)
-   * - Y from T scaled by [temp_min..temp_max] (bottom cold .. top warm)
-   * - Clamp to circle (so the dot never escapes the ring)
-   * - Add a tiny easing toward the centre (reads nicer)
-   */
-  #pupilPosition(Tc, rh, tmin, tmax) {
-    if (!Number.isFinite(Tc) || !Number.isFinite(rh)) return { left: NaN, top: NaN };
+  #dewpointRingGradient(text) {
+    // Your ring macro colors:
+    // Very Dry -> deepskyblue
+    // Dry -> mediumaquamarine
+    // Pleasant -> limegreen
+    // Comfortable -> yellowgreen
+    // Sticky Humid -> yellow
+    // Muggy -> gold
+    // Sweltering -> orange
+    // Stifling -> crimson
+    // Unknown/Unavailable -> dimgray
+    const color =
+      text === 'Very Dry' ? 'deepskyblue' :
+      text === 'Dry' ? 'mediumaquamarine' :
+      text === 'Pleasant' ? 'limegreen' :
+      text === 'Comfortable' ? 'yellowgreen' :
+      text === 'Sticky Humid' ? 'yellow' :
+      text === 'Muggy' ? 'gold' :
+      text === 'Sweltering' ? 'orange' :
+      text === 'Stifling' ? 'crimson' :
+      'dimgray';
+    // Recreate your gradient structure
+    return `radial-gradient(circle, ${color}, 55%, rgba(100,100,100,0.15), rgba(100,100,100,0.15))`;
+  }
 
-    const nx = this.#clamp01(rh / 100);                          // 0..1 left->right (dry->humid)
-    const ny = this.#clamp01((Tc - tmin) / Math.max(1, (tmax - tmin))); // 0..1 cold->warm
-    // Map into dial local coords (0..100%)
-    let x = 10 + 80 * nx;          // leave 10% padding around
-    let y = 90 - 80 * ny;          // invert so warm is top
-    // Clamp to circle: move (x,y) toward centre if outside radius
-    const cx = 50, cy = 50;
-    const dx = x - cx, dy = y - cy;
-    const r  = Math.sqrt(dx*dx + dy*dy);
-    const R  = 43; // approx radius in % (ring is 86% box)
-    if (r > R) {
-      x = cx + (dx / r) * R;
-      y = cy + (dy / r) * R;
+  #innerCircleGradient(RH, Tc) {
+    // Humidity color per macro:
+    // unknown/unavailable -> dimgray
+    // <40 or >60 -> hotpink
+    // 40..60 -> black
+    let humColor = 'dimgray';
+    if (Number.isFinite(RH)) {
+      if (RH > 60 || RH < 40) humColor = 'hotpink';
+      else humColor = 'black';
     }
-    // Ease slightly toward centre
-    x = cx + (x - cx) * 0.92;
-    y = cy + (y - cy) * 0.92;
-    return { left: this.#round(x, 2), top: this.#round(y, 2) };
+
+    // Temperature color per macro (many ranges -> blue/orange families or dimgray mid)
+    let tColor = 'dimgray';
+    if (Number.isFinite(Tc)) {
+      if (Tc > 26.5) tColor = 'rgba(255, 69, 0, 0.8)';                 // hot/orange
+      else if (Tc > 24.0 && Tc <= 26.5) tColor = 'dimgray';             // neutral
+      else if (Tc > 19.0 && Tc <= 24.0) tColor = 'dimgray';             // neutral
+      else /* <=19.0 */ tColor = 'rgba(0, 102, 255, 0.8)';              // cool/blue (covers <=19 inc <3)
+    }
+
+    return `radial-gradient(circle, ${humColor} 0%, black, ${tColor} 70%)`;
   }
 
-  /* ----------------------------- HELPERS ---------------------------------- */
+  #temperatureBackground(Tc) {
+    // Simple band -> color mapping to mimic your "temperature colour" backdrop
+    if (!Number.isFinite(Tc)) return '#333';
+    if (Tc < 3) return 'linear-gradient(135deg,#001a4d,#003d99)';        // FROSTY deep blues
+    if (Tc <= 4.99) return 'linear-gradient(135deg,#0a2a6b,#0f49a5)';
+    if (Tc <= 8.99) return 'linear-gradient(135deg,#0e4ba0,#1380d3)';    // CHILLY/Cooler blues
+    if (Tc <= 13.99) return 'linear-gradient(135deg,#1063b7,#16a0e0)';
+    if (Tc <= 18.99) return 'linear-gradient(135deg,#0f8a7a,#1fc0a5)';   // MILD teal/green
+    if (Tc <= 23.99) return 'linear-gradient(135deg,#2aa84a,#85c638)';   // PERFECT greens
+    if (Tc <= 27.99) return 'linear-gradient(135deg,#f0b323,#f76b1c)';   // WARM orange
+    if (Tc <= 34.99) return 'linear-gradient(135deg,#ef4823,#e9290f)';   // HOT red-orange
+    return 'linear-gradient(135deg,#7a0000,#b00000)';                    // BOILING deep red
+  }
 
-  #clamp01(v) { return Math.min(1, Math.max(0, v)); }
+  // ---- Floating dot logic (exact macro) -----------------------------------
 
+  #floatingDot(Tc, RH, tMin, tMax, tWarnMin, tWarnMax, hMin, hMax) {
+    // Defaults when unknown/unavailable
+    const tIsFinite = Number.isFinite(Tc);
+    const hIsFinite = Number.isFinite(RH);
+    const tVal = tIsFinite ? Tc : 22;
+    const hVal = hIsFinite ? RH : 50;
+
+    // Scale temperature -> 0..100% (bottom..top)
+    const clampedT = Math.min(Math.max(tVal, tMin), tMax);
+    const bottomPct = ((clampedT - tMin) * (100 - 0)) / (tMax - tMin); // 0..100
+
+    // X position is humidity % (+0.5% offset like your macro)
+    const leftPct = Math.min(Math.max(hVal, 0), 100) + 0.5;
+
+    // Outside limits check
+    const outsideLimits =
+      (hVal < hMin) || (hVal > hMax) ||
+      (tVal < tWarnMin) || (tVal > tWarnMax) ||
+      (!hIsFinite && !tIsFinite) || // both unknown -> defaults in macro, considered outside
+      (!hIsFinite && tIsFinite && tVal === 22) ||
+      (hIsFinite && !tIsFinite && hVal === 50);
+
+    return {
+      leftPct: this.#round(leftPct, 1),
+      bottomPct: this.#round(bottomPct, 1),
+      outsideLimits,
+    };
+  }
+
+  // ---- Helpers -------------------------------------------------------------
+
+  #toC(v, unit) {
+    if (!Number.isFinite(v)) return NaN;
+    const u = (unit || '').toLowerCase();
+    if (u.includes('f')) return (v - 32) * (5 / 9);
+    return v;
+  }
+  #fromC(vC, unitOut) {
+    if (!Number.isFinite(vC)) return NaN;
+    const u = (unitOut || '').toLowerCase();
+    if (u.includes('f')) return (vC * 9/5) + 32;
+    return vC;
+  }
   #clampRH(rh) {
     if (!Number.isFinite(rh)) return NaN;
     return Math.min(100, Math.max(0, rh));
   }
-
-  #toCelsius(v, unit) {
-    if (!Number.isFinite(v)) return NaN;
-    const u = (unit || '').toLowerCase();
-    if (u.includes('f')) return (v - 32) * (5/9);
-    return v;
-  }
-
-  #fromCelsius(vC, unitOut) {
-    if (!Number.isFinite(vC)) return NaN;
-    const u = (unitOut || '').toLowerCase();
-    if (u.includes('f')) return vC * 9/5 + 32;
-    return vC;
-  }
-
-  #resolveWind(wsState, fallback_mps) {
-    if (!wsState) return Number.isFinite(fallback_mps) ? fallback_mps : 0;
+  #resolveWind(wsState, default_mps) {
+    if (!wsState) return default_mps ?? 0.0;
     const raw = parseFloat(wsState.state);
-    if (!Number.isFinite(raw)) return Number.isFinite(fallback_mps) ? fallback_mps : 0;
+    if (!Number.isFinite(raw)) return default_mps ?? 0.0;
     const unit = (wsState.attributes.unit_of_measurement || 'm/s').toLowerCase();
     if (unit.includes('m/s')) return raw;
     if (unit.includes('km/h') || unit.includes('kph')) return raw / 3.6;
     if (unit.includes('mph')) return raw * 0.44704;
-    if (unit.includes('kn'))  return raw * 0.514444;
+    if (unit.includes('kn')) return raw * 0.514444;
     return raw;
   }
-
   #round(v, d = 1) {
     if (!Number.isFinite(v)) return NaN;
     const p = Math.pow(10, d);
     return Math.round(v * p) / p;
   }
-
-  #num(v, d = 1) {
+  #fmt(v, d = 1) {
     if (!Number.isFinite(v)) return '—';
     return this.#round(v, d).toLocaleString(undefined, {
-      minimumFractionDigits: d, maximumFractionDigits: d,
+      minimumFractionDigits: d,
+      maximumFractionDigits: d,
     });
   }
 
-  /* --------------------------- LOVELACE API ------------------------------- */
+  // ---- Lovelace plumbing ---------------------------------------------------
 
   set hass(hass) { this._hass = hass; this.requestUpdate(); }
   get hass() { return this._hass; }
 
-  static getConfigElement() { return document.createElement('simple-air-comfort-card-editor'); }
+  static getConfigElement() {
+    return document.createElement('simple-air-comfort-card-editor');
+  }
 
   static getStubConfig() {
     return {
-      name: 'Aircomfort',
+      name: 'Air Comfort',
       temperature: 'sensor.temperature',
       humidity: 'sensor.humidity',
       // windspeed: 'sensor.wind_speed',
       decimals: 1,
       default_wind_speed: 0,
-      temp_min: 10,
+      temp_min: 15,
       temp_max: 35,
+      temp_min_warning: 18,
+      temp_max_warning: 26.4,
+      humidity_min: 40,
+      humidity_max: 60,
     };
   }
 }
 
-/* Register the card */
+// Register the card element
 customElements.define('simple-air-comfort-card', SimpleAirComfortCard);
 
-/* Card picker metadata */
+// Lovelace card picker metadata
 window.customCards = window.customCards || [];
 window.customCards.push({
   type: 'simple-air-comfort-card',
   name: 'Simple Air Comfort Card',
   description:
-    'BoM apparent temperature + Arden Buck dewpoint; dial with moving pupil; wind only in editor.',
+    'Australian BoM apparent temperature + dew point (Buck). Outer dewpoint ring, inner comfort circle, and moving dot.',
   preview: true,
 });
 
 /* ------------------------------------------------------------------------ */
-/*                                GUI EDITOR                                */
+/*                             GUI EDITOR                                   */
 /* ------------------------------------------------------------------------ */
 
 class SimpleAirComfortCardEditor extends LitElement {
@@ -469,33 +560,50 @@ class SimpleAirComfortCardEditor extends LitElement {
   };
 
   static styles = css`
-    .form { display: grid; gap: 12px; padding: 8px 12px 16px; }
-    .row { display: grid; grid-template-columns: 210px 1fr; gap: 12px; align-items: center; }
-    .hint { opacity: .7; font-size: .9em; }
+    .form {
+      display: grid;
+      gap: 12px;
+      padding: 8px 12px 16px;
+    }
+    .row {
+      display: grid;
+      grid-template-columns: 230px 1fr;
+      gap: 12px;
+      align-items: center;
+    }
+    .hint { opacity: 0.72; font-size: 0.9em; }
+    ha-textfield { width: 100%; }
   `;
 
   setConfig(config) {
     this._config = {
-      name: config.name ?? 'Aircomfort',
+      name: config.name ?? 'Air Comfort',
       temperature: config.temperature,
       humidity: config.humidity,
       windspeed: config.windspeed,
       decimals: Number.isFinite(config.decimals) ? config.decimals : 1,
-      default_wind_speed:
-        Number.isFinite(config.default_wind_speed) ? config.default_wind_speed : 0.0,
-      temp_min: Number.isFinite(config.temp_min) ? config.temp_min : 10,
+      default_wind_speed: Number.isFinite(config.default_wind_speed) ? config.default_wind_speed : 0.0,
+      temp_min: Number.isFinite(config.temp_min) ? config.temp_min : 15,
       temp_max: Number.isFinite(config.temp_max) ? config.temp_max : 35,
+      temp_min_warning: Number.isFinite(config.temp_min_warning) ? config.temp_min_warning : 18,
+      temp_max_warning: Number.isFinite(config.temp_max_warning) ? config.temp_max_warning : 26.4,
+      humidity_min: Number.isFinite(config.humidity_min) ? config.humidity_min : 40,
+      humidity_max: Number.isFinite(config.humidity_max) ? config.humidity_max : 60,
     };
   }
 
-  get _name()       { return this._config?.name ?? ''; }
-  get _temperature(){ return this._config?.temperature ?? ''; }
-  get _humidity()   { return this._config?.humidity ?? ''; }
-  get _windspeed()  { return this._config?.windspeed ?? ''; }
-  get _decimals()   { return Number.isFinite(this._config?.decimals) ? this._config.decimals : 1; }
-  get _defWind()    { return Number.isFinite(this._config?.default_wind_speed) ? this._config.default_wind_speed : 0.0; }
-  get _tmin()       { return Number.isFinite(this._config?.temp_min) ? this._config.temp_min : 10; }
-  get _tmax()       { return Number.isFinite(this._config?.temp_max) ? this._config.temp_max : 35; }
+  get _name() { return this._config?.name ?? ''; }
+  get _temperature() { return this._config?.temperature ?? ''; }
+  get _humidity() { return this._config?.humidity ?? ''; }
+  get _windspeed() { return this._config?.windspeed ?? ''; }
+  get _decimals() { return Number.isFinite(this._config?.decimals) ? this._config.decimals : 1; }
+  get _defaultWind() { return Number.isFinite(this._config?.default_wind_speed) ? this._config.default_wind_speed : 0.0; }
+  get _tmin() { return Number.isFinite(this._config?.temp_min) ? this._config.temp_min : 15; }
+  get _tmax() { return Number.isFinite(this._config?.temp_max) ? this._config.temp_max : 35; }
+  get _twmin() { return Number.isFinite(this._config?.temp_min_warning) ? this._config.temp_min_warning : 18; }
+  get _twmax() { return Number.isFinite(this._config?.temp_max_warning) ? this._config.temp_max_warning : 26.4; }
+  get _hmin() { return Number.isFinite(this._config?.humidity_min) ? this._config.humidity_min : 40; }
+  get _hmax() { return Number.isFinite(this._config?.humidity_max) ? this._config.humidity_max : 60; }
 
   render() {
     if (!this.hass) return html``;
@@ -503,10 +611,12 @@ class SimpleAirComfortCardEditor extends LitElement {
     return html`
       <div class="form">
         <div class="row">
-          <div><label>Name (shown at top)</label></div>
-          <ha-textfield .value=${this._name}
-                        @input=${e => this.#update('name', e.target.value)}
-                        placeholder="Aircomfort"></ha-textfield>
+          <div><label>Name</label></div>
+          <ha-textfield
+            .value=${this._name}
+            @input=${(e) => this._set('name', e.target.value)}
+            placeholder="Air Comfort"
+          ></ha-textfield>
         </div>
 
         <div class="row">
@@ -515,9 +625,9 @@ class SimpleAirComfortCardEditor extends LitElement {
             .hass=${this.hass}
             .value=${this._temperature}
             .includeDomains=${['sensor']}
+            @value-changed=${(e) => this._set('temperature', e.detail.value)}
             allow-custom-entity
-            @value-changed=${e => this.#update('temperature', e.detail.value)}>
-          </ha-entity-picker>
+          ></ha-entity-picker>
         </div>
 
         <div class="row">
@@ -526,77 +636,107 @@ class SimpleAirComfortCardEditor extends LitElement {
             .hass=${this.hass}
             .value=${this._humidity}
             .includeDomains=${['sensor']}
+            @value-changed=${(e) => this._set('humidity', e.detail.value)}
             allow-custom-entity
-            @value-changed=${e => this.#update('humidity', e.detail.value)}>
-          </ha-entity-picker>
+          ></ha-entity-picker>
         </div>
 
         <div class="row">
           <div>
             <label>Wind speed entity</label>
-            <div class="hint">Optional. Used in AT calc only.</div>
+            <div class="hint">Optional. Used only in Apparent Temperature.</div>
           </div>
           <ha-entity-picker
             .hass=${this.hass}
             .value=${this._windspeed}
             .includeDomains=${['sensor']}
+            @value-changed=${(e) => this._set('windspeed', e.detail.value)}
             allow-custom-entity
-            @value-changed=${e => this.#update('windspeed', e.detail.value)}>
-          </ha-entity-picker>
+            no-clear-text
+          ></ha-entity-picker>
         </div>
 
         <div class="row">
           <div><label>Default wind speed (m/s)</label>
-            <div class="hint">If no wind speed entity is set, this value is used.</div>
+            <div class="hint">Used if no wind entity is set.</div>
           </div>
-          <ha-textfield type="number" inputmode="decimal" step="0.1"
-                        .value=${String(this._defWind)}
-                        @input=${e => this.#updateNumber('default_wind_speed', e.target.value, 0)}>
-          </ha-textfield>
-        </div>
-
-        <div class="row">
-          <div><label>Temp scale min (°C)</label>
-            <div class="hint">Pupil vertical scaling lower bound.</div>
-          </div>
-          <ha-textfield type="number" step="0.5"
-                        .value=${String(this._tmin)}
-                        @input=${e => this.#updateNumber('temp_min', e.target.value, 10)}>
-          </ha-textfield>
-        </div>
-
-        <div class="row">
-          <div><label>Temp scale max (°C)</label>
-            <div class="hint">Pupil vertical scaling upper bound.</div>
-          </div>
-          <ha-textfield type="number" step="0.5"
-                        .value=${String(this._tmax)}
-                        @input=${e => this.#updateNumber('temp_max', e.target.value, 35)}>
-          </ha-textfield>
+          <ha-textfield
+            type="number" inputmode="decimal" step="0.1"
+            .value=${String(this._defaultWind)}
+            @input=${(e) => this._setNum('default_wind_speed', e.target.value, 0)}
+          ></ha-textfield>
         </div>
 
         <div class="row">
           <div><label>Decimals</label></div>
-          <ha-textfield type="number" step="1" min="0"
-                        .value=${String(this._decimals)}
-                        @input=${e => this.#updateNumber('decimals', e.target.value, 1)}>
-          </ha-textfield>
+          <ha-textfield
+            type="number" step="1" min="0"
+            .value=${String(this._decimals)}
+            @input=${(e) => this._setNum('decimals', e.target.value, 1)}
+          ></ha-textfield>
+        </div>
+
+        <div class="row">
+          <div><label>Temp scale min / max (°C)</label>
+            <div class="hint">Dot vertical mapping (bottom..top).</div>
+          </div>
+          <ha-textfield
+            type="number" step="0.1"
+            .value=${String(this._tmin)}
+            @input=${(e) => this._setNum('temp_min', e.target.value, 15)}
+          ></ha-textfield>
+          <ha-textfield
+            type="number" step="0.1"
+            .value=${String(this._tmax)}
+            @input=${(e) => this._setNum('temp_max', e.target.value, 35)}
+          ></ha-textfield>
+        </div>
+
+        <div class="row">
+          <div><label>Temp warning min / max (°C)</label>
+            <div class="hint">Blink when outside.</div>
+          </div>
+          <ha-textfield
+            type="number" step="0.1"
+            .value=${String(this._twmin)}
+            @input=${(e) => this._setNum('temp_min_warning', e.target.value, 18)}
+          ></ha-textfield>
+          <ha-textfield
+            type="number" step="0.1"
+            .value=${String(this._twmax)}
+            @input=${(e) => this._setNum('temp_max_warning', e.target.value, 26.4)}
+          ></ha-textfield>
+        </div>
+
+        <div class="row">
+          <div><label>Humidity range min / max (%)</label>
+            <div class="hint">Blink when outside.</div>
+          </div>
+          <ha-textfield
+            type="number" step="1"
+            .value=${String(this._hmin)}
+            @input=${(e) => this._setNum('humidity_min', e.target.value, 40)}
+          ></ha-textfield>
+          <ha-textfield
+            type="number" step="1"
+            .value=${String(this._hmax)}
+            @input=${(e) => this._setNum('humidity_max', e.target.value, 60)}
+          ></ha-textfield>
         </div>
       </div>
     `;
   }
 
-  #update(key, value) {
+  _set(k, v) {
     const cfg = { ...(this._config ?? {}) };
-    if (value === '' || value === undefined || value === null) delete cfg[key];
-    else cfg[key] = value;
+    if (v === '' || v === undefined || v === null) delete cfg[k];
+    else cfg[k] = v;
     this._config = cfg;
     fireEvent(this, 'config-changed', { config: cfg });
   }
-  #updateNumber(key, raw, fallback = 0) {
+  _setNum(k, raw, fallback) {
     const num = raw === '' ? undefined : Number(raw);
-    const val = Number.isFinite(num) ? num : fallback;
-    this.#update(key, val);
+    this._set(k, Number.isFinite(num) ? num : fallback);
   }
 }
 
