@@ -346,6 +346,7 @@ class SimpleAirComfortCardEditor extends LitElement {
 
         <div class="row">
           <div><label>Default wind speed (m/s)</label></div>
+          <div class="hint">If no wind speed entity is set, use this default.</div>
           <ha-textfield
             type="number"
             inputmode="decimal"
@@ -353,7 +354,6 @@ class SimpleAirComfortCardEditor extends LitElement {
             .value=${String(this._defaultWind)}
             @input=${(e) => this._updateNumber('default_wind_speed', e.target.value)}
           ></ha-textfield>
-          <div class="hint">If no wind speed entity is set, use this default.</div>
         </div>
 
         <div class="row">
