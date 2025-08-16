@@ -1,7 +1,9 @@
 #!/usr/bin/env node
-// github-release-helper.js (ESM)
 import { readFileSync, writeFileSync } from 'node:fs';
 import { execSync } from 'node:child_process';
+
+const sh = (cmd, opts = {}) => execSync(cmd, { stdio: 'inherit', ...opts });
+const out = (cmd) => execSync(cmd, { encoding: 'utf8' }).trim();
 
 const version = process.argv[2];
 if (!version) {
@@ -9,39 +11,61 @@ if (!version) {
   process.exit(1);
 }
 
-const run = (cmd) => execSync(cmd, { stdio: 'inherit' });
+function tagExists(tag) {
+  try { sh(`git rev-parse -q --verify refs/tags/${tag}`); return true; }
+  catch { return false; }
+}
+function releaseExists(tag) {
+  try { out(`gh release view ${tag} --json name -q .name`); return true; }
+  catch { return false; }
+}
 
-console.log(`📦 Updating package.json -> ${version}`);
-const pkg = JSON.parse(readFileSync('package.json', 'utf8'));
-pkg.version = version;
-writeFileSync('package.json', JSON.stringify(pkg, null, 2) + '\n');
+try {
+  console.log(`📦 Updating package.json -> ${version}`);
+  const pkg = JSON.parse(readFileSync('package.json', 'utf-8'));
+  pkg.version = version;
+  writeFileSync('package.json', JSON.stringify(pkg, null, 2) + '\n');
 
-console.log('🧹 Ensuring deps are installed (npm ci) …');
-run('npm ci');
+  console.log('🧹 Ensuring deps are installed (npm ci) …');
+  sh('npm ci');
 
-console.log('🔨 Building …');
-run('npm run build');
+  console.log('🔨 Building …');
+  sh('npm run build');
 
-// (optional) checksum file for integrity
-console.log('🧮 Writing checksums …');
-run('sha256sum dist/simple-air-comfort-card.js dist/simple-air-comfort-card.js.gz dist/sac_background_overlay.svg > dist/checksums.txt');
+  console.log('🧮 Writing checksums …');
+  sh('sha256sum dist/simple-air-comfort-card.js dist/simple-air-comfort-card.js.gz dist/sac_background_overlay.svg > dist/checksums.txt');
 
-console.log(`📁 Committing and tagging v${version} …`);
-run('git add package.json dist/checksums.txt');
-run(`git commit -m "chore(release): v${version}"`);
-run(`git tag v${version}`);
+  console.log(`📁 Committing${tagExists(`v${version}`) ? '' : ' and tagging'} v${version} …`);
+  sh('git add package.json dist && git commit -m "chore(release): v' + version + '" || true');
 
-console.log('🚀 Pushing branch and tag …');
-run('git push origin main');
-run(`git push origin v${version}`);
+  if (!tagExists(`v${version}`)) {
+    sh(`git tag v${version}`);
+    sh(`git push origin main`);
+    sh(`git push origin v${version}`);
+  } else {
+    // Ensure branch push still happens
+    sh(`git push origin main`);
+  }
 
-console.log('🏷  Creating GitHub release …');
-// ⬇️ auto-attach built files
-run(`gh release create v${version} \
-  dist/simple-air-comfort-card.js \
-  dist/simple-air-comfort-card.js.gz \
-  dist/sac_background_overlay.svg \
-  dist/checksums.txt \
-  --title "v${version}" --notes "Auto release for v${version}" --latest`);
+  if (!releaseExists(`v${version}`)) {
+    console.log('🏷  Creating GitHub release …');
+    sh(`gh release create v${version} \
+      dist/simple-air-comfort-card.js \
+      dist/simple-air-comfort-card.js.gz \
+      dist/sac_background_overlay.svg \
+      --title "v${version}" --notes "Release v${version}"`);
+  } else {
+    console.log('📤 Release exists; uploading assets (clobber) …');
+    sh(`gh release upload v${version} \
+      dist/simple-air-comfort-card.js \
+      dist/simple-air-comfort-card.js.gz \
+      dist/sac_background_overlay.svg \
+      dist/checksums.txt \
+      --clobber`);
+  }
 
-console.log(`✅ Release v${version} created successfully.`);
+  console.log(`✅ Done.`);
+} catch (e) {
+  console.error('❌ Release failed:', e.message);
+  process.exit(1);
+}
