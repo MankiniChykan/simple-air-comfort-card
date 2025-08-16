@@ -4,14 +4,15 @@
   "type": "module",
   "description": "Dynamic Lovelace card for visualizing indoor comfort using temperature, humidity, and dew point.",
   "main": "dist/simple-air-comfort-card.js",
+  "module": "dist/simple-air-comfort-card.js",
+  "files": ["dist/"],
   "scripts": {
-    "build": "rollup -c",
     "clean": "rimraf dist",
-    "postbuild": "gzip -kf dist/simple-air-comfort-card.js",
-    "release": "node github-release-helper.js",
+    "build": "rollup -c",
     "watch": "rollup -c -w",
-    "serve": "npx http-server . -c-1 -p 5173",
-    "dev": "npm-run-all --parallel watch serve"
+    "serve": "http-server . -c-1 -p 5173",
+    "dev": "npm-run-all --parallel watch serve",
+    "release": "node github-release-helper.js"
   },
   "author": "Hunter",
   "license": "MIT",
@@ -21,7 +22,11 @@
     "@rollup/plugin-replace": "^5.0.7",
     "@rollup/plugin-terser": "^0.4.4",
     "eslint": "^9.33.0",
+    "http-server": "^14.1.1",
+    "npm-run-all": "^4.1.5",
+    "rimraf": "^5.0.7",
     "rollup": "^3.29.5",
+    "rollup-plugin-copy": "^3.5.0",
     "rollup-plugin-gzip": "^4.1.1",
     "typescript": "^5.9.2"
   },
@@ -29,3 +34,4 @@
     "lit": "^3.3.1"
   }
 }
+
