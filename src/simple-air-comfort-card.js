@@ -51,177 +51,147 @@ class SimpleAirComfortCard extends LitElement {
 
   static styles = css`
     ha-card {
-      padding: 0;
+      position: relative;
+      padding: 12px 12px 14px;
       overflow: hidden;
-      position: relative;
     }
 
-    /* Content frame with rounded corners so the background gradient looks like your macro card */
-    .frame {
-      margin: 16px;
-      border-radius: 18px;
-      padding: 20px;
-      min-height: 360px;
-      position: relative;
-    }
-
-    .title {
-      text-align: center;
-      font-weight: 700;
-      font-size: 1.2rem;
-      color: rgba(255,255,255,0.92);
-      text-shadow: 0 1px 2px rgba(0,0,0,0.4);
-    }
-
-    .subtitle {
-      margin-top: 4px;
-      text-align: center;
-      font-weight: 600;
-      color: rgba(255,255,255,0.70);
-    }
-
-    /* grid: 2 columns, with a second row where the dial spans both columns */
-    .grid {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      grid-template-rows: auto auto;     /* <— add this */
-      gap: 12px 16px;
-      align-items: start;
-      margin-top: 16px;
-    }
-
-    /* Numbers & labels at TL/TR/BL/BR */
-    .corner {
-      display: grid;
-      gap: 6px;
-      align-content: start;
-      color: rgba(255,255,255,0.9);
-      text-shadow: 0 1px 2px rgba(0,0,0,0.35);
-    }
-    .label {
-      font-weight: 600;
-      color: rgba(255,255,255,0.85);
-    }
-    .value {
-      font-weight: 800;
-      font-size: 1.1rem;
-    }
-
-    /* center the dial and make it occupy the second row across both columns */
-    .dial-wrap {
+    /* Square canvas so % math matches your YAML placements */
+    .canvas {
       position: relative;
       width: 100%;
-      grid-column: 1 / 3;                /* <— span both columns */
-      grid-row: 2;                       /* <— second row */
-      display: flex;                     /* <— center */
-      justify-content: center;
-      align-items: center;
-    }
-
-    .dial {
-      position: relative;
-      width: min(56vmin, 420px);         /* a bit bigger and truly centered */
-      max-width: 92%;
       aspect-ratio: 1 / 1;
+      /* Background = temperature macro */
+      background: var(--sac-temp-bg, #2a2a2a);
+      border-radius: 8px;
     }
 
-    /* Outer ring: white rim; the glow tint is set inline via style= (dewpoint mapping) */
-    .ring {
+    /* Title + subtitle (room name + dewpoint text) */
+    .header {
+      position: absolute;
+      top: 6%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: 100%;
+      text-align: center;
+      pointer-events: none;
+    }
+    .title {
+      font-weight: 700;
+      font-size: 1.05rem;
+      color: white;
+      text-shadow: 0 1px 2px rgba(0,0,0,0.35);
+      line-height: 1.15;
+    }
+    .subtitle {
+      font-weight: 600;
+      font-size: 0.9rem;
+      color: silver;
+      margin-top: 0.15rem;
+    }
+
+    /* Four corners (TL/TR/BL/BR) */
+    .corner {
+      position: absolute;
+      color: white;
+      text-shadow: 0 1px 2px rgba(0,0,0,0.35);
+      font-weight: 700;
+      letter-spacing: 0.2px;
+    }
+    .corner .label {
+      font-size: 0.75rem;
+      opacity: 0.85;
+      display: block;
+      font-weight: 600;
+    }
+    .corner .value {
+      font-size: 1.05rem;
+    }
+    .tl { left: 8%;  top: 18%; transform: translate(0, -50%);  text-align: left;  }
+    .tr { right: 8%; top: 18%; transform: translate(0, -50%);  text-align: right; }
+    .bl { left: 8%;  bottom: 8%;  transform: translate(0,  0%);  text-align: left;  }
+    .br { right: 8%; bottom: 8%;  transform: translate(0,  0%);  text-align: right; }
+
+    /* Center graphic: perfectly centered concentric circles */
+    .graphic {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: 56%;
+      height: 56%;
+      min-width: 120px;
+      min-height: 120px;
+    }
+
+    /* Axis labels placed around the dial rim */
+    .axis {
+      position: absolute;
+      color: rgba(255,255,255,0.92);
+      font-weight: 700;
+      text-shadow: 0 1px 2px rgba(0,0,0,0.45);
+      pointer-events: none;
+    }
+    .axis-top    { top: -12px; left: 50%; transform: translate(-50%, -50%); }
+    .axis-bottom { bottom: -12px; left: 50%; transform: translate(-50%,  50%); }
+    .axis-left   { left: -20px;  top: 50%;  transform: translate(-50%, -50%) rotate(180deg); writing-mode: vertical-rl; }
+    .axis-right  { right: -20px; top: 50%;  transform: translate( 50%, -50%); writing-mode: vertical-rl; }
+
+    /* Outer ring: white border + dewpoint gradient fill (macro colours) */
+    .outer-ring {
       position: absolute;
       inset: 0;
       border-radius: 50%;
-      border: 3px solid white;
+      border: 2.5px solid white;
+      background: var(--sac-dewpoint-ring, radial-gradient(circle, dimgray, 55%, rgba(100,100,100,0.15), rgba(100,100,100,0.15)));
       box-shadow:
         0 0 6px 3px rgba(0,0,0,0.18),
         0 0 18px 6px rgba(0,0,0,0.22);
     }
 
-    /* Inner eye gradient: inline background via style= (from macro rules) */
-    .eye {
+    /* Inner comfort circle: black + humidity/temperature gradient (macro) */
+    .inner-circle {
       position: absolute;
       left: 50%;
       top: 50%;
-      width: 62%;
-      aspect-ratio: 1 / 1;
       transform: translate(-50%, -50%);
+      width: 46.5%;
+      height: 46.5%;
       border-radius: 50%;
-      box-shadow:
-        inset 0 0 24px rgba(0,0,0,0.65),
-        0 0 24px rgba(0,0,0,0.25);
+      background: var(--sac-inner-gradient, radial-gradient(circle, black 0%, black 60%));
+      border: 0;
+      box-shadow: inset 0 0 12px rgba(0,0,0,0.6);
     }
 
-    /* Floating dot (white), positioned by inline left/bottom % */
+    /* Floating dot + alert blink */
     .dot {
       position: absolute;
-      width: 9%;
-      aspect-ratio: 1 / 1;
+      width: 15%;
+      height: 15%;
       border-radius: 50%;
       background: white;
-      box-shadow: 0 2px 4px rgba(0,0,0,0.35);
+      box-shadow: 0 0 6px rgba(0,0,0,0.45);
       transform: translate(-50%, 50%);
-      transition: bottom 0.8s ease-in-out, left 0.8s ease-in-out;
-      z-index: 3;
+      transition: left 0.8s ease-in-out, bottom 0.8s ease-in-out;
+      z-index: 2;
     }
-
-    /* axis labels anchored to the dial */
-    .axis {
+    .dot.outside::before {
+      content: "";
       position: absolute;
-      left: 50%;
-      transform: translateX(-50%);
-      top: -24px;                        /* Warm on the outside of the rim */
-      color: rgba(255,255,255,0.9);
-      font-weight: 700;
-      text-shadow: 0 1px 2px rgba(0,0,0,0.45);
+      inset: -20%;
+      border-radius: 50%;
+      background: radial-gradient(circle,
+        rgba(255,0,0,0.8) 20%,
+        rgba(255,0,0,0.3) 50%,
+        rgba(255,0,0,0.1) 70%,
+        rgba(255,0,0,0) 100%
+      );
+      animation: sac-blink 1s infinite alternate;
+      z-index: -1;
     }
-    .axis-bottom {
-      top: auto;
-      bottom: -24px;                     /* Cold */
-    }
-    .axis-left,
-    .axis-right {
-      top: 50%;
-      transform: translateY(-50%);       /* center vertically */
-      writing-mode: vertical-rl;
-      color: rgba(255,255,255,0.9);
-      font-weight: 700;
-      text-shadow: 0 1px 2px rgba(0,0,0,0.45);
-    }
-    .axis-left {
-      left: -28px;                       /* Dry (rotated to read upright) */
-      rotate: 180deg;
-    }
-    .axis-right {
-      right: -28px;                      /* Humid */
-    }
-
-    /* Bottom row: BL temperature comfort text, BR humidity comfort text */
-    .bottom-row {
-      margin-top: 24px;
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      align-items: start;
-    }
-    .bottom-cell {
-      display: grid;
-      gap: 6px;
-    }
-    .bottom-title {
-      color: rgba(255,255,255,0.85);
-      font-weight: 700;
-    }
-    .bottom-value {
-      color: rgba(255,255,255,0.95);
-      font-size: 1.1rem;
-      font-weight: 900;
-      letter-spacing: 0.4px;
-    }
-
-    /* Small screen tweaks */
-    @media (max-width: 540px) {
-      .grid { grid-template-columns: 1fr; }
-      .dial { width: min(86%, 360px); margin: 0 auto; }
-      .corner { text-align: left; }
-      .bottom-row { grid-template-columns: 1fr 1fr; }
+    @keyframes sac-blink {
+      0%   { opacity: 1; }
+      100% { opacity: 0.3; }
     }
   `;
 
@@ -245,100 +215,109 @@ class SimpleAirComfortCard extends LitElement {
   render() {
     if (!this.hass || !this._config) return html``;
 
-    // ---- Pull entity states -------------------------------------------------
+    // Entities
     const tState  = this.hass.states[this._config.temperature];
     const rhState = this.hass.states[this._config.humidity];
     const wsState = this._config.windspeed ? this.hass.states[this._config.windspeed] : undefined;
 
     if (!tState || !rhState) {
-      return html`<ha-card><div class="frame">
-        <div class="title">${this._config.name}</div>
-        <div class="subtitle">Entity not found: ${!tState ? this._config.temperature : this._config.humidity}</div>
-      </div></ha-card>`;
+      return html`<ha-card>
+        <div class="canvas">
+          <div class="header">
+            <div class="title">${this._config.name ?? 'Air Comfort'}</div>
+            <div class="subtitle">Entity not found: ${!tState ? this._config.temperature : this._config.humidity}</div>
+          </div>
+        </div>
+      </ha-card>`;
     }
 
-    // ---- Units & numeric parsing -------------------------------------------
+    // Parse & physics
     const tempUnitIn = (tState.attributes.unit_of_measurement || '°C').trim();
-    const tempC  = this.#toCelsius(parseFloat(tState.state), tempUnitIn);
-    const rh     = this.#clampRH(parseFloat(rhState.state));
-    const ws_mps = this.#resolveWind(wsState, this._config.default_wind_speed);
+    const Tc   = this.#toCelsius(parseFloat(tState.state), tempUnitIn);
+    const RH   = this.#clampRH(parseFloat(rhState.state));
+    const WS   = this.#resolveWind(wsState, this._config.default_wind_speed);
 
-    // ---- Physics ------------------------------------------------------------
-    const es_hPa = this.#buckSaturationVapourPressure_hPa(tempC);
-    const e_hPa  = (rh / 100) * es_hPa;
-    const dewC   = this.#dewPointFromVapourPressure_hPa(e_hPa);
-    const atC    = this.#apparentTemperatureC(tempC, e_hPa, ws_mps);
+    const es   = this.#buckSaturationVapourPressure_hPa(Tc);
+    const e    = (RH / 100) * es;
+    const dpC  = this.#dewPointFromVapourPressure_hPa(e);
+    const atC  = this.#apparentTemperatureC(Tc, e, WS);
 
-    // ---- Macro-equivalent text categories ----------------------------------
-    const dewText  = this.#dewpointTextFromMacro(dewC);
-    const tempText = this.#temperatureTextFromMacro(tempC);
-    const rhText   = this.#humidityTextFromMacro(rh);
+    // Macro texts
+    const dewText  = this.#dewpointTextFromMacro(dpC);
+    const tempText = this.#temperatureTextFromMacro(Tc);
+    const rhText   = this.#humidityTextFromMacro(RH);
 
-    // ---- Visual colours per your macros ------------------------------------
-    const cardBg     = this.#backgroundGradientForTempC(tempC);          // <-- NEW: matches Jinja macro exactly
-    const ringGlow   = this.#dewpointGlowForText(dewText);               // outer ring halo tint
-    const innerEyeBg = this.#innerEyeGradient(rh, tempC);                // black/pink/blue per macro rules
+    // Gradients (macros → CSS)
+    const cardBg    = this.#backgroundGradientForTempC(Tc);
+    const ringGrad  = this.#dewpointRingGradientFromText(dewText);
+    const innerGrad = this.#innerEyeGradient(RH, Tc);
 
-    // ---- Floating dot position ---------------------------------------------
+    // Floating dot position (full 0..100% space of the graphic box)
     const { temp_min, temp_max } = this._config;
-    const yPct = this.#scaleClamped(tempC, temp_min, temp_max, 0, 100);   // 0=bottom, 100=top
-    const xPct = this.#clamp(rh, 0, 100);                                 // 0..100 across
+    const yPct = this.#scaleClamped(Tc, temp_min, temp_max, 0, 100); // bottom..top
+    const xPct = this.#clamp(RH + 0.5, 0, 100);                      // left..right (+0.5 like your macro)
 
-    // ---- Output numbers & units -------------------------------------------
+    // Outside limits → blink
+    const outside = (RH < 40 || RH > 60 || Tc < 18 || Tc > 26.4);
+
+    // Output strings
     const d = this._config.decimals;
     const outUnit = tempUnitIn;
-    const dewOut = this.#formatNumber(this.#fromCelsius(dewC, outUnit), d) + ` ${outUnit}`;
+    const dewOut = this.#formatNumber(this.#fromCelsius(dpC, outUnit), d) + ` ${outUnit}`;
     const atOut  = this.#formatNumber(this.#fromCelsius(atC,  outUnit), d) + ` ${outUnit}`;
 
     return html`
-      <ha-card style="background:${cardBg}">
-        <div class="frame">
-          <div class="title">${this._config.name}</div>
-          <div class="subtitle">${dewText}</div>
-
-          <div class="grid">
-            <!-- TL: Dew point -->
-            <div class="corner">
-              <div class="label">Dew point</div>
-              <div class="value">${dewOut}</div>
-            </div>
-
-            <!-- Dial: centered row 2 spanning both columns -->
-            <div class="dial-wrap">
-              <div class="dial">
-                <div class="axis">Warm</div>
-                <div class="axis axis-bottom">Cold</div>
-                <div class="axis-left">Dry</div>
-                <div class="axis-right">Humid</div>
-
-                <div class="ring" style="${ringGlow}"></div>
-                <div class="eye" style="background:${innerEyeBg}"></div>
-
-                <!-- floating dot -->
-                <div class="dot" style="left:${xPct}%; bottom:${yPct}%"></div>
-              </div>
-            </div>
-
-          <!-- TR: Feels like -->
-          <div class="corner" style="justify-self:end; text-align:right;">
-            <div class="label">Feels like</div>
-            <div class="value">${atOut}</div>
+      <ha-card>
+        <div class="canvas" style="--sac-temp-bg:${cardBg}">
+          <!-- Title + Dewpoint comfort text -->
+          <div class="header">
+            <div class="title">${this._config.name ?? 'Air Comfort'}</div>
+            <div class="subtitle">${dewText}</div>
           </div>
 
-          <div class="bottom-row">
-            <div class="bottom-cell">
-              <div class="bottom-title">Temperature</div>
-              <div class="bottom-value">${tempText}</div>
-            </div>
-            <div class="bottom-cell" style="text-align:right;">
-              <div class="bottom-title">Humidity</div>
-              <div class="bottom-value">${rhText}</div>
+          <!-- TL: Dew point -->
+          <div class="corner tl">
+            <span class="label">Dew point</span>
+            <span class="value">${dewOut}</span>
+          </div>
+
+          <!-- TR: Feels like -->
+          <div class="corner tr">
+            <span class="label">Feels like</span>
+            <span class="value">${atOut}</span>
+          </div>
+
+          <!-- BL: Temperature comfort -->
+          <div class="corner bl">
+            <span class="label">Temperature</span>
+            <span class="value">${tempText}</span>
+          </div>
+
+          <!-- BR: Humidity comfort -->
+          <div class="corner br">
+            <span class="label">Humidity</span>
+            <span class="value">${rhText}</span>
+          </div>
+
+          <!-- Center dial -->
+          <div class="graphic">
+            <div class="axis axis-top">Warm</div>
+            <div class="axis axis-bottom">Cold</div>
+            <div class="axis axis-left">Dry</div>
+            <div class="axis axis-right">Humid</div>
+
+            <div class="outer-ring" style="background:${ringGrad}"></div>
+            <div class="inner-circle" style="background:${innerGrad}"></div>
+
+            <div class="dot ${outside ? 'outside' : ''}"
+                style="left:${xPct}%; bottom:${yPct}%;">
             </div>
           </div>
         </div>
       </ha-card>
     `;
   }
+
 
   getCardSize() { return 4; }
 
@@ -468,6 +447,28 @@ class SimpleAirComfortCard extends LitElement {
       0 0 0 3px white inset,
       0 0 18px 6px ${base},
       0 0 22px 10px rgba(0,0,0,0.25)`;
+  }
+
+  #dewpointRingGradientFromText(text) {
+    // Mirrors your `calculate_dewpoint_colour_outer_ring_limits`
+    const base = (t => {
+      switch (t) {
+        case 'Very Dry':     return 'deepskyblue';
+        case 'Dry':          return 'mediumaquamarine';
+        case 'Pleasant':     return 'limegreen';
+        case 'Comfortable':  return 'yellowgreen';
+        case 'Sticky Humid': return 'yellow';
+        case 'Muggy':        return 'gold';
+        case 'Sweltering':   return 'orange';
+        case 'Stifling':     return 'crimson';
+        case 'Unknown':
+        case 'Unavailable':
+        default:             return 'dimgray';
+      }
+    })(text || 'Unknown');
+
+    // Same stops/alphas as the Jinja macro
+    return `radial-gradient(circle, ${base}, 55%, rgba(100,100,100,0.15), rgba(100,100,100,0.15))`;
   }
 
   // Inner eye gradient following your inner_circle_comfort_zone_alert_colour
