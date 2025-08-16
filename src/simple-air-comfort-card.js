@@ -589,14 +589,13 @@ window.customCards.push({
 });
 
 /* ------------------------------------------------------------------------ */
-/*                             GUI EDITOR                                   */
+/*                             GUI EDITOR (FIXED)                           */
 /* ------------------------------------------------------------------------ */
 
 class SimpleAirComfortCardEditor extends LitElement {
   static properties = {
-    hass: { type: Object },
+    hass: { type: Object },          // ← keep reactive
     _config: { state: true },
-    _helpers: { state: true },          // <— keep a handle to helpers
   };
 
   static styles = css`
@@ -614,54 +613,51 @@ class SimpleAirComfortCardEditor extends LitElement {
     .hint { opacity: 0.7; font-size: 0.9em; }
   `;
 
-  // 🔌 Ensure HA’s card helpers are loaded when the editor is attached,
-  // so elements like <ha-entity-picker> get defined and work.
+  // Ensure card helpers are loaded when the editor is attached
   connectedCallback() {
     super.connectedCallback();
-    this._ensureHelpers();
+    (async () => {
+      try {
+        this._helpers = await (window.loadCardHelpers?.());
+      } catch {
+        /* ignore */
+      }
+    })();
   }
 
-  async _ensureHelpers() {
-    if (this._helpers) return;
-    if (window.loadCardHelpers) {
-      try {
-        this._helpers = await window.loadCardHelpers();
-        // Nudge a re-render once helpers are ready (ensures pickers show up)
-        await this.updateComplete;
-        this.requestUpdate();
-      } catch (e) {
-        // no-op; editor still works, pickers may appear once HA loads helpers
-      }
-    }
-  }
+  // Make hass reactive (some HA internals rely on accessor style)
+  set hass(hass) { this._hass = hass; this.requestUpdate(); }
+  get hass() { return this._hass; }
 
   setConfig(config) {
     this._config = {
-      name: config.name ?? 'Air Comfort',
-      temperature: config.temperature,
-      humidity: config.humidity,
-      windspeed: config.windspeed,
-      decimals: Number.isFinite(config.decimals) ? config.decimals : 1,
-      default_wind_speed: Number.isFinite(config.default_wind_speed) ? config.default_wind_speed : 0.0,
-      temp_min: Number.isFinite(config.temp_min) ? config.temp_min : 15,
-      temp_max: Number.isFinite(config.temp_max) ? config.temp_max : 35,
+      name: config?.name ?? 'Air Comfort',
+      temperature: config?.temperature,
+      humidity: config?.humidity,
+      windspeed: config?.windspeed,
+      decimals: Number.isFinite(config?.decimals) ? config.decimals : 1,
+      default_wind_speed: Number.isFinite(config?.default_wind_speed) ? config.default_wind_speed : 0.0,
+      temp_min: Number.isFinite(config?.temp_min) ? config.temp_min : 15,
+      temp_max: Number.isFinite(config?.temp_max) ? config.temp_max : 35,
     };
   }
 
-  get _name() { return this._config?.name ?? ''; }
+  get _name()        { return this._config?.name ?? ''; }
   get _temperature() { return this._config?.temperature ?? ''; }
-  get _humidity() { return this._config?.humidity ?? ''; }
-  get _windspeed() { return this._config?.windspeed ?? ''; }
-  get _decimals() { return Number.isFinite(this._config?.decimals) ? this._config.decimals : 1; }
+  get _humidity()    { return this._config?.humidity ?? ''; }
+  get _windspeed()   { return this._config?.windspeed ?? ''; }
+  get _decimals()    { return Number.isFinite(this._config?.decimals) ? this._config.decimals : 1; }
   get _defaultWind() { return Number.isFinite(this._config?.default_wind_speed) ? this._config.default_wind_speed : 0.0; }
-  get _tmin() { return Number.isFinite(this._config?.temp_min) ? this._config.temp_min : 15; }
-  get _tmax() { return Number.isFinite(this._config?.temp_max) ? this._config.temp_max : 35; }
+  get _tmin()        { return Number.isFinite(this._config?.temp_min) ? this._config.temp_min : 15; }
+  get _tmax()        { return Number.isFinite(this._config?.temp_max) ? this._config.temp_max : 35; }
 
   render() {
+    // If hass isn’t injected yet, don’t render (prevents a blank/broken editor)
     if (!this.hass) return html``;
 
     return html`
       <div class="form">
+
         <div class="row">
           <div><label>Name</label></div>
           <ha-textfield
@@ -677,8 +673,8 @@ class SimpleAirComfortCardEditor extends LitElement {
             .hass=${this.hass}
             .value=${this._temperature}
             .includeDomains=${['sensor']}
-            @value-changed=${(e) => this._update('temperature', e.detail.value)}
             allow-custom-entity
+            @value-changed=${(e) => this._update('temperature', e.detail.value)}
           ></ha-entity-picker>
         </div>
 
@@ -688,8 +684,8 @@ class SimpleAirComfortCardEditor extends LitElement {
             .hass=${this.hass}
             .value=${this._humidity}
             .includeDomains=${['sensor']}
-            @value-changed=${(e) => this._update('humidity', e.detail.value)}
             allow-custom-entity
+            @value-changed=${(e) => this._update('humidity', e.detail.value)}
           ></ha-entity-picker>
         </div>
 
@@ -702,9 +698,8 @@ class SimpleAirComfortCardEditor extends LitElement {
             .hass=${this.hass}
             .value=${this._windspeed}
             .includeDomains=${['sensor']}
-            @value-changed=${(e) => this._update('windspeed', e.detail.value)}
             allow-custom-entity
-            no-clear-text
+            @value-changed=${(e) => this._update('windspeed', e.detail.value)}
           ></ha-entity-picker>
         </div>
 
@@ -752,19 +747,17 @@ class SimpleAirComfortCardEditor extends LitElement {
             @input=${(e) => this._updateNumber('temp_max', e.target.value, 35)}
           ></ha-textfield>
         </div>
+
       </div>
     `;
   }
 
   _update(key, value) {
-    const newConfig = { ...(this._config ?? {}) };
-    if (value === '' || value === undefined || value === null) {
-      delete newConfig[key];
-    } else {
-      newConfig[key] = value;
-    }
-    this._config = newConfig;
-    fireEvent(this, 'config-changed', { config: newConfig });
+    const next = { ...(this._config ?? {}) };
+    if (value === '' || value === undefined || value === null) delete next[key];
+    else next[key] = value;
+    this._config = next;
+    fireEvent(this, 'config-changed', { config: next });
   }
 
   _updateNumber(key, raw, fallback = 0) {
@@ -775,4 +768,3 @@ class SimpleAirComfortCardEditor extends LitElement {
 }
 
 customElements.define('simple-air-comfort-card-editor', SimpleAirComfortCardEditor);
-
