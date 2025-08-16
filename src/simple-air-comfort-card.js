@@ -7,21 +7,14 @@ import { LitElement, html, css } from 'lit';
  *     (T in °C, e in hPa from Arden Buck, ws in m/s)
  * - Vapour pressure (e) via Arden Buck saturation vapour pressure.
  * - Dew point from Arden Buck (numeric inverse).
- * - Default windspeed is 0.0 m/s (indoor-friendly) if no wind entity provided.
- * - Title “Air Comfort” is rendered over the SVG background (no ha-card header).
+ * - Default windspeed is 0.0 m/s if no wind entity provided.
  *
- * Lovelace config example:
- * type: custom:simple-air-comfort-card
- * name: Air Comfort                # currently only used in editor pane
- * temperature: sensor.living_temp
- * humidity: sensor.living_humidity
- * windspeed: sensor.living_wind_speed   # optional
- * decimals: 1                           # optional (default 1)
- * default_wind_speed: 0                 # optional (default 0 m/s)
+ * Visual notes:
+ * - No external SVG; background is pure CSS (no broken image, no outer border).
+ * - Top center inside the ring shows “Air Comfort”.
+ * - Bottom-left shows INTENSITY (e.g., “Mild”) under air temperature.
+ * - Bottom-right shows COMFORT word (e.g., “Comfy”) under RH.
  */
-
-// We ship the SVG next to the bundle (rollup copies it to dist/).
-const BG_URL = 'sac_background_overlay.svg';
 
 const fireEvent = (node, type, detail, options) => {
   const event = new Event(type, {
@@ -41,52 +34,32 @@ class SimpleAirComfortCard extends LitElement {
   };
 
   static styles = css`
-    ha-card { padding: 0; overflow: hidden; }
+    ha-card {
+      padding: 0;
+      overflow: hidden;
+    }
 
-    /* Canvas that holds everything */
+    /* Whole canvas */
     .canvas {
       position: relative;
-      padding: 18px 18px 20px;
-      min-height: 420px;   /* responsive; grows with container width */
+      padding: 18px;
+      min-height: 420px;
+      /* soft vignette background */
+      background:
+        radial-gradient(140% 110% at 50% 35%, rgba(0,0,0,0.26), rgba(0,0,0,0.58)),
+        radial-gradient(100% 100% at 50% 50%, rgba(8,32,28,0.55), rgba(0,0,0,0.65));
+      border-radius: 14px;
     }
 
-    /* SVG background */
-    .bg {
-      position: absolute;
-      inset: 0;
-      display: grid;
-      place-items: center;
-      pointer-events: none;
-    }
-    .bg img {
-      width: 100%;
-      height: 100%;
-      object-fit: cover;
-      opacity: 0.9;
-      filter: saturate(0.9);
-    }
-    /* Title sitting ON the background */
-    .bg-title {
-      position: absolute;
-      top: 10px;
-      left: 50%;
-      transform: translateX(-50%);
-      font-weight: 700;
-      font-size: 1.05rem;
-      color: rgba(255,255,255,0.85);
-      letter-spacing: .3px;
-      text-shadow: 0 1px 2px rgba(0,0,0,.5);
-    }
-
-    /* Dial stage (kept away from card edges) */
+    /* Stage that holds the dial */
     .stage {
       position: relative;
-      z-index: 2;
-      margin: 36px 18px 24px;
-      border-radius: 18px;
-      padding: clamp(18px, 3vw, 28px);
-      background: radial-gradient(120% 120% at 50% 35%, rgba(0,0,0,.35), rgba(0,0,0,.55));
-      box-shadow: inset 0 0 60px rgba(0,0,0,.35);
+      z-index: 1;
+      margin: 8px 6px 10px;
+      padding: clamp(14px, 2.4vw, 24px);
+      border-radius: 16px;
+      background: radial-gradient(120% 120% at 50% 40%, rgba(0,0,0,0.35), rgba(0,0,0,0.55));
+      box-shadow: inset 0 0 60px rgba(0,0,0,0.35);
     }
 
     /* Dial geometry */
@@ -95,76 +68,84 @@ class SimpleAirComfortCard extends LitElement {
       width: min(86vw, 560px);
       max-width: 100%;
       margin: 0 auto;
-      aspect-ratio: 1/1;
+      aspect-ratio: 1 / 1;
     }
+
     .ring {
       position: absolute;
       inset: 0;
       border-radius: 50%;
-      border: 3px solid rgba(255,255,255,0.9);
-      box-shadow: 0 0 12px rgba(255,255,255,0.2), inset 0 0 40px rgba(0,0,0,.4);
+      border: 3px solid rgba(255,255,255,0.92);
+      box-shadow:
+        0 0 12px rgba(255,255,255,0.18),
+        inset 0 0 40px rgba(0,0,0,0.4);
     }
+
     .inner {
       position: absolute;
       inset: 20% 20% 20% 20%;
       border-radius: 50%;
-      background: radial-gradient(60% 60% at 50% 45%, rgba(11,109,93,.9), rgba(0,0,0,.7));
-      box-shadow: inset 0 0 60px rgba(0,0,0,.55);
+      background: radial-gradient(60% 60% at 50% 45%, rgba(11,109,93,0.95), rgba(0,0,0,0.72));
+      box-shadow: inset 0 0 60px rgba(0,0,0,0.55);
     }
+
     .iris {
       position: absolute;
       inset: 32% 32% 32% 32%;
       border-radius: 50%;
-      background: radial-gradient(65% 65% at 45% 40%, rgba(11,109,93,.9), rgba(0,0,0,.85));
-      box-shadow: inset 0 0 40px rgba(0,0,0,.7);
+      background: radial-gradient(65% 65% at 45% 40%, rgba(11,109,93,0.9), rgba(0,0,0,0.85));
+      box-shadow: inset 0 0 40px rgba(0,0,0,0.7);
     }
+
     .pupil {
       position: absolute;
-      top: 50%; left: 50%;
-      width: 56px; height: 56px;
+      top: 50%;
+      left: 50%;
+      width: 56px;
+      height: 56px;
       transform: translate(-50%, -50%);
       border-radius: 50%;
       background: radial-gradient(60% 60% at 45% 40%, #0c0c0c, #000);
-      box-shadow: 0 0 0 6px rgba(255,255,255,0.85),
-                  0 4px 18px rgba(0,0,0,.6);
+      box-shadow:
+        0 0 0 6px rgba(255,255,255,0.85),
+        0 4px 18px rgba(0,0,0,0.6);
     }
 
-    /* Cardinal captions (static) */
+    /* Static captions around ring */
     .caption {
       position: absolute;
       font-size: .92rem;
-      font-weight: 600;
-      color: rgba(255,255,255,.75);
+      font-weight: 700;
+      color: rgba(255,255,255,.82);
       text-shadow: 0 1px 2px rgba(0,0,0,.7);
       user-select: none;
+      letter-spacing: .2px;
     }
+    /* Air Comfort replaces the old top "Warm" caption */
     .top    { top: -30px; left: 50%; transform: translate(-50%, 0); }
     .bottom { bottom: -30px; left: 50%; transform: translate(-50%, 0); }
     .left   { left: -34px; top: 50%; transform: translate(0, -50%) rotate(-90deg); }
     .right  { right: -34px; top: 50%; transform: translate(0, -50%) rotate(90deg); }
 
-    /* Value labels around dial */
+    /* Metrics near quadrants */
     .metric {
       position: absolute;
       display: grid;
       gap: 2px;
       text-align: center;
-      color: rgba(255,255,255,.85);
+      color: rgba(255,255,255,.88);
       text-shadow: 0 1px 2px rgba(0,0,0,.6);
       font-variant-numeric: tabular-nums;
     }
-    .metric .k { font-size: .92rem; opacity: .9; }
+    .metric .k { font-size: .92rem; opacity: .92; font-weight: 600; }
     .metric .v { font-size: 1.05rem; font-weight: 800; letter-spacing: .2px; }
 
-    .tl { top: 13%; left: 18%; }   /* Dew point */
-    .tr { top: 13%; right: 18%; }  /* Feels like */
-    .bl { bottom: 11%; left: 18%; }/* Air temp + INTENSITY (Mild/…) */
-    .br { bottom: 11%; right: 18%; }/* RH + COMFORT (Comfy/Dry/…) */
+    .tl { top: 13%; left: 18%; }    /* Dew point */
+    .tr { top: 13%; right: 18%; }   /* Feels like */
+    .bl { bottom: 11%; left: 18%; } /* Air temperature + INTENSITY */
+    .br { bottom: 11%; right: 18%; }/* RH + COMFORT */
 
-    .sub { font-size: .9rem; color: rgba(255,255,255,.7); }
-
-    /* Hide the stock header; we render title on the background instead */
-    .hidden-header { display:none }
+    .sub { font-size: .9rem; color: rgba(255,255,255,.75); font-weight: 600; }
   `;
 
   setConfig(config) {
@@ -191,13 +172,17 @@ class SimpleAirComfortCard extends LitElement {
     if (!tState || !rhState) {
       return html`<ha-card>
         <div class="canvas">
-          <div class="bg"><img src=${BG_URL} alt="" /></div>
-          <div class="metric tl"><div class="k">Entity not found</div></div>
+          <div class="stage">
+            <div style="text-align:center;color:var(--secondary-text-color);padding:24px 8px">
+              Missing entity:
+              ${!tState ? this._config.temperature : this._config.humidity}
+            </div>
+          </div>
         </div>
       </ha-card>`;
     }
 
-    // Inputs and units
+    // Inputs
     const tempUnitIn = (tState.attributes.unit_of_measurement || '°C').trim();
     const tempC = this.#toCelsius(parseFloat(tState.state), tempUnitIn);
     const rh    = this.#clampRH(parseFloat(rhState.state));
@@ -209,29 +194,20 @@ class SimpleAirComfortCard extends LitElement {
     const dewC   = this.#dewPointFromVapourPressure_hPa(e_hPa);
     const atC    = this.#apparentTemperatureC(tempC, e_hPa, ws_mps);
 
-    // Output units match input temp units
+    // Outputs (use same unit as input temp)
     const outUnit = tempUnitIn;
     const valueAT  = this.#fromCelsius(atC, outUnit);
     const valueT   = this.#fromCelsius(tempC, outUnit);
     const valueDew = this.#fromCelsius(dewC, outUnit);
 
-    // Classifications for text labels
-    const comfortWord   = this.#comfortWord(tempC, rh);            // “Comfy”, “Warm”, “Cold”, “Dry”, “Humid”
-    const intensityWord = this.#intensityWord(tempC, rh);          // “Mild”, “Moderate”, “Severe”
+    // Labels
+    const comfortWord   = this.#comfortWord(tempC, rh);   // bottom-right
+    const intensityWord = this.#intensityWord(tempC, rh); // bottom-left
     const d = this._config.decimals;
 
     return html`
       <ha-card>
-        <!-- We don't render a standard header; title appears over background -->
-        <div class="hidden-header">${this._config.name}</div>
-
         <div class="canvas">
-          <!-- Background SVG + overlaid title -->
-          <div class="bg">
-            <img src=${BG_URL} alt="" />
-            <div class="bg-title">Air Comfort</div>
-          </div>
-
           <div class="stage">
             <div class="dial">
               <div class="ring"></div>
@@ -239,13 +215,13 @@ class SimpleAirComfortCard extends LitElement {
               <div class="iris"></div>
               <div class="pupil"></div>
 
-              <!-- Static captions around ring -->
-              <div class="caption top">Warm</div>
+              <!-- Captions around the ring -->
+              <div class="caption top">Air Comfort</div>
               <div class="caption right">Humid</div>
               <div class="caption bottom">Cold</div>
               <div class="caption left">Dry</div>
 
-              <!-- Metrics placed like your reference -->
+              <!-- Quadrant metrics -->
               <div class="metric tl">
                 <div class="k">Dew point</div>
                 <div class="v">${this.#formatNumber(valueDew, d)} ${outUnit}</div>
@@ -258,13 +234,11 @@ class SimpleAirComfortCard extends LitElement {
 
               <div class="metric bl">
                 <div class="v">${this.#formatNumber(valueT, d)} ${outUnit}</div>
-                <!-- REPLACES “PERFECT” with the top’s smaller word -->
                 <div class="sub">${intensityWord}</div>
               </div>
 
               <div class="metric br">
                 <div class="v">${this.#formatNumber(rh, d)} %</div>
-                <!-- REPLACES “COMFY” with the top’s big comfort word -->
                 <div class="sub">${comfortWord}</div>
               </div>
             </div>
@@ -306,18 +280,15 @@ class SimpleAirComfortCard extends LitElement {
   // ---- Classification text -------------------------------------------------
 
   #comfortWord(Tc, rh) {
-    // Simple zone word for the *bottom-right* label.
     if (rh < 30) return 'Dry';
     if (rh > 60) return 'Humid';
     if (Tc < 18) return 'Cold';
     if (Tc > 26) return 'Warm';
     return 'Comfy';
-    // (Tighten thresholds later if you want.)
   }
 
   #intensityWord(Tc, rh) {
-    // “Mild/Moderate/Severe” sited at bottom-left.
-    // Distance from nominal comfy center (22°C, 45%).
+    // distance from nominal comfy center (22°C, 45% RH)
     const dn = Math.hypot((Tc - 22) / 8, (rh - 45) / 25);
     if (dn < 0.45) return 'Mild';
     if (dn < 0.85) return 'Moderate';
@@ -401,7 +372,7 @@ window.customCards.push({
   type: 'simple-air-comfort-card',
   name: 'Simple Air Comfort Card',
   description:
-    'Australian BoM apparent temperature + dew point (Arden Buck). Wind is optional; defaults to 0.0 m/s.',
+    'Australian BoM apparent temperature + dew point (Arden Buck). Wind optional; defaults to 0 m/s. Pure CSS background.',
   preview: true,
 });
 
