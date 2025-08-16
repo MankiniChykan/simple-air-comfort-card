@@ -136,6 +136,7 @@ const b=globalThis,w=b.trustedTypes,E=w?w.createPolicy("lit-html",{createHTML:t=
 
         <div class="row">
           <div><label>Default wind speed (m/s)</label></div>
+          <div class="hint">If no wind speed entity is set, use this default.</div>
           <ha-textfield
             type="number"
             inputmode="decimal"
@@ -143,7 +144,6 @@ const b=globalThis,w=b.trustedTypes,E=w?w.createPolicy("lit-html",{createHTML:t=
             .value=${String(this._defaultWind)}
             @input=${t=>this._updateNumber("default_wind_speed",t.target.value)}
           ></ha-textfield>
-          <div class="hint">If no wind speed entity is set, use this default.</div>
         </div>
 
         <div class="row">
