@@ -2,23 +2,39 @@ import { LitElement, html, css } from 'lit';
 
 /**
  * Simple Air Comfort Card
- * - Apparent Temperature (Australian BoM):
+ *
+ * Core goals:
+ * - Compute *Australian BoM Apparent Temperature* in the card (no templates/sensors needed).
+ * - Use Arden Buck for saturation vapour pressure (es) and derive vapour pressure (e).
+ * - Compute dew point by numerically inverting Buck (robust across sub-/above-freezing).
+ * - Be indoor-friendly: default wind speed is 0.0 m/s if no wind entity is set.
+ *
+ * Formulas:
+ *   Apparent Temperature (BoM):
  *     AT = T + 0.33·e − 0.70·ws − 4.0
- *     (T in °C, e in hPa from Arden Buck, ws in m/s)
- * - Vapour pressure (e) via Arden Buck saturation vapour pressure.
- * - Dew point from Arden Buck (numeric inverse).
- * - Default windspeed is 0.0 m/s (indoor-friendly) if no wind entity provided.
+ *     where T is °C, e is vapour pressure in hPa, ws is wind speed in m/s
+ *
+ *   Vapour pressure from RH (using Buck saturation vapour pressure):
+ *     e = (RH/100) · es(T)
+ *
+ *   Buck saturation vapour pressure (hPa):
+ *     For T ≥ 0°C:  es = 6.1121 · exp((18.678 − T/234.5) · (T / (257.14 + T)))
+ *     For T <  0°C: es = 6.1115 · exp((23.036 − T/333.7) · (T / (279.82 + T)))
+ *
+ *   Dew point (°C):
+ *     Numerically invert es to find Td such that es(Td) ≈ e (bisection).
  *
  * Lovelace config example:
  * type: custom:simple-air-comfort-card
  * name: Air Comfort
- * temperature: sensor.living_temp
- * humidity: sensor.living_humidity
- * windspeed: sensor.living_wind_speed   # optional
- * decimals: 1                           # optional (default 1)
- * default_wind_speed: 0                 # optional (default 0 m/s)
+ * temperature: sensor.living_temp            # required
+ * humidity: sensor.living_humidity           # required
+ * windspeed: sensor.living_wind_speed        # optional (m/s, km/h, mph, kn supported)
+ * decimals: 1                                # optional, display precision (default 1)
+ * default_wind_speed: 0                      # optional, m/s fallback when no wind entity (default 0)
  */
 
+/** Small helper to dispatch HA-style events (e.g., 'config-changed' from the editor) */
 const fireEvent = (node, type, detail, options) => {
   const event = new Event(type, {
     bubbles: options?.bubbles ?? true,
@@ -30,10 +46,13 @@ const fireEvent = (node, type, detail, options) => {
   return event;
 };
 
+/** ------------------------------------------------------------------------ */
+/**                           DISPLAY CARD CLASS                             */
+/** ------------------------------------------------------------------------ */
 class SimpleAirComfortCard extends LitElement {
   static properties = {
-    hass: { type: Object },
-    _config: { state: true },
+    hass: { type: Object },     // Home Assistant instance
+    _config: { state: true },   // Card config (internal reactive state)
   };
 
   static styles = css`
@@ -55,6 +74,7 @@ class SimpleAirComfortCard extends LitElement {
     .muted { opacity: 0.7; }
   `;
 
+  /** Validate and normalize config */
   setConfig(config) {
     if (!config || !config.temperature || !config.humidity) {
       throw new Error('simple-air-comfort-card: "temperature" and "humidity" entities are required.');
@@ -69,13 +89,16 @@ class SimpleAirComfortCard extends LitElement {
     };
   }
 
+  /** Render the card UI */
   render() {
     if (!this.hass || !this._config) return html``;
 
+    // Grab states
     const tState = this.hass.states[this._config.temperature];
     const rhState = this.hass.states[this._config.humidity];
     const wsState = this._config.windspeed ? this.hass.states[this._config.windspeed] : undefined;
 
+    // Early error if required entities are missing
     if (!tState || !rhState) {
       return html`<ha-card>
         <div class="header"><div class="title">${this._config.name}</div></div>
@@ -83,16 +106,19 @@ class SimpleAirComfortCard extends LitElement {
       </ha-card>`;
     }
 
+    // Parse units and values
     const tempUnitIn = (tState.attributes.unit_of_measurement || '°C').trim();
     const tempC = this.#toCelsius(parseFloat(tState.state), tempUnitIn);
     const rh = this.#clampRH(parseFloat(rhState.state));
     const ws_mps = this.#resolveWind(wsState, this._config.default_wind_speed);
 
-    const es_hPa = this.#buckSaturationVapourPressure_hPa(tempC);
-    const e_hPa = (rh / 100) * es_hPa;
-    const dewC = this.#dewPointFromVapourPressure_hPa(e_hPa);
-    const atC = this.#apparentTemperatureC(tempC, e_hPa, ws_mps);
+    // Physics calculations
+    const es_hPa = this.#buckSaturationVapourPressure_hPa(tempC); // saturation vapour pressure at T
+    const e_hPa = (rh / 100) * es_hPa;                            // actual vapour pressure from RH
+    const dewC = this.#dewPointFromVapourPressure_hPa(e_hPa);     // dew point by numeric inversion
+    const atC = this.#apparentTemperatureC(tempC, e_hPa, ws_mps); // BoM apparent temperature
 
+    // Display in the same temperature unit the sensor reported (°C or °F)
     const outUnit = tempUnitIn;
     const valueAT  = this.#fromCelsius(atC, outUnit);
     const valueT   = this.#fromCelsius(tempC, outUnit);
@@ -105,8 +131,10 @@ class SimpleAirComfortCard extends LitElement {
 
     return html`
       <ha-card>
+        <!-- Header -->
         <div class="header"><div class="title">${this._config.name}</div></div>
 
+        <!-- Primary display -->
         <div class="main">
           <div class="primary">
             ${this.#formatNumber(valueAT, d)}<span class="unit">${outUnit}</span>
@@ -114,6 +142,7 @@ class SimpleAirComfortCard extends LitElement {
           <div class="muted">Apparent temperature</div>
         </div>
 
+        <!-- Secondary rows -->
         <div class="rows">
           <div class="row">
             <div class="label">Air temperature</div>
@@ -140,14 +169,19 @@ class SimpleAirComfortCard extends LitElement {
     `;
   }
 
+  /** Let HA estimate the card's vertical size */
   getCardSize() { return 3; }
 
-  // ---- Physics -------------------------------------------------------------
+  // -------------------------------------------------------------------------
+  //                            Physics helpers
+  // -------------------------------------------------------------------------
 
+  /** BoM apparent temperature in °C: AT = T + 0.33·e − 0.70·ws − 4.0 */
   #apparentTemperatureC(Tc, e_hPa, ws_mps) {
     return Tc + 0.33 * e_hPa - 0.70 * ws_mps - 4.0;
   }
 
+  /** Buck saturation vapour pressure in hPa, piecewise for above/below freezing */
   #buckSaturationVapourPressure_hPa(Tc) {
     if (!Number.isFinite(Tc)) return NaN;
     if (Tc >= 0) {
@@ -156,10 +190,14 @@ class SimpleAirComfortCard extends LitElement {
     return 6.1115 * Math.exp((23.036 - Tc / 333.7) * (Tc / (279.82 + Tc)));
   }
 
+  /**
+   * Find dew point in °C from vapour pressure e (hPa) by numerically inverting Buck.
+   * Uses a robust bisection over a broad temperature range.
+   */
   #dewPointFromVapourPressure_hPa(e_hPa) {
     if (!Number.isFinite(e_hPa) || e_hPa <= 0) return NaN;
     let lo = -80, hi = 60, mid = 0;
-    for (let i = 0; i < 60; i++) {
+    for (let i = 0; i < 60; i++) { // 60 iters is generous; usually converges quickly
       mid = (lo + hi) / 2;
       const es = this.#buckSaturationVapourPressure_hPa(mid);
       if (!Number.isFinite(es)) break;
@@ -169,20 +207,25 @@ class SimpleAirComfortCard extends LitElement {
     return mid;
   }
 
-  // ---- Helpers -------------------------------------------------------------
+  // -------------------------------------------------------------------------
+  //                              Utilities
+  // -------------------------------------------------------------------------
 
+  /** Clamp RH to [0, 100] to avoid nonsense values propagating */
   #clampRH(rh) {
     if (!Number.isFinite(rh)) return NaN;
     return Math.min(100, Math.max(0, rh));
   }
 
+  /** Convert a temperature reading to °C from its unit */
   #toCelsius(value, unit) {
     if (!Number.isFinite(value)) return NaN;
     const u = (unit || '').toLowerCase();
     if (u.includes('f')) return (value - 32) * (5 / 9);
-    return value;
+    return value; // assume already °C
   }
 
+  /** Convert °C to the requested output unit (°C or °F) */
   #fromCelsius(valueC, unitOut) {
     const u = (unitOut || '').toLowerCase();
     if (!Number.isFinite(valueC)) return NaN;
@@ -190,6 +233,10 @@ class SimpleAirComfortCard extends LitElement {
     return valueC;
   }
 
+  /**
+   * Resolve wind speed to m/s from a variety of common units.
+   * Fallback to the configured default if no entity or invalid value.
+   */
   #resolveWind(wsState, default_mps) {
     if (!wsState) return default_mps ?? 0.0;
     const raw = parseFloat(wsState.state);
@@ -199,15 +246,17 @@ class SimpleAirComfortCard extends LitElement {
     if (unit.includes('km/h') || unit.includes('kph')) return raw / 3.6;
     if (unit.includes('mph')) return raw * 0.44704;
     if (unit.includes('kn')) return raw * 0.514444;
-    return raw; // assume m/s
+    return raw; // assume m/s if unknown
   }
 
+  /** Safe rounding with fixed decimals */
   #round(v, d = 1) {
     if (!Number.isFinite(v)) return NaN;
     const p = Math.pow(10, d);
     return Math.round(v * p) / p;
   }
 
+  /** Format a number with fixed decimals, or show an em dash on NaN */
   #formatNumber(v, d = 1) {
     if (!Number.isFinite(v)) return '—';
     return this.#round(v, d).toLocaleString(undefined, {
@@ -216,31 +265,36 @@ class SimpleAirComfortCard extends LitElement {
     });
   }
 
-  // ---- Lovelace plumbing ---------------------------------------------------
+  // -------------------------------------------------------------------------
+  //                           Lovelace plumbing
+  // -------------------------------------------------------------------------
 
+  /** Trigger re-render on new hass */
   set hass(hass) { this._hass = hass; this.requestUpdate(); }
   get hass() { return this._hass; }
 
+  /** Tell HA which element to use as the GUI editor */
   static getConfigElement() {
     return document.createElement('simple-air-comfort-card-editor');
   }
 
+  /** Provide a reasonable default config in the card picker */
   static getStubConfig() {
     return {
       name: 'Air Comfort',
       temperature: 'sensor.temperature',
       humidity: 'sensor.humidity',
-      // windspeed: 'sensor.wind_speed',
+      // windspeed: 'sensor.wind_speed', // optional
       decimals: 1,
       default_wind_speed: 0,
     };
   }
 }
 
-// Register the card element
+/** Register the card as a custom element */
 customElements.define('simple-air-comfort-card', SimpleAirComfortCard);
 
-// Lovelace card picker metadata
+/** Advertise to the Lovelace card picker */
 window.customCards = window.customCards || [];
 window.customCards.push({
   type: 'simple-air-comfort-card',
@@ -251,7 +305,7 @@ window.customCards.push({
 });
 
 /* ------------------------------------------------------------------------ */
-/*                             GUI EDITOR                                   */
+/*                               GUI EDITOR                                 */
 /* ------------------------------------------------------------------------ */
 
 class SimpleAirComfortCardEditor extends LitElement {
@@ -275,6 +329,23 @@ class SimpleAirComfortCardEditor extends LitElement {
     .hint { opacity: 0.7; font-size: 0.9em; }
   `;
 
+  constructor() {
+    super();
+    // Ensure HA's helper web components (ha-entity-picker, ha-textfield, etc.) are registered.
+    // Without this, the pickers may not render inside the editor.
+    this._ensureHelpers();
+  }
+
+  async _ensureHelpers() {
+    try {
+      await window.loadCardHelpers?.();
+      this.requestUpdate(); // re-render once helpers are loaded
+    } catch (_) {
+      // No-op; HA may still define them shortly; the editor will re-render as needed.
+    }
+  }
+
+  /** Editor receives current config from HA */
   setConfig(config) {
     this._config = {
       name: config.name ?? 'Air Comfort',
@@ -286,6 +357,7 @@ class SimpleAirComfortCardEditor extends LitElement {
     };
   }
 
+  // Convenience getters to keep template tidy
   get _name() { return this._config?.name ?? ''; }
   get _temperature() { return this._config?.temperature ?? ''; }
   get _humidity() { return this._config?.humidity ?? ''; }
@@ -293,11 +365,13 @@ class SimpleAirComfortCardEditor extends LitElement {
   get _decimals() { return Number.isFinite(this._config?.decimals) ? this._config.decimals : 1; }
   get _defaultWind() { return Number.isFinite(this._config?.default_wind_speed) ? this._config.default_wind_speed : 0.0; }
 
+  /** Render the editor form */
   render() {
     if (!this.hass) return html``;
 
     return html`
       <div class="form">
+        <!-- Name -->
         <div class="row">
           <div><label>Name</label></div>
           <ha-textfield
@@ -307,28 +381,31 @@ class SimpleAirComfortCardEditor extends LitElement {
           ></ha-textfield>
         </div>
 
+        <!-- Temperature entity -->
         <div class="row">
           <div><label>Temperature entity</label></div>
           <ha-entity-picker
             .hass=${this.hass}
             .value=${this._temperature}
             .includeDomains=${['sensor']}
-            @value-changed=${(e) => this._update('temperature', e.detail.value)}
             allow-custom-entity
+            @value-changed=${(e) => this._update('temperature', e.detail.value)}
           ></ha-entity-picker>
         </div>
 
+        <!-- Humidity entity -->
         <div class="row">
           <div><label>Humidity entity</label></div>
           <ha-entity-picker
             .hass=${this.hass}
             .value=${this._humidity}
             .includeDomains=${['sensor']}
-            @value-changed=${(e) => this._update('humidity', e.detail.value)}
             allow-custom-entity
+            @value-changed=${(e) => this._update('humidity', e.detail.value)}
           ></ha-entity-picker>
         </div>
 
+        <!-- Wind speed entity (optional) -->
         <div class="row">
           <div>
             <label>Wind speed entity</label>
@@ -338,15 +415,17 @@ class SimpleAirComfortCardEditor extends LitElement {
             .hass=${this.hass}
             .value=${this._windspeed}
             .includeDomains=${['sensor']}
-            @value-changed=${(e) => this._update('windspeed', e.detail.value)}
             allow-custom-entity
-            no-clear-text
+            @value-changed=${(e) => this._update('windspeed', e.detail.value)}
           ></ha-entity-picker>
         </div>
 
+        <!-- Default wind speed fallback -->
         <div class="row">
-          <div><label>Default wind speed (m/s)</label></div>
-          <div class="hint">If no wind speed entity is set, use this default.</div>
+          <div>
+            <label>Default wind speed (m/s)</label>
+            <div class="hint">If no wind speed entity is set, use this default.</div>
+          </div>
           <ha-textfield
             type="number"
             inputmode="decimal"
@@ -356,6 +435,7 @@ class SimpleAirComfortCardEditor extends LitElement {
           ></ha-textfield>
         </div>
 
+        <!-- Decimals -->
         <div class="row">
           <div><label>Decimals</label></div>
           <ha-textfield
@@ -370,6 +450,7 @@ class SimpleAirComfortCardEditor extends LitElement {
     `;
   }
 
+  /** Update config value (strings/entities) */
   _update(key, value) {
     const newConfig = { ...(this._config ?? {}) };
     if (value === '' || value === undefined || value === null) {
@@ -381,6 +462,7 @@ class SimpleAirComfortCardEditor extends LitElement {
     fireEvent(this, 'config-changed', { config: newConfig });
   }
 
+  /** Update numeric config with fallback (for number inputs) */
   _updateNumber(key, raw, fallback = 0) {
     const num = raw === '' ? undefined : Number(raw);
     const val = Number.isFinite(num) ? num : fallback;
@@ -388,4 +470,5 @@ class SimpleAirComfortCardEditor extends LitElement {
   }
 }
 
+/** Register the editor custom element */
 customElements.define('simple-air-comfort-card-editor', SimpleAirComfortCardEditor);
