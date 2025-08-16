@@ -1,9 +1,8 @@
 {
   "name": "Simple Air Comfort Card",
   "filename": "dist/simple-air-comfort-card.js",
-  "type": "module",
   "render_readme": true,
-  "description": "Highly accurate air comfort visualization card using temperature, humidity, dew point, CO₂, and apparent temperature.",
-  "domains": ["lovelace"],
-  "iot_class": "local_polling"
+  "homeassistant": "2024.6.0",
+  "zip_release": true,
+  "hide_default_branch": false
 }
