@@ -1,31 +1,27 @@
 import { LitElement, html, css } from 'lit';
-import { styleMap } from 'lit/directives/style-map.js';
 
 /**
  * Simple Air Comfort Card
+ * - Apparent Temperature (Australian BoM):
+ *     AT = T + 0.33·e − 0.70·ws − 4.0
+ *     (T in °C, e in hPa from Arden Buck, ws in m/s)
+ * - Vapour pressure (e) via Arden Buck saturation vapour pressure.
+ * - Dew point from Arden Buck (numeric inverse).
+ * - Default windspeed is 0.0 m/s (indoor-friendly) if no wind entity provided.
+ * - Title “Air Comfort” is rendered over the SVG background (no ha-card header).
  *
- * Physics:
- *  - Vapour pressure (e, hPa) via Arden Buck saturation vapour pressure.
- *  - Dew point via numeric inverse of Buck.
- *  - Apparent Temperature (Australian BoM):
- *        AT = T + 0.33·e − 0.70·ws − 4.0
- *        (T in °C, e in hPa, ws in m/s)
- *
- * Behaviour:
- *  - If no wind entity, a default wind speed (m/s) is used (configurable; default 0.0 m/s).
- *  - Wind speed and vapour pressure are not rendered on the dial; they’re only used in calculations.
- *  - Temperature units follow the temperature entity (°C/°F); internal math uses °C.
- *
- * Lovelace:
- *  type: custom:simple-air-comfort-card
- *  name: Air Comfort
- *  temperature: sensor.living_temp
- *  humidity: sensor.living_humidity
- *  windspeed: sensor.living_wind_speed  # optional
- *  decimals: 1                          # optional (default 1)
- *  default_wind_speed: 0                # optional (default 0 m/s)
- *  overlay_url: /hacsfiles/simple-air-comfort-card/sac_background_overlay.svg  # optional
+ * Lovelace config example:
+ * type: custom:simple-air-comfort-card
+ * name: Air Comfort                # currently only used in editor pane
+ * temperature: sensor.living_temp
+ * humidity: sensor.living_humidity
+ * windspeed: sensor.living_wind_speed   # optional
+ * decimals: 1                           # optional (default 1)
+ * default_wind_speed: 0                 # optional (default 0 m/s)
  */
+
+// We ship the SVG next to the bundle (rollup copies it to dist/).
+const BG_URL = 'sac_background_overlay.svg';
 
 const fireEvent = (node, type, detail, options) => {
   const event = new Event(type, {
@@ -44,99 +40,133 @@ class SimpleAirComfortCard extends LitElement {
     _config: { state: true },
   };
 
-  /* ---------- Look & layout (ring-anchored) -------------------------------- */
   static styles = css`
-    :host { --ring-size: 68%; } /* ring size relative to the square canvas */
+    ha-card { padding: 0; overflow: hidden; }
 
-    ha-card { padding: 16px; overflow: hidden; }
-
-    /* Header */
-    .header { display: grid; place-items: center; gap: 4px; margin-bottom: 6px; text-align: center; }
-    .title { font-weight: 700; opacity: 0.9; }
-    .summary { font-size: 1.6rem; font-weight: 800; line-height: 1; }
-    .sub { opacity: 0.75; font-size: 0.95rem; }
-
-    /* Square working area holding the dial */
+    /* Canvas that holds everything */
     .canvas {
       position: relative;
-      width: 100%;
-      aspect-ratio: 1 / 1;
-      border-radius: 12px;
-      background: radial-gradient(60% 60% at 50% 45%, rgba(0,160,120,0.22), rgba(0,0,0,0.36) 55%, rgba(0,0,0,0.65));
-      box-shadow: inset 0 0 60px rgba(0,0,0,0.35);
+      padding: 18px 18px 20px;
+      min-height: 420px;   /* responsive; grows with container width */
     }
 
-    /* Real white outer ring (not dependent on the SVG) */
-    .ring {
+    /* SVG background */
+    .bg {
       position: absolute;
-      left: 50%; top: 50%;
-      width: var(--ring-size); height: var(--ring-size);
-      transform: translate(-50%, -50%);
-      border-radius: 50%;
-      border: 2.5px solid rgba(255,255,255,0.95);
-      box-shadow: 0 0 4px rgba(0,0,0,0.45);
+      inset: 0;
+      display: grid;
+      place-items: center;
       pointer-events: none;
     }
-
-    /* Optional overlay SVG for the soft halo/vignette */
-    .overlay {
-      position: absolute; left: 50%; top: 50%;
-      width: var(--ring-size); height: var(--ring-size);
-      transform: translate(-50%, -50%);
-      object-fit: contain; pointer-events: none;
-      filter: drop-shadow(0 0 6px rgba(0,0,0,0.35)) brightness(1.05);
+    .bg img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      opacity: 0.9;
+      filter: saturate(0.9);
     }
-
-    /* Inner glow */
-    .inner {
-      position: absolute; left: 50%; top: 50%;
-      width: calc(var(--ring-size) * 0.58); height: calc(var(--ring-size) * 0.58);
-      transform: translate(-50%, -50%);
-      border-radius: 50%;
-      background:
-        radial-gradient(40% 40% at 45% 45%, rgba(0,0,0,0.9), rgba(0,0,0,0.6) 35%, rgba(0,0,0,0.1) 65%, transparent 66%),
-        radial-gradient(circle at 50% 55%, rgba(0,200,160,0.6), rgba(0,120,100,0.42) 60%, rgba(0,0,0,0.15) 100%);
-    }
-
-    /* Floating dot (white rimmed) whose position is tied to comfort */
-    .dot {
+    /* Title sitting ON the background */
+    .bg-title {
       position: absolute;
-      left: calc(50% + var(--dot-x));
-      top:  calc(50% + var(--dot-y));
-      width: calc(var(--ring-size) * 0.095);
-      height: calc(var(--ring-size) * 0.095);
-      transform: translate(-50%, -50%);
-      border-radius: 50%;
-      background: #000;
-      border: 6px solid rgba(238,238,238,0.98);
-      box-shadow: 0 10px 18px rgba(0,0,0,0.55);
+      top: 10px;
+      left: 50%;
+      transform: translateX(-50%);
+      font-weight: 700;
+      font-size: 1.05rem;
+      color: rgba(255,255,255,0.85);
+      letter-spacing: .3px;
+      text-shadow: 0 1px 2px rgba(0,0,0,.5);
     }
 
-    /* Ring-tied captions */
-    .label { position: absolute; color: rgba(255,255,255,0.8); text-shadow: 0 1px 2px rgba(0,0,0,0.5); font-variant-numeric: tabular-nums; }
-    .label.small { font-size: 0.95rem; font-weight: 700; }
-    .label.tiny  { font-size: 0.85rem; opacity: 0.72; font-weight: 600; }
-    .label.caption { font-size: 0.85rem; opacity: 0.65; }
+    /* Dial stage (kept away from card edges) */
+    .stage {
+      position: relative;
+      z-index: 2;
+      margin: 36px 18px 24px;
+      border-radius: 18px;
+      padding: clamp(18px, 3vw, 28px);
+      background: radial-gradient(120% 120% at 50% 35%, rgba(0,0,0,.35), rgba(0,0,0,.55));
+      box-shadow: inset 0 0 60px rgba(0,0,0,.35);
+    }
 
-    /* Cardinal captions positioned relative to the ring */
-    .at-top    { left: 50%; top: 38%; transform: translate(-50%, -50%); }
-    .at-bottom { left: 50%; top: 79%; transform: translate(-50%, -50%); }
-    .at-left   { left: 24%;  top: 58%; transform: translate(-50%, -50%) rotate(180deg); writing-mode: vertical-rl; }
-    .at-right  { left: 76%;  top: 58%; transform: translate(-50%, -50%); writing-mode: vertical-rl; }
+    /* Dial geometry */
+    .dial {
+      position: relative;
+      width: min(86vw, 560px);
+      max-width: 100%;
+      margin: 0 auto;
+      aspect-ratio: 1/1;
+    }
+    .ring {
+      position: absolute;
+      inset: 0;
+      border-radius: 50%;
+      border: 3px solid rgba(255,255,255,0.9);
+      box-shadow: 0 0 12px rgba(255,255,255,0.2), inset 0 0 40px rgba(0,0,0,.4);
+    }
+    .inner {
+      position: absolute;
+      inset: 20% 20% 20% 20%;
+      border-radius: 50%;
+      background: radial-gradient(60% 60% at 50% 45%, rgba(11,109,93,.9), rgba(0,0,0,.7));
+      box-shadow: inset 0 0 60px rgba(0,0,0,.55);
+    }
+    .iris {
+      position: absolute;
+      inset: 32% 32% 32% 32%;
+      border-radius: 50%;
+      background: radial-gradient(65% 65% at 45% 40%, rgba(11,109,93,.9), rgba(0,0,0,.85));
+      box-shadow: inset 0 0 40px rgba(0,0,0,.7);
+    }
+    .pupil {
+      position: absolute;
+      top: 50%; left: 50%;
+      width: 56px; height: 56px;
+      transform: translate(-50%, -50%);
+      border-radius: 50%;
+      background: radial-gradient(60% 60% at 45% 40%, #0c0c0c, #000);
+      box-shadow: 0 0 0 6px rgba(255,255,255,0.85),
+                  0 4px 18px rgba(0,0,0,.6);
+    }
 
-    /* Corner metric blocks that hug the ring */
-    .corner { position: absolute; transform: translate(-50%, -50%); text-align: center; }
-    .tl { left: 34%; top: 33%; } /* Dew point */
-    .tr { left: 66%; top: 33%; } /* Feels like */
-    .bl { left: 34%; top: 77%; } /* Air temp + text */
-    .br { left: 66%; top: 77%; } /* RH + text   */
+    /* Cardinal captions (static) */
+    .caption {
+      position: absolute;
+      font-size: .92rem;
+      font-weight: 600;
+      color: rgba(255,255,255,.75);
+      text-shadow: 0 1px 2px rgba(0,0,0,.7);
+      user-select: none;
+    }
+    .top    { top: -30px; left: 50%; transform: translate(-50%, 0); }
+    .bottom { bottom: -30px; left: 50%; transform: translate(-50%, 0); }
+    .left   { left: -34px; top: 50%; transform: translate(0, -50%) rotate(-90deg); }
+    .right  { right: -34px; top: 50%; transform: translate(0, -50%) rotate(90deg); }
 
-    .metric { display: grid; gap: 2px; justify-items: center; }
-    .metric .big { font-weight: 900; }
-    .metric .cap { opacity: 0.72; font-size: 0.85rem; }
+    /* Value labels around dial */
+    .metric {
+      position: absolute;
+      display: grid;
+      gap: 2px;
+      text-align: center;
+      color: rgba(255,255,255,.85);
+      text-shadow: 0 1px 2px rgba(0,0,0,.6);
+      font-variant-numeric: tabular-nums;
+    }
+    .metric .k { font-size: .92rem; opacity: .9; }
+    .metric .v { font-size: 1.05rem; font-weight: 800; letter-spacing: .2px; }
+
+    .tl { top: 13%; left: 18%; }   /* Dew point */
+    .tr { top: 13%; right: 18%; }  /* Feels like */
+    .bl { bottom: 11%; left: 18%; }/* Air temp + INTENSITY (Mild/…) */
+    .br { bottom: 11%; right: 18%; }/* RH + COMFORT (Comfy/Dry/…) */
+
+    .sub { font-size: .9rem; color: rgba(255,255,255,.7); }
+
+    /* Hide the stock header; we render title on the background instead */
+    .hidden-header { display:none }
   `;
 
-  /* ---------- Config ------------------------------------------------------- */
   setConfig(config) {
     if (!config || !config.temperature || !config.humidity) {
       throw new Error('simple-air-comfort-card: "temperature" and "humidity" entities are required.');
@@ -148,11 +178,9 @@ class SimpleAirComfortCard extends LitElement {
       windspeed: config.windspeed, // optional
       decimals: Number.isFinite(config.decimals) ? config.decimals : 1,
       default_wind_speed: Number.isFinite(config.default_wind_speed) ? config.default_wind_speed : 0.0,
-      overlay_url: config.overlay_url || '/hacsfiles/simple-air-comfort-card/sac_background_overlay.svg',
     };
   }
 
-  /* ---------- Rendering ---------------------------------------------------- */
   render() {
     if (!this.hass || !this._config) return html``;
 
@@ -162,109 +190,98 @@ class SimpleAirComfortCard extends LitElement {
 
     if (!tState || !rhState) {
       return html`<ha-card>
-        <div class="header"><div class="title">${this._config.name}</div></div>
-        <div class="sub">Entity not found: ${!tState ? this._config.temperature : this._config.humidity}</div>
+        <div class="canvas">
+          <div class="bg"><img src=${BG_URL} alt="" /></div>
+          <div class="metric tl"><div class="k">Entity not found</div></div>
+        </div>
       </ha-card>`;
     }
 
-    /* Units & inputs */
+    // Inputs and units
     const tempUnitIn = (tState.attributes.unit_of_measurement || '°C').trim();
     const tempC = this.#toCelsius(parseFloat(tState.state), tempUnitIn);
-    const rhRaw = parseFloat(rhState.state);
-    const rh = this.#clampRH(rhRaw);
+    const rh    = this.#clampRH(parseFloat(rhState.state));
     const ws_mps = this.#resolveWind(wsState, this._config.default_wind_speed);
 
-    /* Physics (Buck + BoM) */
+    // Physics
     const es_hPa = this.#buckSaturationVapourPressure_hPa(tempC);
     const e_hPa  = (rh / 100) * es_hPa;
     const dewC   = this.#dewPointFromVapourPressure_hPa(e_hPa);
     const atC    = this.#apparentTemperatureC(tempC, e_hPa, ws_mps);
 
-    /* Output units follow the temperature entity */
+    // Output units match input temp units
     const outUnit = tempUnitIn;
-    const tOut   = this.#fromCelsius(tempC, outUnit);
-    const dewOut = this.#fromCelsius(dewC, outUnit);
-    const atOut  = this.#fromCelsius(atC, outUnit);
+    const valueAT  = this.#fromCelsius(atC, outUnit);
+    const valueT   = this.#fromCelsius(tempC, outUnit);
+    const valueDew = this.#fromCelsius(dewC, outUnit);
+
+    // Classifications for text labels
+    const comfortWord   = this.#comfortWord(tempC, rh);            // “Comfy”, “Warm”, “Cold”, “Dry”, “Humid”
+    const intensityWord = this.#intensityWord(tempC, rh);          // “Mild”, “Moderate”, “Severe”
     const d = this._config.decimals;
-
-    /* Headline words (moisture dominates big word; thermal is sub) */
-    const moistureWord = rh < 35 ? 'Dry' : (rh > 60 ? 'Humid' : 'Comfy');
-    const thermalBand  = atC >= 26 ? 'Hot' : atC >= 23 ? 'Warm' : atC >= 19 ? 'Mild' : atC >= 16 ? 'Cool' : 'Cold';
-
-    /* Bottom captions (like your reference card) */
-    const humidComfort = rh < 35 ? 'DRY' : (rh <= 60 ? 'COMFY' : 'HUMID');
-    const tempComfort  = (atC > 20 && atC < 22) ? 'PERFECT'
-                        : (atC >= 18 && atC <= 24) ? 'MILD'
-                        : (atC < 18) ? 'COOL' : 'WARM';
-
-    /* Floating dot position: X = humidity (dry← … humid→), Y = thermal (warm↑ … cold↓).
-       Normalized range: [-1, +1], then scaled against ring size via CSS calc(). */
-    const clamp01 = (n) => Math.max(-1, Math.min(1, n));
-    const nx = clamp01((rh - 50) / 50);   // -1 (dry) … +1 (humid)
-    const ny = clamp01((21 - atC) / 10);  // +1 cold (down), -1 warm (up) relative to ~21°C
-    const dotX = `calc(var(--ring-size) * 0.32 * ${nx.toFixed(3)})`;
-    const dotY = `calc(var(--ring-size) * 0.32 * ${ny.toFixed(3)})`;
-
-    const OVERLAY_URL = this._config.overlay_url;
 
     return html`
       <ha-card>
-        <!-- Header -->
-        <div class="header">
-          <div class="title">${this._config.name}</div>
-          <div class="summary">${moistureWord}</div>
-          <div class="sub">${thermalBand}</div>
-        </div>
+        <!-- We don't render a standard header; title appears over background -->
+        <div class="hidden-header">${this._config.name}</div>
 
-        <!-- Dial -->
-        <div class="canvas" style=${styleMap({ '--dot-x': dotX, '--dot-y': dotY })}>
-          <!-- Cardinal captions -->
-          <div class="label tiny at-top">Warm</div>
-          <div class="label tiny at-bottom">Cold</div>
-          <div class="label tiny at-left">Dry</div>
-          <div class="label tiny at-right">Humid</div>
-
-          <!-- Ring + optional overlay + glow + dot -->
-          <div class="ring"></div>
-          <img class="overlay" src="${OVERLAY_URL}" alt="" />
-          <div class="inner"></div>
-          <div class="dot" aria-hidden="true"></div>
-
-          <!-- Corners -->
-          <div class="corner tl metric">
-            <div class="label caption">Dew point</div>
-            <div class="label small big">${this.#formatNumber(dewOut, d)} ${outUnit}</div>
+        <div class="canvas">
+          <!-- Background SVG + overlaid title -->
+          <div class="bg">
+            <img src=${BG_URL} alt="" />
+            <div class="bg-title">Air Comfort</div>
           </div>
 
-          <div class="corner tr metric">
-            <div class="label caption">Feels like</div>
-            <div class="label small big">${this.#formatNumber(atOut, d)} ${outUnit}</div>
-          </div>
+          <div class="stage">
+            <div class="dial">
+              <div class="ring"></div>
+              <div class="inner"></div>
+              <div class="iris"></div>
+              <div class="pupil"></div>
 
-          <div class="corner bl metric">
-            <div class="label small big">${this.#formatNumber(tOut, d)} ${outUnit}</div>
-            <div class="label cap">${tempComfort}</div>
-          </div>
+              <!-- Static captions around ring -->
+              <div class="caption top">Warm</div>
+              <div class="caption right">Humid</div>
+              <div class="caption bottom">Cold</div>
+              <div class="caption left">Dry</div>
 
-          <div class="corner br metric">
-            <div class="label small big">${this.#formatNumber(rh, d)} %</div>
-            <div class="label cap">${humidComfort}</div>
+              <!-- Metrics placed like your reference -->
+              <div class="metric tl">
+                <div class="k">Dew point</div>
+                <div class="v">${this.#formatNumber(valueDew, d)} ${outUnit}</div>
+              </div>
+
+              <div class="metric tr">
+                <div class="k">Feels like</div>
+                <div class="v">${this.#formatNumber(valueAT, d)} ${outUnit}</div>
+              </div>
+
+              <div class="metric bl">
+                <div class="v">${this.#formatNumber(valueT, d)} ${outUnit}</div>
+                <!-- REPLACES “PERFECT” with the top’s smaller word -->
+                <div class="sub">${intensityWord}</div>
+              </div>
+
+              <div class="metric br">
+                <div class="v">${this.#formatNumber(rh, d)} %</div>
+                <!-- REPLACES “COMFY” with the top’s big comfort word -->
+                <div class="sub">${comfortWord}</div>
+              </div>
+            </div>
           </div>
         </div>
       </ha-card>
     `;
   }
 
-  getCardSize() { return 3; }
+  getCardSize() { return 4; }
 
-  /* ---------- Physics ------------------------------------------------------ */
+  // ---- Physics -------------------------------------------------------------
 
-  // Australian BoM apparent temperature in °C
   #apparentTemperatureC(Tc, e_hPa, ws_mps) {
     return Tc + 0.33 * e_hPa - 0.70 * ws_mps - 4.0;
   }
 
-  // Buck saturation vapour pressure (hPa)
   #buckSaturationVapourPressure_hPa(Tc) {
     if (!Number.isFinite(Tc)) return NaN;
     if (Tc >= 0) {
@@ -273,7 +290,6 @@ class SimpleAirComfortCard extends LitElement {
     return 6.1115 * Math.exp((23.036 - Tc / 333.7) * (Tc / (279.82 + Tc)));
   }
 
-  // Dew point from vapour pressure via numeric inverse of Buck (°C)
   #dewPointFromVapourPressure_hPa(e_hPa) {
     if (!Number.isFinite(e_hPa) || e_hPa <= 0) return NaN;
     let lo = -80, hi = 60, mid = 0;
@@ -287,7 +303,28 @@ class SimpleAirComfortCard extends LitElement {
     return mid;
   }
 
-  /* ---------- Helpers ------------------------------------------------------ */
+  // ---- Classification text -------------------------------------------------
+
+  #comfortWord(Tc, rh) {
+    // Simple zone word for the *bottom-right* label.
+    if (rh < 30) return 'Dry';
+    if (rh > 60) return 'Humid';
+    if (Tc < 18) return 'Cold';
+    if (Tc > 26) return 'Warm';
+    return 'Comfy';
+    // (Tighten thresholds later if you want.)
+  }
+
+  #intensityWord(Tc, rh) {
+    // “Mild/Moderate/Severe” sited at bottom-left.
+    // Distance from nominal comfy center (22°C, 45%).
+    const dn = Math.hypot((Tc - 22) / 8, (rh - 45) / 25);
+    if (dn < 0.45) return 'Mild';
+    if (dn < 0.85) return 'Moderate';
+    return 'Severe';
+  }
+
+  // ---- Helpers -------------------------------------------------------------
 
   #clampRH(rh) {
     if (!Number.isFinite(rh)) return NaN;
@@ -316,7 +353,7 @@ class SimpleAirComfortCard extends LitElement {
     if (unit.includes('m/s')) return raw;
     if (unit.includes('km/h') || unit.includes('kph')) return raw / 3.6;
     if (unit.includes('mph')) return raw * 0.44704;
-    if (unit.includes('kn'))  return raw * 0.514444;
+    if (unit.includes('kn')) return raw * 0.514444;
     return raw; // assume m/s
   }
 
@@ -334,7 +371,7 @@ class SimpleAirComfortCard extends LitElement {
     });
   }
 
-  /* ---------- Lovelace plumbing ------------------------------------------- */
+  // ---- Lovelace plumbing ---------------------------------------------------
 
   set hass(hass) { this._hass = hass; this.requestUpdate(); }
   get hass() { return this._hass; }
@@ -355,22 +392,22 @@ class SimpleAirComfortCard extends LitElement {
   }
 }
 
-/* Register the card element */
+// Register the card element
 customElements.define('simple-air-comfort-card', SimpleAirComfortCard);
 
-/* Lovelace card picker metadata */
+// Lovelace card picker metadata
 window.customCards = window.customCards || [];
 window.customCards.push({
   type: 'simple-air-comfort-card',
   name: 'Simple Air Comfort Card',
   description:
-    'Australian BoM apparent temperature + dew point (Arden Buck). Wind defaults to 0.0 m/s if not provided.',
+    'Australian BoM apparent temperature + dew point (Arden Buck). Wind is optional; defaults to 0.0 m/s.',
   preview: true,
 });
 
-/* -------------------------------------------------------------------------- */
-/*                                GUI EDITOR                                  */
-/* -------------------------------------------------------------------------- */
+/* ------------------------------------------------------------------------ */
+/*                             GUI EDITOR                                   */
+/* ------------------------------------------------------------------------ */
 
 class SimpleAirComfortCardEditor extends LitElement {
   static properties = {
@@ -380,12 +417,7 @@ class SimpleAirComfortCardEditor extends LitElement {
 
   static styles = css`
     .form { display: grid; gap: 12px; padding: 8px 12px 16px; }
-    .row {
-      display: grid;
-      grid-template-columns: 220px 1fr;
-      gap: 12px;
-      align-items: center;
-    }
+    .row { display: grid; grid-template-columns: 220px 1fr; gap: 12px; align-items: center; }
     .hint { opacity: 0.7; font-size: 0.9em; }
   `;
 
@@ -397,17 +429,15 @@ class SimpleAirComfortCardEditor extends LitElement {
       windspeed: config.windspeed,
       decimals: Number.isFinite(config.decimals) ? config.decimals : 1,
       default_wind_speed: Number.isFinite(config.default_wind_speed) ? config.default_wind_speed : 0.0,
-      overlay_url: config.overlay_url || '/hacsfiles/simple-air-comfort-card/sac_background_overlay.svg',
     };
   }
 
-  get _name() { return this._config?.name ?? ''; }
+  get _name()        { return this._config?.name ?? ''; }
   get _temperature() { return this._config?.temperature ?? ''; }
-  get _humidity() { return this._config?.humidity ?? ''; }
-  get _windspeed() { return this._config?.windspeed ?? ''; }
-  get _decimals() { return Number.isFinite(this._config?.decimals) ? this._config.decimals : 1; }
+  get _humidity()    { return this._config?.humidity ?? ''; }
+  get _windspeed()   { return this._config?.windspeed ?? ''; }
+  get _decimals()    { return Number.isFinite(this._config?.decimals) ? this._config.decimals : 1; }
   get _defaultWind() { return Number.isFinite(this._config?.default_wind_speed) ? this._config.default_wind_speed : 0.0; }
-  get _overlay() { return this._config?.overlay_url ?? ''; }
 
   render() {
     if (!this.hass) return html``;
@@ -448,7 +478,7 @@ class SimpleAirComfortCardEditor extends LitElement {
         <div class="row">
           <div>
             <label>Wind speed entity</label>
-            <div class="hint">Optional. If empty, wind defaults below and is used only in the calculation.</div>
+            <div class="hint">Optional. If empty, wind defaults below.</div>
           </div>
           <ha-entity-picker
             .hass=${this.hass}
@@ -461,9 +491,7 @@ class SimpleAirComfortCardEditor extends LitElement {
         </div>
 
         <div class="row">
-          <div><label>Default wind speed (m/s)</label>
-            <div class="hint">If no wind speed entity is set, use this default.</div>
-          </div>
+          <div><label>Default wind speed (m/s)</label></div>
           <ha-textfield
             type="number"
             inputmode="decimal"
@@ -481,17 +509,6 @@ class SimpleAirComfortCardEditor extends LitElement {
             min="0"
             .value=${String(this._decimals)}
             @input=${(e) => this._updateNumber('decimals', e.target.value, 0)}
-          ></ha-textfield>
-        </div>
-
-        <div class="row">
-          <div><label>Overlay URL (optional)</label>
-            <div class="hint">Defaults to the HACS path. Leave blank to keep default.</div>
-          </div>
-          <ha-textfield
-            .value=${this._overlay}
-            @input=${(e) => this._update('overlay_url', e.target.value)}
-            placeholder="/hacsfiles/simple-air-comfort-card/sac_background_overlay.svg"
           ></ha-textfield>
         </div>
       </div>
