@@ -717,7 +717,7 @@ class SimpleAirComfortCardEditor extends LitElement {
             step="0.1"
             .value=${String(this._tmin)}
             @input=${(e) => this._updateNumber('temp_min', e.target.value, 15)}
-          ></ha-entity-picker>
+          ></ha-textfield>
         </div>
 
         <div class="row">
@@ -728,7 +728,7 @@ class SimpleAirComfortCardEditor extends LitElement {
             step="0.1"
             .value=${String(this._tmax)}
             @input=${(e) => this._updateNumber('temp_max', e.target.value, 35)}
-          ></ha-entity-picker>
+          ></ha-textfield>
         </div>
       </div>
     `;
