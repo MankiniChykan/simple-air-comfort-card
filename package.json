@@ -5,7 +5,9 @@
   "description": "Dynamic Lovelace card for visualizing indoor comfort using temperature, humidity, and dew point.",
   "main": "dist/simple-air-comfort-card.js",
   "module": "dist/simple-air-comfort-card.js",
-  "files": ["dist/"],
+  "files": [
+    "dist/"
+  ],
   "scripts": {
     "clean": "rimraf dist",
     "build": "rollup -c",
@@ -25,7 +27,7 @@
     "eslint": "^9.33.0",
     "http-server": "^14.1.1",
     "npm-run-all": "^4.1.5",
-    "rimraf": "^5.0.7",
+    "rimraf": "^5.0.10",
     "rollup": "^3.29.5",
     "rollup-plugin-copy": "^3.5.0",
     "rollup-plugin-gzip": "^4.1.1",
@@ -35,4 +37,3 @@
     "lit": "^3.3.1"
   }
 }
-
