@@ -596,6 +596,7 @@ class SimpleAirComfortCardEditor extends LitElement {
   static properties = {
     hass: { type: Object },
     _config: { state: true },
+    _helpers: { state: true },          // <— keep a handle to helpers
   };
 
   static styles = css`
@@ -612,6 +613,27 @@ class SimpleAirComfortCardEditor extends LitElement {
     }
     .hint { opacity: 0.7; font-size: 0.9em; }
   `;
+
+  // 🔌 Ensure HA’s card helpers are loaded when the editor is attached,
+  // so elements like <ha-entity-picker> get defined and work.
+  connectedCallback() {
+    super.connectedCallback();
+    this._ensureHelpers();
+  }
+
+  async _ensureHelpers() {
+    if (this._helpers) return;
+    if (window.loadCardHelpers) {
+      try {
+        this._helpers = await window.loadCardHelpers();
+        // Nudge a re-render once helpers are ready (ensures pickers show up)
+        await this.updateComplete;
+        this.requestUpdate();
+      } catch (e) {
+        // no-op; editor still works, pickers may appear once HA loads helpers
+      }
+    }
+  }
 
   setConfig(config) {
     this._config = {
@@ -753,3 +775,4 @@ class SimpleAirComfortCardEditor extends LitElement {
 }
 
 customElements.define('simple-air-comfort-card-editor', SimpleAirComfortCardEditor);
+
