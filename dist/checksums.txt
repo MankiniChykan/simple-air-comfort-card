@@ -1,2 +1,2 @@
 simple-air-comfort-card.js  37a8a3b1829c8947d82edbf6ecfa9d149304c3dc2af5fc6c04b14bedd5b991e2
-simple-air-comfort-card.js.gz  a909169364abb749e98dad5c4257404a4b26d55d6f94f673d5c49f586ce3ac00
+simple-air-comfort-card.js.gz  93db85f0aa771e9afcba658904971dff89286f69857ea6fd9d58fb0e02695aec
