@@ -3,25 +3,33 @@ import { LitElement, html, css } from 'lit';
 /**
  * Simple Air Comfort Card
  *
- * Face:
- *  - Title (room name) at top, dewpoint comfort text as subtitle.
- *  - TL: Dew point (°C)
- *  - TR: Apparent temperature (AT, °C)
- *  - BL: Temperature comfort text
- *  - BR: Humidity comfort text
- *  - Right side graphic: outer white ring (dewpoint gradient), inner black comfort circle (humidity/temperature gradient),
- *    and a floating white dot that moves per humidity (X) & temperature (Y) and blinks when outside limits.
+ * Physics & conventions
+ * - Apparent Temperature (Australian BoM):
+ *     AT = T + 0.33·e − 0.70·ws − 4.0
+ *     (T in °C, e in hPa from Arden Buck, ws in m/s)
+ * - Vapour pressure (e) via Arden Buck saturation vapour pressure.
+ * - Dew point from Arden Buck (numeric inverse).
+ * - Default windspeed is 0.0 m/s (indoor-friendly) if no wind entity provided.
  *
- * Physics:
- *  - Apparent Temperature (Australian BoM):
- *      AT = T + 0.33·e − 0.70·ws − 4.0
- *    where T in °C, e in hPa (Arden Buck vapour pressure from RH & T), ws in m/s
- *  - Dew point via Arden Buck inverse (numeric bisection).
+ * Visuals
+ * - Card background colour = your macro `calculate_temperature_colour_card_background`
+ *   (we reproduce it 1:1 in JS helpers).
+ * - Outer ring: white stroke with a soft, dew-point-tinted glow (mapping from your dewpoint text).
+ * - Inner eye (radial): humidity/temperature alert gradient from your inner-circle macro.
+ * - Floating white dot: moves by RH (x) and T (y), scaling by configurable temp_min/temp_max.
+ * - Face shows: room name at top, dewpoint text under name, TL dewpoint value, TR feels-like,
+ *   BL temperature-comfort text, BR humidity-comfort text.
  *
- * GUI Editor:
- *  - Pick temperature, humidity, optional wind. Set decimals, default wind, temp/humidity limits.
- *
- * No vapour pressure or wind readouts on face (wind still used in AT).
+ * Lovelace config example:
+ * type: custom:simple-air-comfort-card
+ * name: Master Bedroom
+ * temperature: sensor.bed_temp
+ * humidity: sensor.bed_rh
+ * windspeed: sensor.bed_ws           # optional
+ * decimals: 1                        # optional (default 1)
+ * default_wind_speed: 0              # optional (default 0 m/s)
+ * temp_min: 15                       # optional (dot vertical scale min °C)
+ * temp_max: 35                       # optional (dot vertical scale max °C)
  */
 
 const fireEvent = (node, type, detail, options) => {
@@ -43,133 +51,168 @@ class SimpleAirComfortCard extends LitElement {
 
   static styles = css`
     ha-card {
-      position: relative;
-      padding: 12px 12px 14px;
+      padding: 0;
       overflow: hidden;
+      position: relative;
     }
 
-    /* Maintain a square canvas for the graphic so percentages match your YAML layout */
-    .canvas {
+    /* Content frame with rounded corners so the background gradient looks like your macro card */
+    .frame {
+      margin: 16px;
+      border-radius: 18px;
+      padding: 20px;
+      min-height: 360px;
+      position: relative;
+    }
+
+    .title {
+      text-align: center;
+      font-weight: 700;
+      font-size: 1.2rem;
+      color: rgba(255,255,255,0.92);
+      text-shadow: 0 1px 2px rgba(0,0,0,0.4);
+    }
+
+    .subtitle {
+      margin-top: 4px;
+      text-align: center;
+      font-weight: 600;
+      color: rgba(255,255,255,0.70);
+    }
+
+    /* Two-column layout: left labels, right dial */
+    .grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px 16px;
+      align-items: start;
+      margin-top: 16px;
+    }
+
+    /* Numbers & labels at TL/TR/BL/BR */
+    .corner {
+      display: grid;
+      gap: 6px;
+      align-content: start;
+      color: rgba(255,255,255,0.9);
+      text-shadow: 0 1px 2px rgba(0,0,0,0.35);
+    }
+    .label {
+      font-weight: 600;
+      color: rgba(255,255,255,0.85);
+    }
+    .value {
+      font-weight: 800;
+      font-size: 1.1rem;
+    }
+
+    /* Dial area at right column */
+    .dial-wrap {
       position: relative;
       width: 100%;
       aspect-ratio: 1 / 1;
-      /* Background = temperature color mapping (matches your comfort bands) */
-      background: var(--sac-temp-bg, #2a2a2a);
-      border-radius: 8px;
+      display: grid;
+      place-items: center;
+    }
+    .dial {
+      position: relative;
+      width: min(82%, 360px);
+      aspect-ratio: 1 / 1;
     }
 
-    /* Title + subtitle row */
-    .header {
-      position: absolute;
-      top: 6%;
-      left: 50%;
-      transform: translate(-50%, -50%);
-      width: 100%;
-      text-align: center;
-      pointer-events: none;
-    }
-    .title {
-      font-weight: 700;
-      font-size: 1.05rem;
-      color: white;
-      text-shadow: 0 1px 2px rgba(0,0,0,0.35);
-      line-height: 1.15;
-    }
-    .subtitle {
-      font-weight: 600;
-      font-size: 0.9rem;
-      color: silver;
-      margin-top: 0.15rem;
-    }
-
-    /* The four text corners (TL/TR/BL/BR), using your picture-element style placements */
-    .corner {
-      position: absolute;
-      color: white;
-      text-shadow: 0 1px 2px rgba(0,0,0,0.35);
-      font-weight: 700;
-      letter-spacing: 0.2px;
-    }
-    .corner .label {
-      font-size: 0.75rem;
-      opacity: 0.85;
-      display: block;
-      font-weight: 600;
-    }
-    .corner .value {
-      font-size: 1.05rem;
-    }
-    .tl { left: 8%; top: 18%; transform: translate(-0%, -50%); text-align: left; }
-    .tr { right: 8%; top: 18%; transform: translate(0%, -50%); text-align: right; }
-    .bl { left: 8%; bottom: 8%; transform: translate(0%, 0%); text-align: left; }
-    .br { right: 8%; bottom: 8%; transform: translate(0%, 0%); text-align: right; }
-
-    /* Center graphic: centered concentric circles */
-    .graphic {
-      position: absolute;
-      top: 50%;
-      left: 50%;
-      transform: translate(-50%, -50%);
-      width: 56%;
-      height: 56%;
-      min-width: 120px;
-      min-height: 120px;
-    }
-
-    /* Outer ring: white border + dewpoint gradient fill (your ring macro colors) */
-    .outer-ring {
+    /* Outer ring: white rim; the glow tint is set inline via style= (dewpoint mapping) */
+    .ring {
       position: absolute;
       inset: 0;
       border-radius: 50%;
-      border: 2.5px solid white;
-      background: var(--sac-dewpoint-ring, radial-gradient(circle, dimgray, 55%, rgba(100,100,100,0.15), rgba(100,100,100,0.15)));
+      border: 3px solid white;
+      box-shadow:
+        0 0 6px 3px rgba(0,0,0,0.18),
+        0 0 18px 6px rgba(0,0,0,0.22);
     }
 
-    /* Inner comfort circle: black base + humidity/temperature gradient per your macro */
-    .inner-circle {
+    /* Inner eye gradient: inline background via style= (from macro rules) */
+    .eye {
       position: absolute;
-      /* From your YAML: inner ~21% within a 45% ring -> centered circle sized ~21% of canvas. */
-      /* We’ll center it within the outer ring using 50% and translate. */
       left: 50%;
       top: 50%;
+      width: 62%;
+      aspect-ratio: 1 / 1;
       transform: translate(-50%, -50%);
-      width: 46.5%;
-      height: 46.5%;
       border-radius: 50%;
-      background: var(--sac-inner-gradient, radial-gradient(circle, black 0%, black 60%));
-      border: 0;
-      box-shadow: inset 0 0 12px rgba(0,0,0,0.6);
+      box-shadow:
+        inset 0 0 24px rgba(0,0,0,0.65),
+        0 0 24px rgba(0,0,0,0.25);
     }
 
-    /* Floating dot and its blink aura when outside limits */
+    /* Floating dot (white), positioned by inline left/bottom % */
     .dot {
       position: absolute;
-      width: 15%;
-      height: 15%;
+      width: 9%;
+      aspect-ratio: 1 / 1;
       border-radius: 50%;
       background: white;
-      box-shadow: 0 0 6px rgba(0,0,0,0.45);
-      transform: translate(-50%, 50%); /* Match your macro’s translate */
-      transition: left 0.8s ease-in-out, bottom 0.8s ease-in-out;
-      z-index: 2;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.35);
+      transform: translate(-50%, 50%);
+      transition: bottom 0.8s ease-in-out, left 0.8s ease-in-out;
+      z-index: 3;
     }
-    .dot.outside::before {
-      content: "";
+
+    /* Axis labels around the ring (fixed) */
+    .axis {
       position: absolute;
-      inset: -20%;
-      border-radius: 50%;
-      background: radial-gradient(circle,
-        rgba(255,0,0,0.8) 20%,
-        rgba(255,0,0,0.3) 50%,
-        rgba(255,0,0,0.1) 70%,
-        rgba(255,0,0,0) 100%
-      );
-      animation: sac-blink 1s infinite alternate;
-      z-index: -1;
+      left: 50%;
+      transform: translateX(-50%);
+      top: -26px;
+      color: rgba(255,255,255,0.85);
+      font-weight: 700;
     }
-    @keyframes sac-blink {
-      0% { opacity: 1; }
-      100% { opacity: 0.3; }
+    .axis-bottom {
+      top: auto;
+      bottom: -26px;
+    }
+    .axis-left,
+    .axis-right {
+      top: 50%;
+      transform: translateY(-50%);
+      left: -28px;
+      writing-mode: vertical-rl;
+      rotate: 180deg;
+    }
+    .axis-right {
+      left: auto;
+      right: -28px;
+      rotate: 0deg;
+    }
+
+    /* Bottom row: BL temperature comfort text, BR humidity comfort text */
+    .bottom-row {
+      margin-top: 24px;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      align-items: start;
+    }
+    .bottom-cell {
+      display: grid;
+      gap: 6px;
+    }
+    .bottom-title {
+      color: rgba(255,255,255,0.85);
+      font-weight: 700;
+    }
+    .bottom-value {
+      color: rgba(255,255,255,0.95);
+      font-size: 1.1rem;
+      font-weight: 900;
+      letter-spacing: 0.4px;
+    }
+
+    /* Small screen tweaks */
+    @media (max-width: 540px) {
+      .grid { grid-template-columns: 1fr; }
+      .dial { width: min(86%, 360px); margin: 0 auto; }
+      .corner { text-align: left; }
+      .bottom-row { grid-template-columns: 1fr 1fr; }
     }
   `;
 
@@ -181,129 +224,107 @@ class SimpleAirComfortCard extends LitElement {
       name: config.name ?? 'Air Comfort',
       temperature: config.temperature,
       humidity: config.humidity,
-      windspeed: config.windspeed, // optional; used in AT only
+      windspeed: config.windspeed, // optional
       decimals: Number.isFinite(config.decimals) ? config.decimals : 1,
       default_wind_speed: Number.isFinite(config.default_wind_speed) ? config.default_wind_speed : 0.0,
-
-      // Limits & warnings (used for dot motion + blink + scaling)
+      // dot vertical scaling (maps temperature to dial vertical pos)
       temp_min: Number.isFinite(config.temp_min) ? config.temp_min : 15,
       temp_max: Number.isFinite(config.temp_max) ? config.temp_max : 35,
-      temp_min_warning: Number.isFinite(config.temp_min_warning) ? config.temp_min_warning : 18,
-      temp_max_warning: Number.isFinite(config.temp_max_warning) ? config.temp_max_warning : 26.4,
-      humidity_min: Number.isFinite(config.humidity_min) ? config.humidity_min : 40,
-      humidity_max: Number.isFinite(config.humidity_max) ? config.humidity_max : 60,
     };
   }
-
-  // ---- Rendering -----------------------------------------------------------
 
   render() {
     if (!this.hass || !this._config) return html``;
 
-    const t = this.hass.states[this._config.temperature];
-    const h = this.hass.states[this._config.humidity];
-    const w = this._config.windspeed ? this.hass.states[this._config.windspeed] : undefined;
+    // ---- Pull entity states -------------------------------------------------
+    const tState  = this.hass.states[this._config.temperature];
+    const rhState = this.hass.states[this._config.humidity];
+    const wsState = this._config.windspeed ? this.hass.states[this._config.windspeed] : undefined;
 
-    if (!t || !h) {
-      return html`<ha-card>
-        <div class="canvas"></div>
-        <div style="padding: 8px; color: var(--primary-text-color)">Missing entity:
-          ${!t ? this._config.temperature : this._config.humidity}</div>
-      </ha-card>`;
+    if (!tState || !rhState) {
+      return html`<ha-card><div class="frame">
+        <div class="title">${this._config.name}</div>
+        <div class="subtitle">Entity not found: ${!tState ? this._config.temperature : this._config.humidity}</div>
+      </div></ha-card>`;
     }
 
-    // Raw sensor values
-    const unitT = (t.attributes.unit_of_measurement || '°C').trim();
-    const T_C = this.#toC(parseFloat(t.state), unitT);
-    const RH = this.#clampRH(parseFloat(h.state));
+    // ---- Units & numeric parsing -------------------------------------------
+    const tempUnitIn = (tState.attributes.unit_of_measurement || '°C').trim();
+    const tempC  = this.#toCelsius(parseFloat(tState.state), tempUnitIn);
+    const rh     = this.#clampRH(parseFloat(rhState.state));
+    const ws_mps = this.#resolveWind(wsState, this._config.default_wind_speed);
 
-    // Wind (m/s) resolution (hidden on face, used in AT)
-    const WS = this.#resolveWind(w, this._config.default_wind_speed);
+    // ---- Physics ------------------------------------------------------------
+    const es_hPa = this.#buckSaturationVapourPressure_hPa(tempC);
+    const e_hPa  = (rh / 100) * es_hPa;
+    const dewC   = this.#dewPointFromVapourPressure_hPa(e_hPa);
+    const atC    = this.#apparentTemperatureC(tempC, e_hPa, ws_mps);
 
-    // Buck vapour pressure (hPa) and dew point (°C)
-    const es_hPa = this.#buckEs_hPa(T_C);
-    const e_hPa = (RH / 100) * es_hPa;
-    const dew_C = this.#dewFromE_hPa(e_hPa);
+    // ---- Macro-equivalent text categories ----------------------------------
+    const dewText  = this.#dewpointTextFromMacro(dewC);
+    const tempText = this.#temperatureTextFromMacro(tempC);
+    const rhText   = this.#humidityTextFromMacro(rh);
 
-    // Apparent Temperature (BoM)
-    const AT_C = this.#apparentTemperatureC(T_C, e_hPa, WS);
+    // ---- Visual colours per your macros ------------------------------------
+    const cardBg     = this.#backgroundGradientForTempC(tempC);          // <-- NEW: matches Jinja macro exactly
+    const ringGlow   = this.#dewpointGlowForText(dewText);               // outer ring halo tint
+    const innerEyeBg = this.#innerEyeGradient(rh, tempC);                // black/pink/blue per macro rules
 
-    // Texts per your macros (EXACT thresholds)
-    const textDew = this.#dewpointTextFromMacro(dew_C);
-    const textTemp = this.#temperatureTextFromMacro(T_C);
-    const textHum = this.#humidityTextFromMacro(RH);
+    // ---- Floating dot position ---------------------------------------------
+    const { temp_min, temp_max } = this._config;
+    const yPct = this.#scaleClamped(tempC, temp_min, temp_max, 0, 100);   // 0=bottom, 100=top
+    const xPct = this.#clamp(rh, 0, 100);                                 // 0..100 across
 
-    // Visual colors/gradients from your macros
-    const dewRing = this.#dewpointRingGradient(textDew);
-    const innerGrad = this.#innerCircleGradient(RH, T_C);
-
-    // Card background color from temperature comfort bands (approximate mapping)
-    const tempBg = this.#temperatureBackground(T_C);
-
-    // Floating dot position + blink (exact macro behavior)
-    const {
-      leftPct, bottomPct, outsideLimits,
-    } = this.#floatingDot(T_C, RH,
-      this._config.temp_min, this._config.temp_max,
-      this._config.temp_min_warning, this._config.temp_max_warning,
-      this._config.humidity_min, this._config.humidity_max
-    );
-
-    // Format numbers
+    // ---- Output numbers & units -------------------------------------------
     const d = this._config.decimals;
-    const dewOut = this.#fmt(this.#fromC(dew_C, unitT), d);
-    const atOut  = this.#fmt(this.#fromC(AT_C, unitT), d);
-
-    // Inline CSS vars for gradients & bg
-    const styleVars = `
-      --sac-temp-bg: ${tempBg};
-      --sac-dewpoint-ring: ${dewRing};
-      --sac-inner-gradient: ${innerGrad};
-    `;
+    const outUnit = tempUnitIn;
+    const dewOut = this.#formatNumber(this.#fromCelsius(dewC, outUnit), d) + ` ${outUnit}`;
+    const atOut  = this.#formatNumber(this.#fromCelsius(atC,  outUnit), d) + ` ${outUnit}`;
 
     return html`
-      <ha-card>
-        <div class="canvas" style=${styleVars}>
+      <ha-card style="background:${cardBg}">
+        <div class="frame">
+          <div class="title">${this._config.name}</div>
+          <div class="subtitle">${dewText}</div>
 
-          <!-- Title + subtitle (dewpoint comfort text) -->
-          <div class="header">
-            <div class="title">${this._config.name}</div>
-            <div class="subtitle">${textDew}</div>
+          <div class="grid">
+            <!-- Left (TL) Dew point value -->
+            <div class="corner">
+              <div class="label">Dew point</div>
+              <div class="value">${dewOut}</div>
+            </div>
+
+            <!-- Right column: the dial -->
+            <div class="dial-wrap">
+              <div class="dial">
+                <div class="axis">Warm</div>
+                <div class="axis axis-bottom">Cold</div>
+                <div class="axis-left">Dry</div>
+                <div class="axis-right">Humid</div>
+
+                <div class="ring" style="${ringGlow}"></div>
+                <div class="eye" style="background:${innerEyeBg}"></div>
+
+                <!-- floating dot -->
+                <div class="dot" style="left:${xPct}%; bottom:${yPct}%"></div>
+              </div>
+            </div>
+
+            <!-- Right (TR) Feels like -->
+            <div class="corner" style="grid-column: 2 / 3; grid-row: 1 / 2; justify-self:end; text-align:right;">
+              <div class="label">Feels like</div>
+              <div class="value">${atOut}</div>
+            </div>
           </div>
 
-          <!-- TL: Dew point -->
-          <div class="corner tl">
-            <span class="label">Dew point</span>
-            <span class="value">${dewOut} ${unitT}</span>
-          </div>
-
-          <!-- TR: Apparent temperature -->
-          <div class="corner tr">
-            <span class="label">Feels like</span>
-            <span class="value">${atOut} ${unitT}</span>
-          </div>
-
-          <!-- BL: Temperature comfort text -->
-          <div class="corner bl">
-            <span class="label">Temperature</span>
-            <span class="value">${textTemp}</span>
-          </div>
-
-          <!-- BR: Humidity comfort text -->
-          <div class="corner br">
-            <span class="label">Humidity</span>
-            <span class="value">${textHum}</span>
-          </div>
-
-          <!-- Right graphic: outer dewpoint ring + inner comfort circle + floating dot -->
-          <div class="graphic">
-            <div class="outer-ring"></div>
-            <div class="inner-circle"></div>
-
-            <!-- Floating dot -->
-            <div
-              class="dot ${outsideLimits ? 'outside' : ''}"
-              style="left:${leftPct}%; bottom:${bottomPct}%;">
+          <div class="bottom-row">
+            <div class="bottom-cell">
+              <div class="bottom-title">Temperature</div>
+              <div class="bottom-value">${tempText}</div>
+            </div>
+            <div class="bottom-cell" style="text-align:right;">
+              <div class="bottom-title">Humidity</div>
+              <div class="bottom-value">${rhText}</div>
             </div>
           </div>
         </div>
@@ -311,26 +332,31 @@ class SimpleAirComfortCard extends LitElement {
     `;
   }
 
-  getCardSize() { return 3; }
+  getCardSize() { return 4; }
 
-  // ---- Physics -------------------------------------------------------------
+  // ==========================================================================
+  // Physics
+  // ==========================================================================
 
   #apparentTemperatureC(Tc, e_hPa, ws_mps) {
     return Tc + 0.33 * e_hPa - 0.70 * ws_mps - 4.0;
   }
 
-  #buckEs_hPa(Tc) {
+  #buckSaturationVapourPressure_hPa(Tc) {
     if (!Number.isFinite(Tc)) return NaN;
-    if (Tc >= 0) return 6.1121 * Math.exp((18.678 - Tc / 234.5) * (Tc / (257.14 + Tc)));
+    if (Tc >= 0) {
+      return 6.1121 * Math.exp((18.678 - Tc / 234.5) * (Tc / (257.14 + Tc)));
+    }
     return 6.1115 * Math.exp((23.036 - Tc / 333.7) * (Tc / (279.82 + Tc)));
   }
 
-  #dewFromE_hPa(e_hPa) {
+  #dewPointFromVapourPressure_hPa(e_hPa) {
     if (!Number.isFinite(e_hPa) || e_hPa <= 0) return NaN;
+    // Numeric inverse of Arden Buck via bisection
     let lo = -80, hi = 60, mid = 0;
     for (let i = 0; i < 60; i++) {
       mid = (lo + hi) / 2;
-      const es = this.#buckEs_hPa(mid);
+      const es = this.#buckSaturationVapourPressure_hPa(mid);
       if (!Number.isFinite(es)) break;
       if (es > e_hPa) hi = mid; else lo = mid;
       if (Math.abs(hi - lo) < 1e-4) break;
@@ -338,153 +364,160 @@ class SimpleAirComfortCard extends LitElement {
     return mid;
   }
 
-  // ---- Macro-matching texts ------------------------------------------------
+  // ==========================================================================
+  // Macro-equivalent text mappings (locked to your Jinja ranges)
+  // ==========================================================================
 
+  // Dewpoint Comfort Text
   #dewpointTextFromMacro(dpC) {
     if (!Number.isFinite(dpC)) return 'Unknown';
-    if (dpC < 5) return 'Very Dry';
-    if (dpC <= 10) return 'Dry';
-    if (dpC <= 12.79) return 'Pleasant';
-    if (dpC <= 15.49) return 'Comfortable';
-    if (dpC <= 18.39) return 'Sticky Humid';
-    if (dpC <= 21.19) return 'Muggy';
-    if (dpC <= 23.9) return 'Sweltering';
+    if (dpC < 5)                       return 'Very Dry';
+    if (dpC >= 5     && dpC <= 10)     return 'Dry';
+    if (dpC >= 10.1  && dpC <= 12.79)  return 'Pleasant';
+    if (dpC >= 12.8  && dpC <= 15.49)  return 'Comfortable';
+    if (dpC >= 15.5  && dpC <= 18.39)  return 'Sticky Humid';
+    if (dpC >= 18.4  && dpC <= 21.19)  return 'Muggy';
+    if (dpC >= 21.2  && dpC <= 23.9)   return 'Sweltering';
     return 'Stifling';
   }
 
+  // Temperature Comfort Text
   #temperatureTextFromMacro(Tc) {
     if (!Number.isFinite(Tc)) return 'N/A';
-    if (Tc < 3) return 'FROSTY';
-    if (Tc <= 4.99) return 'COLD';
-    if (Tc <= 8.99) return 'CHILLY';
-    if (Tc <= 13.99) return 'COOL';
-    if (Tc <= 18.99) return 'MILD';
-    if (Tc <= 23.99) return 'PERFECT';
-    if (Tc <= 27.99) return 'WARM';
-    if (Tc <= 34.99) return 'HOT';
+    if (Tc < 3)                         return 'FROSTY';
+    if (Tc >= 3.1  && Tc <= 4.99)       return 'COLD';
+    if (Tc >= 5    && Tc <= 8.99)       return 'CHILLY';
+    if (Tc >= 9    && Tc <= 13.99)      return 'COOL';
+    if (Tc >= 14   && Tc <= 18.99)      return 'MILD';
+    if (Tc >= 19   && Tc <= 23.99)      return 'PERFECT';
+    if (Tc >= 24   && Tc <= 27.99)      return 'WARM';
+    if (Tc >= 28   && Tc <= 34.99)      return 'HOT';
     return 'BOILING';
   }
 
+  // Humidity Comfort Text
   #humidityTextFromMacro(RH) {
     if (!Number.isFinite(RH)) return 'N/A';
-    if (RH < 40) return 'DRY';
-    if (RH <= 60) return 'COMFY';
+    if (RH < 40)              return 'DRY';
+    if (RH <= 60)             return 'COMFY';
     return 'HUMID';
   }
 
-  // ---- Visual mappings (match your macros) ---------------------------------
+  // ==========================================================================
+  // Visual mappings (ring glow, inner eye gradient, card background gradient)
+  // ==========================================================================
 
-  #dewpointRingGradient(text) {
-    // Your ring macro colors:
-    // Very Dry -> deepskyblue
-    // Dry -> mediumaquamarine
-    // Pleasant -> limegreen
-    // Comfortable -> yellowgreen
-    // Sticky Humid -> yellow
-    // Muggy -> gold
-    // Sweltering -> orange
-    // Stifling -> crimson
-    // Unknown/Unavailable -> dimgray
-    const color =
-      text === 'Very Dry' ? 'deepskyblue' :
-      text === 'Dry' ? 'mediumaquamarine' :
-      text === 'Pleasant' ? 'limegreen' :
-      text === 'Comfortable' ? 'yellowgreen' :
-      text === 'Sticky Humid' ? 'yellow' :
-      text === 'Muggy' ? 'gold' :
-      text === 'Sweltering' ? 'orange' :
-      text === 'Stifling' ? 'crimson' :
-      'dimgray';
-    // Recreate your gradient structure
-    return `radial-gradient(circle, ${color}, 55%, rgba(100,100,100,0.15), rgba(100,100,100,0.15))`;
+  // NEW: exact reproduction of your calculate_temperature_colour_card_background macro
+  #temperatureComfortTextForBg(Tc) {
+    if (!Number.isFinite(Tc)) return 'n/a';
+    if (Tc < 3) return 'frosty';
+    if (Tc <= 4.99) return 'cold';
+    if (Tc <= 8.99) return 'chilly';
+    if (Tc <= 13.99) return 'cool';
+    if (Tc <= 18.99) return 'mild';
+    if (Tc <= 23.99) return 'perfect';
+    if (Tc <= 27.99) return 'warm';
+    if (Tc <= 34.99) return 'hot';
+    return 'boiling';
+  }
+  #_bgColourFromText(text) {
+    const t = String(text || '').toLowerCase();
+    if (t === 'frosty')  return 'mediumblue';
+    if (t === 'cold')    return 'dodgerblue';
+    if (t === 'chilly')  return 'deepskyblue';
+    if (t === 'cool')    return 'mediumaquamarine';
+    if (t === 'mild')    return 'seagreen';
+    if (t === 'perfect') return 'limegreen';
+    if (t === 'warm')    return 'gold';
+    if (t === 'hot')     return 'orange';
+    if (t === 'boiling') return 'crimson';
+    return 'dimgray';
+  }
+  #backgroundGradientForTempC(Tc) {
+    const label  = this.#temperatureComfortTextForBg(Tc);
+    const colour = this.#_bgColourFromText(label);
+    return `radial-gradient(circle, rgba(100,100,100,0.15), rgba(100,100,100,0.15), rgba(100,100,100,0.15), ${colour})`;
   }
 
-  #innerCircleGradient(RH, Tc) {
-    // Humidity color per macro:
-    // unknown/unavailable -> dimgray
-    // <40 or >60 -> hotpink
-    // 40..60 -> black
-    let humColor = 'dimgray';
-    if (Number.isFinite(RH)) {
-      if (RH > 60 || RH < 40) humColor = 'hotpink';
-      else humColor = 'black';
-    }
-
-    // Temperature color per macro (many ranges -> blue/orange families or dimgray mid)
-    let tColor = 'dimgray';
-    if (Number.isFinite(Tc)) {
-      if (Tc > 26.5) tColor = 'rgba(255, 69, 0, 0.8)';                 // hot/orange
-      else if (Tc > 24.0 && Tc <= 26.5) tColor = 'dimgray';             // neutral
-      else if (Tc > 19.0 && Tc <= 24.0) tColor = 'dimgray';             // neutral
-      else /* <=19.0 */ tColor = 'rgba(0, 102, 255, 0.8)';              // cool/blue (covers <=19 inc <3)
-    }
-
-    return `radial-gradient(circle, ${humColor} 0%, black, ${tColor} 70%)`;
-  }
-
-  #temperatureBackground(Tc) {
-    // Simple band -> color mapping to mimic your "temperature colour" backdrop
-    if (!Number.isFinite(Tc)) return '#333';
-    if (Tc < 3) return 'linear-gradient(135deg,#001a4d,#003d99)';        // FROSTY deep blues
-    if (Tc <= 4.99) return 'linear-gradient(135deg,#0a2a6b,#0f49a5)';
-    if (Tc <= 8.99) return 'linear-gradient(135deg,#0e4ba0,#1380d3)';    // CHILLY/Cooler blues
-    if (Tc <= 13.99) return 'linear-gradient(135deg,#1063b7,#16a0e0)';
-    if (Tc <= 18.99) return 'linear-gradient(135deg,#0f8a7a,#1fc0a5)';   // MILD teal/green
-    if (Tc <= 23.99) return 'linear-gradient(135deg,#2aa84a,#85c638)';   // PERFECT greens
-    if (Tc <= 27.99) return 'linear-gradient(135deg,#f0b323,#f76b1c)';   // WARM orange
-    if (Tc <= 34.99) return 'linear-gradient(135deg,#ef4823,#e9290f)';   // HOT red-orange
-    return 'linear-gradient(135deg,#7a0000,#b00000)';                    // BOILING deep red
-  }
-
-  // ---- Floating dot logic (exact macro) -----------------------------------
-
-  #floatingDot(Tc, RH, tMin, tMax, tWarnMin, tWarnMax, hMin, hMax) {
-    // Defaults when unknown/unavailable
-    const tIsFinite = Number.isFinite(Tc);
-    const hIsFinite = Number.isFinite(RH);
-    const tVal = tIsFinite ? Tc : 22;
-    const hVal = hIsFinite ? RH : 50;
-
-    // Scale temperature -> 0..100% (bottom..top)
-    const clampedT = Math.min(Math.max(tVal, tMin), tMax);
-    const bottomPct = ((clampedT - tMin) * (100 - 0)) / (tMax - tMin); // 0..100
-
-    // X position is humidity % (+0.5% offset like your macro)
-    const leftPct = Math.min(Math.max(hVal, 0), 100) + 0.5;
-
-    // Outside limits check
-    const outsideLimits =
-      (hVal < hMin) || (hVal > hMax) ||
-      (tVal < tWarnMin) || (tVal > tWarnMax) ||
-      (!hIsFinite && !tIsFinite) || // both unknown -> defaults in macro, considered outside
-      (!hIsFinite && tIsFinite && tVal === 22) ||
-      (hIsFinite && !tIsFinite && hVal === 50);
-
-    return {
-      leftPct: this.#round(leftPct, 1),
-      bottomPct: this.#round(bottomPct, 1),
-      outsideLimits,
+  // Map dewpoint text -> soft halo tint behind the white ring
+  #dewpointGlowForText(text) {
+    // tint colours mirror your dewpoint outer-ring macro
+    const m = {
+      'Unknown':       'dimgray',
+      'Unavailable':   'dimgray',
+      'Very Dry':      'deepskyblue',
+      'Dry':           'mediumaquamarine',
+      'Pleasant':      'limegreen',
+      'Comfortable':   'yellowgreen',
+      'Sticky Humid':  'yellow',
+      'Muggy':         'gold',
+      'Sweltering':    'orange',
+      'Stifling':      'crimson',
     };
+    const base = m[text] || 'rgba(100,100,100,0.15)';
+    // apply as inset/outer glow under the ring border
+    return `box-shadow:
+      0 0 0 3px white inset,
+      0 0 18px 6px ${base},
+      0 0 22px 10px rgba(0,0,0,0.25)`;
   }
 
-  // ---- Helpers -------------------------------------------------------------
+  // Inner eye gradient following your inner_circle_comfort_zone_alert_colour
+  #innerEyeGradient(RH, Tc) {
+    // Humidity colour: hotpink when outside [40..60], else black
+    let humidityColor = 'black';
+    if (!Number.isFinite(RH)) humidityColor = 'dimgray';
+    else if (RH < 40 || RH > 60) humidityColor = 'hotpink';
 
-  #toC(v, unit) {
-    if (!Number.isFinite(v)) return NaN;
-    const u = (unit || '').toLowerCase();
-    if (u.includes('f')) return (v - 32) * (5 / 9);
-    return v;
+    // Temperature colour buckets
+    let temperatureColor = 'dimgray';
+    if (Number.isFinite(Tc)) {
+      if (Tc > 34.9)                         temperatureColor = 'rgba(255, 69, 0, 0.8)';      // boiling+
+      else if (Tc > 26.5 && Tc <= 34.9)      temperatureColor = 'rgba(255, 69, 0, 0.8)';      // hot
+      else if (Tc > 24.0 && Tc <= 26.5)      temperatureColor = 'dimgray';                     // warm
+      else if (Tc > 19.0 && Tc <= 24.0)      temperatureColor = 'dimgray';                     // mild
+      else if (Tc > 14.0 && Tc <= 19.0)      temperatureColor = 'rgba(0, 102, 255, 0.8)';      // cool
+      else if (Tc > 9.0  && Tc <= 14.0)      temperatureColor = 'rgba(0, 102, 255, 0.8)';      // chilly
+      else if (Tc > 5.0  && Tc <= 9.0)       temperatureColor = 'rgba(0, 102, 255, 0.8)';      // cold
+      else if (Tc > 3.0  && Tc <= 5.0)       temperatureColor = 'rgba(0, 102, 255, 0.8)';      // frosty-ish
+      else if (Tc <= 3.0)                    temperatureColor = 'rgba(0, 102, 255, 0.8)';      // frosty
+    } else {
+      temperatureColor = 'dimgray';
+    }
+
+    // Same structure as your macro (radial gradient)
+    return `radial-gradient(circle, ${humidityColor} 0%, black, ${temperatureColor} 70%)`;
   }
-  #fromC(vC, unitOut) {
-    if (!Number.isFinite(vC)) return NaN;
-    const u = (unitOut || '').toLowerCase();
-    if (u.includes('f')) return (vC * 9/5) + 32;
-    return vC;
+
+  // ==========================================================================
+  // Helpers
+  // ==========================================================================
+
+  #clamp(v, a, b) { return Math.min(b, Math.max(a, v)); }
+  #scaleClamped(v, inMin, inMax, outMin, outMax) {
+    if (!Number.isFinite(v)) return (outMin + outMax) / 2;
+    const t = (v - inMin) / (inMax - inMin);
+    return this.#clamp(outMin + t * (outMax - outMin), outMin, outMax);
   }
+
   #clampRH(rh) {
     if (!Number.isFinite(rh)) return NaN;
     return Math.min(100, Math.max(0, rh));
   }
+
+  #toCelsius(value, unit) {
+    if (!Number.isFinite(value)) return NaN;
+    const u = (unit || '').toLowerCase();
+    if (u.includes('f')) return (value - 32) * (5 / 9);
+    return value;
+  }
+  #fromCelsius(valueC, unitOut) {
+    const u = (unitOut || '').toLowerCase();
+    if (!Number.isFinite(valueC)) return NaN;
+    if (u.includes('f')) return valueC * 9/5 + 32;
+    return valueC;
+  }
+
   #resolveWind(wsState, default_mps) {
     if (!wsState) return default_mps ?? 0.0;
     const raw = parseFloat(wsState.state);
@@ -494,14 +527,15 @@ class SimpleAirComfortCard extends LitElement {
     if (unit.includes('km/h') || unit.includes('kph')) return raw / 3.6;
     if (unit.includes('mph')) return raw * 0.44704;
     if (unit.includes('kn')) return raw * 0.514444;
-    return raw;
+    return raw; // assume m/s
   }
+
   #round(v, d = 1) {
     if (!Number.isFinite(v)) return NaN;
     const p = Math.pow(10, d);
     return Math.round(v * p) / p;
   }
-  #fmt(v, d = 1) {
+  #formatNumber(v, d = 1) {
     if (!Number.isFinite(v)) return '—';
     return this.#round(v, d).toLocaleString(undefined, {
       minimumFractionDigits: d,
@@ -528,10 +562,6 @@ class SimpleAirComfortCard extends LitElement {
       default_wind_speed: 0,
       temp_min: 15,
       temp_max: 35,
-      temp_min_warning: 18,
-      temp_max_warning: 26.4,
-      humidity_min: 40,
-      humidity_max: 60,
     };
   }
 }
@@ -545,7 +575,7 @@ window.customCards.push({
   type: 'simple-air-comfort-card',
   name: 'Simple Air Comfort Card',
   description:
-    'Australian BoM apparent temperature + dew point (Buck). Outer dewpoint ring, inner comfort circle, and moving dot.',
+    'Australian BoM apparent temperature + dew point (Arden Buck). Indoor-friendly defaults, macro-matched visuals.',
   preview: true,
 });
 
@@ -567,12 +597,11 @@ class SimpleAirComfortCardEditor extends LitElement {
     }
     .row {
       display: grid;
-      grid-template-columns: 230px 1fr;
+      grid-template-columns: 220px 1fr;
       gap: 12px;
       align-items: center;
     }
-    .hint { opacity: 0.72; font-size: 0.9em; }
-    ha-textfield { width: 100%; }
+    .hint { opacity: 0.7; font-size: 0.9em; }
   `;
 
   setConfig(config) {
@@ -585,10 +614,6 @@ class SimpleAirComfortCardEditor extends LitElement {
       default_wind_speed: Number.isFinite(config.default_wind_speed) ? config.default_wind_speed : 0.0,
       temp_min: Number.isFinite(config.temp_min) ? config.temp_min : 15,
       temp_max: Number.isFinite(config.temp_max) ? config.temp_max : 35,
-      temp_min_warning: Number.isFinite(config.temp_min_warning) ? config.temp_min_warning : 18,
-      temp_max_warning: Number.isFinite(config.temp_max_warning) ? config.temp_max_warning : 26.4,
-      humidity_min: Number.isFinite(config.humidity_min) ? config.humidity_min : 40,
-      humidity_max: Number.isFinite(config.humidity_max) ? config.humidity_max : 60,
     };
   }
 
@@ -600,10 +625,6 @@ class SimpleAirComfortCardEditor extends LitElement {
   get _defaultWind() { return Number.isFinite(this._config?.default_wind_speed) ? this._config.default_wind_speed : 0.0; }
   get _tmin() { return Number.isFinite(this._config?.temp_min) ? this._config.temp_min : 15; }
   get _tmax() { return Number.isFinite(this._config?.temp_max) ? this._config.temp_max : 35; }
-  get _twmin() { return Number.isFinite(this._config?.temp_min_warning) ? this._config.temp_min_warning : 18; }
-  get _twmax() { return Number.isFinite(this._config?.temp_max_warning) ? this._config.temp_max_warning : 26.4; }
-  get _hmin() { return Number.isFinite(this._config?.humidity_min) ? this._config.humidity_min : 40; }
-  get _hmax() { return Number.isFinite(this._config?.humidity_max) ? this._config.humidity_max : 60; }
 
   render() {
     if (!this.hass) return html``;
@@ -614,7 +635,7 @@ class SimpleAirComfortCardEditor extends LitElement {
           <div><label>Name</label></div>
           <ha-textfield
             .value=${this._name}
-            @input=${(e) => this._set('name', e.target.value)}
+            @input=${(e) => this._update('name', e.target.value)}
             placeholder="Air Comfort"
           ></ha-textfield>
         </div>
@@ -625,7 +646,7 @@ class SimpleAirComfortCardEditor extends LitElement {
             .hass=${this.hass}
             .value=${this._temperature}
             .includeDomains=${['sensor']}
-            @value-changed=${(e) => this._set('temperature', e.detail.value)}
+            @value-changed=${(e) => this._update('temperature', e.detail.value)}
             allow-custom-entity
           ></ha-entity-picker>
         </div>
@@ -636,7 +657,7 @@ class SimpleAirComfortCardEditor extends LitElement {
             .hass=${this.hass}
             .value=${this._humidity}
             .includeDomains=${['sensor']}
-            @value-changed=${(e) => this._set('humidity', e.detail.value)}
+            @value-changed=${(e) => this._update('humidity', e.detail.value)}
             allow-custom-entity
           ></ha-entity-picker>
         </div>
@@ -644,99 +665,81 @@ class SimpleAirComfortCardEditor extends LitElement {
         <div class="row">
           <div>
             <label>Wind speed entity</label>
-            <div class="hint">Optional. Used only in Apparent Temperature.</div>
+            <div class="hint">Optional. If empty, the default below is used.</div>
           </div>
           <ha-entity-picker
             .hass=${this.hass}
             .value=${this._windspeed}
             .includeDomains=${['sensor']}
-            @value-changed=${(e) => this._set('windspeed', e.detail.value)}
+            @value-changed=${(e) => this._update('windspeed', e.detail.value)}
             allow-custom-entity
             no-clear-text
           ></ha-entity-picker>
         </div>
 
         <div class="row">
-          <div><label>Default wind speed (m/s)</label>
-            <div class="hint">Used if no wind entity is set.</div>
-          </div>
+          <div><label>Default wind speed (m/s)</label></div>
+          <div class="hint">If no wind speed entity is set, use this default.</div>
           <ha-textfield
-            type="number" inputmode="decimal" step="0.1"
+            type="number"
+            inputmode="decimal"
+            step="0.1"
             .value=${String(this._defaultWind)}
-            @input=${(e) => this._setNum('default_wind_speed', e.target.value, 0)}
+            @input=${(e) => this._updateNumber('default_wind_speed', e.target.value)}
           ></ha-textfield>
         </div>
 
         <div class="row">
           <div><label>Decimals</label></div>
           <ha-textfield
-            type="number" step="1" min="0"
+            type="number"
+            step="1"
+            min="0"
             .value=${String(this._decimals)}
-            @input=${(e) => this._setNum('decimals', e.target.value, 1)}
+            @input=${(e) => this._updateNumber('decimals', e.target.value, 0)}
           ></ha-textfield>
         </div>
 
         <div class="row">
-          <div><label>Temp scale min / max (°C)</label>
-            <div class="hint">Dot vertical mapping (bottom..top).</div>
-          </div>
+          <div><label>Dot temp min (°C)</label></div>
           <ha-textfield
-            type="number" step="0.1"
+            type="number"
+            inputmode="decimal"
+            step="0.1"
             .value=${String(this._tmin)}
-            @input=${(e) => this._setNum('temp_min', e.target.value, 15)}
-          ></ha-textfield>
+            @input=${(e) => this._updateNumber('temp_min', e.target.value, 15)}
+          ></ha-entity-picker>
+        </div>
+
+        <div class="row">
+          <div><label>Dot temp max (°C)</label></div>
           <ha-textfield
-            type="number" step="0.1"
+            type="number"
+            inputmode="decimal"
+            step="0.1"
             .value=${String(this._tmax)}
-            @input=${(e) => this._setNum('temp_max', e.target.value, 35)}
-          ></ha-textfield>
-        </div>
-
-        <div class="row">
-          <div><label>Temp warning min / max (°C)</label>
-            <div class="hint">Blink when outside.</div>
-          </div>
-          <ha-textfield
-            type="number" step="0.1"
-            .value=${String(this._twmin)}
-            @input=${(e) => this._setNum('temp_min_warning', e.target.value, 18)}
-          ></ha-textfield>
-          <ha-textfield
-            type="number" step="0.1"
-            .value=${String(this._twmax)}
-            @input=${(e) => this._setNum('temp_max_warning', e.target.value, 26.4)}
-          ></ha-textfield>
-        </div>
-
-        <div class="row">
-          <div><label>Humidity range min / max (%)</label>
-            <div class="hint">Blink when outside.</div>
-          </div>
-          <ha-textfield
-            type="number" step="1"
-            .value=${String(this._hmin)}
-            @input=${(e) => this._setNum('humidity_min', e.target.value, 40)}
-          ></ha-textfield>
-          <ha-textfield
-            type="number" step="1"
-            .value=${String(this._hmax)}
-            @input=${(e) => this._setNum('humidity_max', e.target.value, 60)}
-          ></ha-textfield>
+            @input=${(e) => this._updateNumber('temp_max', e.target.value, 35)}
+          ></ha-entity-picker>
         </div>
       </div>
     `;
   }
 
-  _set(k, v) {
-    const cfg = { ...(this._config ?? {}) };
-    if (v === '' || v === undefined || v === null) delete cfg[k];
-    else cfg[k] = v;
-    this._config = cfg;
-    fireEvent(this, 'config-changed', { config: cfg });
+  _update(key, value) {
+    const newConfig = { ...(this._config ?? {}) };
+    if (value === '' || value === undefined || value === null) {
+      delete newConfig[key];
+    } else {
+      newConfig[key] = value;
+    }
+    this._config = newConfig;
+    fireEvent(this, 'config-changed', { config: newConfig });
   }
-  _setNum(k, raw, fallback) {
+
+  _updateNumber(key, raw, fallback = 0) {
     const num = raw === '' ? undefined : Number(raw);
-    this._set(k, Number.isFinite(num) ? num : fallback);
+    const val = Number.isFinite(num) ? num : fallback;
+    this._update(key, val);
   }
 }
 
