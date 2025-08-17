@@ -57,17 +57,17 @@ class SimpleAirComfortCard extends LitElement {
       position: relative;
       padding: 0;
       overflow: hidden;
-      isolation: isolate;            /* keep z-index stacking inside this card only */
+      isolation: isolate;                                            /* keep z-index stacking inside this card only */
       border-radius: var(--ha-card-border-radius, 12px);    
-      background: var(--sac-temp-bg, #2a2a2a); /* gradient on the card */
+      background: var(--sac-temp-bg, #2a2a2a);                     /* gradient on the card */
       clip-path: inset(0 round var(--ha-card-border-radius, 12px));  /* optional: if any browsers render shadows outside, clip-path guarantees it */
+      aspect-ratio: 1/1;                                             /* square card */
     }
 
     /* Square canvas so % math matches your YAML placements */
     .canvas {
       position: relative;
-      width: 100%;
-      aspect-ratio: 1 / 1;
+      inset: 0;                                 /* fill ha-card */
       background: transparent;                  /* was var(--sac-temp-bg, …) */
       padding: 12px 12px 14px;                  /* if you stil want inner spacing */
       border-radius: 0;
