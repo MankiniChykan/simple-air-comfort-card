@@ -70,7 +70,13 @@ class SimpleAirComfortCard extends LitElement {
       border-radius: var(--ha-card-border-radius, 12px);    
       background: var(--sac-temp-bg, #2a2a2a);                     /* gradient on the card */
       height: 100%;
-      display: block; /* keep as block; .ratio handles centering itself */
+
+      /* NEW: center an inner square in any grid cell, no bottom creep */
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-sizing: border-box;
+      min-height: 0;
     }
 
     /* Make the inner square center itself inside whatever box Sections gives us */
@@ -83,6 +89,7 @@ class SimpleAirComfortCard extends LitElement {
       height: auto;       /* let aspect-ratio drive the height */
       max-height: 100%;
       aspect-ratio: 1 / 1;/* true square without the padding-top hack */
+      box-sizing: border-box;
     }
 
     /* Square canvas so % math matches your YAML placements */
@@ -92,6 +99,7 @@ class SimpleAirComfortCard extends LitElement {
       background: transparent;                  /* was var(--sac-temp-bg, …) */
       padding: 14px 12px 12px;                  /* if you stil want inner spacing */
       border-radius: 0;
+      box-sizing: border-box;
     }
 
     /* Title + subtitle (room name + dewpoint text) */
@@ -233,6 +241,7 @@ setConfig(config) {
   if (temp_max <= temp_min) {
     throw new Error('simple-air-comfort-card: temp_max must be greater than temp_min.');
   }
+
   this._config = {
     name: config.name ?? 'Air Comfort',
     temperature: config.temperature,
@@ -243,37 +252,17 @@ setConfig(config) {
     temp_min,
     temp_max,
 
-    /* Grid sizing controls for Sections */
-    size_mode: config.size_mode ?? 'auto',                // 'auto' | 'large' | 'small'
+    /* Sections grid sizing — locked to editor choice */
+    size_mode: (config.size_mode === 'large' || config.size_mode === 'small') ? config.size_mode : 'large',
     large_columns: Number.isFinite(toNum(config.large_columns)) ? toNum(config.large_columns) : 12,
     large_rows:    Number.isFinite(toNum(config.large_rows))    ? toNum(config.large_rows)    : 8,
     small_columns: Number.isFinite(toNum(config.small_columns)) ? toNum(config.small_columns) : 6,
     small_rows:    Number.isFinite(toNum(config.small_rows))    ? toNum(config.small_rows)    : 4,
-    auto_breakpoint_px: Number.isFinite(toNum(config.auto_breakpoint_px)) ? toNum(config.auto_breakpoint_px) : 360,
   };
 }
 
   render() {
     if (!this.hass || !this._config) return html``;
-
-    // Lazily attach ResizeObserver after first render (no connectedCallback required)
-    if (!this._resizeObsInitialized) {
-      this._resizeObsInitialized = true;
-      requestAnimationFrame(() => {
-        const card = this.renderRoot?.querySelector('ha-card');
-        if (!card) return;
-        this._resizeObs = this._resizeObs || new ResizeObserver((entries) => {
-          const br = entries[0]?.contentRect;
-          if (!br) return;
-          const narrow = br.width < (this._config?.auto_breakpoint_px ?? 360);
-          if (narrow !== this._isNarrow) {
-            this._isNarrow = narrow;
-            this.requestUpdate();
-          }
-        });
-        try { this._resizeObs.observe(card); } catch {}
-      });
-    }
 
     // Entities
     const tState  = this.hass.states[this._config.temperature];
@@ -293,7 +282,7 @@ setConfig(config) {
       </ha-card>`;
     }
 
-    // Parse & physics (safe-parse unknown/unavailable)
+    // Parse & physics…
     const tempUnitIn = (tState.attributes.unit_of_measurement || '°C').trim();
     const rawT  = tState.state;
     const rawRH = rhState.state;
@@ -306,25 +295,21 @@ setConfig(config) {
     const dpC  = this.#dewPointFromVapourPressure_hPa(e);
     const atC  = this.#apparentTemperatureC(Tc, e, WS);
 
-    // Macro texts
+    // Macro texts & gradients
     const dewText  = this.#dewpointTextFromMacro(dpC);
     const tempText = this.#temperatureTextFromMacro(Tc);
     const rhText   = this.#humidityTextFromMacro(RH);
-
-    // Gradients (macros → CSS)
     const cardBg    = this.#backgroundGradientForTempC(Tc);
     const ringGrad  = this.#dewpointRingGradientFromText(dewText);
     const innerGrad = this.#innerEyeGradient(RH, Tc);
 
-    // Floating dot position (full 0..100% space of the graphic box)
+    // Dot position
     const { temp_min, temp_max } = this._config;
-    const yPct = this.#scaleClamped(Tc, temp_min, temp_max, 0, 100); // bottom..top
-    const xPct = this.#clamp(RH + 0.5, 0, 100);                      // left..right (+0.5 like your macro)
-
-    // Outside limits → blink
+    const yPct = this.#scaleClamped(Tc, temp_min, temp_max, 0, 100);
+    const xPct = this.#clamp(RH + 0.5, 0, 100);
     const outside = (RH < 40 || RH > 60 || Tc < 18 || Tc > 26.4);
 
-    // Output strings
+    // Outputs
     const d = this._config.decimals;
     const outUnit = tempUnitIn;
     const dewOut = this.#formatNumber(this.#fromCelsius(dpC, outUnit), d) + ` ${outUnit}`;
@@ -334,48 +319,24 @@ setConfig(config) {
       <ha-card style="--sac-temp-bg:${cardBg}">
         <div class="ratio">
           <div class="canvas">
-            <!-- Title + Dewpoint comfort text -->
             <div class="header">
               <div class="title">${this._config.name ?? 'Air Comfort'}</div>
               <div class="subtitle">${dewText}</div>
             </div>
 
-            <!-- TL: Dew point -->
-            <div class="corner tl">
-              <span class="label">Dew point</span>
-              <span class="value">${dewOut}</span>
-            </div>
+            <div class="corner tl"><span class="label">Dew point</span><span class="value">${dewOut}</span></div>
+            <div class="corner tr"><span class="label">Feels like</span><span class="value">${atOut}</span></div>
+            <div class="corner bl"><span class="label">Temperature</span><span class="value">${tempText}</span></div>
+            <div class="corner br"><span class="label">Humidity</span><span class="value">${rhText}</span></div>
 
-            <!-- TR: Feels like -->
-            <div class="corner tr">
-              <span class="label">Feels like</span>
-              <span class="value">${atOut}</span>
-            </div>
-
-            <!-- BL: Temperature comfort -->
-            <div class="corner bl">
-              <span class="label">Temperature</span>
-              <span class="value">${tempText}</span>
-            </div>
-
-            <!-- BR: Humidity comfort -->
-            <div class="corner br">
-              <span class="label">Humidity</span>
-              <span class="value">${rhText}</span>
-            </div>
-
-            <!-- Center dial -->
             <div class="graphic" style="--sac-dewpoint-ring:${ringGrad}; --sac-inner-gradient:${innerGrad}">
               <div class="axis axis-top">Warm</div>
               <div class="axis axis-bottom">Cold</div>
               <div class="axis axis-left">Dry</div>
               <div class="axis axis-right">Humid</div>
-
               <div class="outer-ring"></div>
               <div class="inner-circle"></div>
-
-              <div class="dot ${outside ? 'outside' : ''}"
-                  style="left:${xPct}%; bottom:${yPct}%;"></div>
+              <div class="dot ${outside ? 'outside' : ''}" style="left:${xPct}%; bottom:${yPct}%;"></div>
             </div>
           </div>
         </div>
@@ -391,15 +352,12 @@ setConfig(config) {
   // Default grid sizing for Sections view (multiples of 3 recommended)
   getGridOptions() {
     const c = this._config ?? {};
-    const sizeMode = c.size_mode ?? 'auto';
-
-    // Defaults if not provided in config
     const largeColumns = Number.isFinite(c.large_columns) ? c.large_columns : 12;
     const largeRows    = Number.isFinite(c.large_rows)    ? c.large_rows    : 8;
     const smallColumns = Number.isFinite(c.small_columns) ? c.small_columns : 6;
     const smallRows    = Number.isFinite(c.small_rows)    ? c.small_rows    : 4;
 
-    let profile = sizeMode === 'auto' ? (this._isNarrow ? 'small' : 'large') : sizeMode;
+    const profile = (c.size_mode === 'small' || c.size_mode === 'large') ? c.size_mode : 'large';
 
     if (profile === 'small') {
       return {
@@ -413,11 +371,6 @@ setConfig(config) {
       min_columns: largeColumns, min_rows: largeRows,
       max_columns: largeColumns, max_rows: largeRows,
     };
-  }
-
-  disconnectedCallback() {
-    try { this._resizeObs?.disconnect(); } catch {}
-    super.disconnectedCallback?.();
   }
 
   // ==========================================================================
