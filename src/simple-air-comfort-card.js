@@ -69,7 +69,7 @@ class SimpleAirComfortCard extends LitElement {
       position: absolute;
       inset: 0;                                 /* fill ha-card */
       background: transparent;                  /* was var(--sac-temp-bg, …) */
-      padding: 12px 12px 14px;                  /* if you stil want inner spacing */
+      padding: 14px 12px 12px;                  /* if you stil want inner spacing */
       border-radius: 0;
       aspect-ratio: 1/1;
     }
