@@ -715,73 +715,51 @@ class SimpleAirComfortCardEditor extends LitElement {
       default_wind_speed: 0.0,         // m/s
       temp_min: 15,                    // °C
       temp_max: 35,                    // °C
+
+      // NEW: Sections sizing controls (match the card's setConfig/getGridOptions)
+      size_mode: config?.size_mode ?? 'auto',          // 'auto' | 'large' | 'small'
+      large_columns: Number.isFinite(config?.large_columns) ? config.large_columns : 12,
+      large_rows:    Number.isFinite(config?.large_rows)    ? config.large_rows    : 8,
+      small_columns: Number.isFinite(config?.small_columns) ? config.small_columns : 6,
+      small_rows:    Number.isFinite(config?.small_rows)    ? config.small_rows    : 4,
+      auto_breakpoint_px: Number.isFinite(config?.auto_breakpoint_px) ? config.auto_breakpoint_px : 360,
+
       ...(config ?? {}),
     };
 
-    // Build ha-form schema once (or whenever you want to adjust)
+    // Build ha-form schema (includes size picker + numeric fields)
     this._schema = [
       { name: 'name', selector: { text: {} } },
-      {
-        name: 'temperature',
-        required: true,
-        selector: { entity: { domain: 'sensor' } },
-      },
-      {
-        name: 'humidity',
-        required: true,
-        selector: { entity: { domain: 'sensor' } },
-      },
-      {
-        name: 'windspeed',
-        selector: { entity: { domain: 'sensor' } }, // optional
-      },
+      { name: 'temperature', required: true, selector: { entity: { domain: 'sensor' } } },
+      { name: 'humidity',    required: true, selector: { entity: { domain: 'sensor' } } },
+      { name: 'windspeed', selector: { entity: { domain: 'sensor' } } }, // optional
       {
         name: 'default_wind_speed',
-        selector: {
-          number: {
-            min: 0,
-            max: 50,
-            step: 0.1,
-            mode: 'box',
-            unit_of_measurement: 'm/s',
-          },
-        },
+        selector: { number: { min: 0, max: 50, step: 0.1, mode: 'box', unit_of_measurement: 'm/s' } },
       },
+      { name: 'decimals', selector: { number: { min: 0, max: 3, step: 1, mode: 'box' } } },
+      { name: 'temp_min', selector: { number: { min: -20, max: 50, step: 0.1, mode: 'box', unit_of_measurement: '°C' } } },
+      { name: 'temp_max', selector: { number: { min: -20, max: 60, step: 0.1, mode: 'box', unit_of_measurement: '°C' } } },
+
+      // ---- NEW: Sections sizing controls
       {
-        name: 'decimals',
+        name: 'size_mode',
         selector: {
-          number: {
-            min: 0,
-            max: 3,
-            step: 1,
-            mode: 'box',
+          select: {
+            mode: 'dropdown',
+            options: [
+              { label: 'Large (12×8)', value: 'large' },
+              { label: 'Small (6×4)',  value: 'small' },
+              { label: 'Auto (switch by width)', value: 'auto' },
+            ],
           },
         },
       },
-      {
-        name: 'temp_min',
-        selector: {
-          number: {
-            min: -20,
-            max: 50,
-            step: 0.1,
-            mode: 'box',
-            unit_of_measurement: '°C',
-          },
-        },
-      },
-      {
-        name: 'temp_max',
-        selector: {
-          number: {
-            min: -20,
-            max: 60,
-            step: 0.1,
-            mode: 'box',
-            unit_of_measurement: '°C',
-          },
-        },
-      },
+      { name: 'large_columns', selector: { number: { min: 1, max: 24, step: 1, mode: 'box' } } },
+      { name: 'large_rows',    selector: { number: { min: 1, max: 24, step: 1, mode: 'box' } } },
+      { name: 'small_columns', selector: { number: { min: 1, max: 24, step: 1, mode: 'box' } } },
+      { name: 'small_rows',    selector: { number: { min: 1, max: 24, step: 1, mode: 'box' } } },
+      { name: 'auto_breakpoint_px', selector: { number: { min: 200, max: 1200, step: 10, mode: 'box', unit_of_measurement: 'px' } } },
     ];
   }
 
@@ -811,6 +789,14 @@ class SimpleAirComfortCardEditor extends LitElement {
       decimals: 'Decimals',
       temp_min: 'Dot temp min (°C)',
       temp_max: 'Dot temp max (°C)',
+
+      // NEW labels
+      size_mode: 'Card size (Sections)',
+      large_columns: 'Large: columns',
+      large_rows: 'Large: rows',
+      small_columns: 'Small: columns',
+      small_rows: 'Small: rows',
+      auto_breakpoint_px: 'Auto breakpoint (px)',
     };
     return labels[s.name] ?? s.name;
   };
@@ -824,4 +810,3 @@ class SimpleAirComfortCardEditor extends LitElement {
 }
 
 customElements.define('simple-air-comfort-card-editor', SimpleAirComfortCardEditor);
-
