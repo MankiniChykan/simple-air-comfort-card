@@ -589,182 +589,146 @@ window.customCards.push({
 });
 
 /* ------------------------------------------------------------------------ */
-/*                             GUI EDITOR (FIXED)                           */
+/*                     GUI EDITOR — schema-driven (ha-form)                 */
 /* ------------------------------------------------------------------------ */
-
 class SimpleAirComfortCardEditor extends LitElement {
   static properties = {
-    hass: { type: Object },          // ← keep reactive
+    hass: { type: Object },
     _config: { state: true },
+    _schema: { state: true },
   };
 
   static styles = css`
-    .form {
-      display: grid;
-      gap: 12px;
-      padding: 8px 12px 16px;
-    }
-    .row {
-      display: grid;
-      grid-template-columns: 220px 1fr;
-      gap: 12px;
-      align-items: center;
-    }
-    .hint { opacity: 0.7; font-size: 0.9em; }
+    .wrap { padding: 8px 12px 16px; }
   `;
 
-  // Ensure card helpers are loaded when the editor is attached
   connectedCallback() {
     super.connectedCallback();
-    (async () => {
-      try {
-        this._helpers = await (window.loadCardHelpers?.());
-      } catch {
-        /* ignore */
-      }
-    })();
+    // Tiny hook: ensure helpers are available in the editor
+    window.loadCardHelpers?.().catch(() => {});
   }
 
-  // Make hass reactive (some HA internals rely on accessor style)
   set hass(hass) { this._hass = hass; this.requestUpdate(); }
   get hass() { return this._hass; }
 
   setConfig(config) {
+    // Defaults + incoming config
     this._config = {
-      name: config?.name ?? 'Air Comfort',
-      temperature: config?.temperature,
-      humidity: config?.humidity,
-      windspeed: config?.windspeed,
-      decimals: Number.isFinite(config?.decimals) ? config.decimals : 1,
-      default_wind_speed: Number.isFinite(config?.default_wind_speed) ? config.default_wind_speed : 0.0,
-      temp_min: Number.isFinite(config?.temp_min) ? config.temp_min : 15,
-      temp_max: Number.isFinite(config?.temp_max) ? config.temp_max : 35,
+      name: 'Air Comfort',
+      temperature: undefined,
+      humidity: undefined,
+      windspeed: undefined,            // optional
+      decimals: 1,
+      default_wind_speed: 0.0,         // m/s
+      temp_min: 15,                    // °C
+      temp_max: 35,                    // °C
+      ...(config ?? {}),
     };
+
+    // Build ha-form schema once (or whenever you want to adjust)
+    this._schema = [
+      { name: 'name', selector: { text: {} } },
+      {
+        name: 'temperature',
+        required: true,
+        selector: { entity: { domain: 'sensor' } },
+      },
+      {
+        name: 'humidity',
+        required: true,
+        selector: { entity: { domain: 'sensor' } },
+      },
+      {
+        name: 'windspeed',
+        selector: { entity: { domain: 'sensor' } }, // optional
+      },
+      {
+        name: 'default_wind_speed',
+        selector: {
+          number: {
+            min: 0,
+            max: 50,
+            step: 0.1,
+            mode: 'box',
+            unit_of_measurement: 'm/s',
+          },
+        },
+      },
+      {
+        name: 'decimals',
+        selector: {
+          number: {
+            min: 0,
+            max: 3,
+            step: 1,
+            mode: 'box',
+          },
+        },
+      },
+      {
+        name: 'temp_min',
+        selector: {
+          number: {
+            min: -20,
+            max: 50,
+            step: 0.1,
+            mode: 'box',
+            unit_of_measurement: '°C',
+          },
+        },
+      },
+      {
+        name: 'temp_max',
+        selector: {
+          number: {
+            min: -20,
+            max: 60,
+            step: 0.1,
+            mode: 'box',
+            unit_of_measurement: '°C',
+          },
+        },
+      },
+    ];
   }
 
-  get _name()        { return this._config?.name ?? ''; }
-  get _temperature() { return this._config?.temperature ?? ''; }
-  get _humidity()    { return this._config?.humidity ?? ''; }
-  get _windspeed()   { return this._config?.windspeed ?? ''; }
-  get _decimals()    { return Number.isFinite(this._config?.decimals) ? this._config.decimals : 1; }
-  get _defaultWind() { return Number.isFinite(this._config?.default_wind_speed) ? this._config.default_wind_speed : 0.0; }
-  get _tmin()        { return Number.isFinite(this._config?.temp_min) ? this._config.temp_min : 15; }
-  get _tmax()        { return Number.isFinite(this._config?.temp_max) ? this._config.temp_max : 35; }
-
   render() {
-    // If hass isn’t injected yet, don’t render (prevents a blank/broken editor)
-    if (!this.hass) return html``;
+    if (!this.hass || !this._config) return html``;
 
     return html`
-      <div class="form">
-
-        <div class="row">
-          <div><label>Name</label></div>
-          <ha-textfield
-            .value=${this._name}
-            @input=${(e) => this._update('name', e.target.value)}
-            placeholder="Air Comfort"
-          ></ha-textfield>
-        </div>
-
-        <div class="row">
-          <div><label>Temperature entity</label></div>
-          <ha-entity-picker
-            .hass=${this.hass}
-            .value=${this._temperature}
-            .includeDomains=${['sensor']}
-            allow-custom-entity
-            @value-changed=${(e) => this._update('temperature', e.detail.value)}
-          ></ha-entity-picker>
-        </div>
-
-        <div class="row">
-          <div><label>Humidity entity</label></div>
-          <ha-entity-picker
-            .hass=${this.hass}
-            .value=${this._humidity}
-            .includeDomains=${['sensor']}
-            allow-custom-entity
-            @value-changed=${(e) => this._update('humidity', e.detail.value)}
-          ></ha-entity-picker>
-        </div>
-
-        <div class="row">
-          <div>
-            <label>Wind speed entity</label>
-            <div class="hint">Optional. If empty, the default below is used.</div>
-          </div>
-          <ha-entity-picker
-            .hass=${this.hass}
-            .value=${this._windspeed}
-            .includeDomains=${['sensor']}
-            allow-custom-entity
-            @value-changed=${(e) => this._update('windspeed', e.detail.value)}
-          ></ha-entity-picker>
-        </div>
-
-        <div class="row">
-          <div><label>Default wind speed (m/s)</label></div>
-          <div class="hint">If no wind speed entity is set, use this default.</div>
-          <ha-textfield
-            type="number"
-            inputmode="decimal"
-            step="0.1"
-            .value=${String(this._defaultWind)}
-            @input=${(e) => this._updateNumber('default_wind_speed', e.target.value)}
-          ></ha-textfield>
-        </div>
-
-        <div class="row">
-          <div><label>Decimals</label></div>
-          <ha-textfield
-            type="number"
-            step="1"
-            min="0"
-            .value=${String(this._decimals)}
-            @input=${(e) => this._updateNumber('decimals', e.target.value, 0)}
-          ></ha-textfield>
-        </div>
-
-        <div class="row">
-          <div><label>Dot temp min (°C)</label></div>
-          <ha-textfield
-            type="number"
-            inputmode="decimal"
-            step="0.1"
-            .value=${String(this._tmin)}
-            @input=${(e) => this._updateNumber('temp_min', e.target.value, 15)}
-          ></ha-textfield>
-        </div>
-
-        <div class="row">
-          <div><label>Dot temp max (°C)</label></div>
-          <ha-textfield
-            type="number"
-            inputmode="decimal"
-            step="0.1"
-            .value=${String(this._tmax)}
-            @input=${(e) => this._updateNumber('temp_max', e.target.value, 35)}
-          ></ha-textfield>
-        </div>
-
+      <div class="wrap">
+        <ha-form
+          .hass=${this.hass}
+          .data=${this._config}
+          .schema=${this._schema}
+          .computeLabel=${this._computeLabel}
+          @value-changed=${this._onValueChanged}
+        ></ha-form>
       </div>
     `;
   }
 
-  _update(key, value) {
-    const next = { ...(this._config ?? {}) };
-    if (value === '' || value === undefined || value === null) delete next[key];
-    else next[key] = value;
-    this._config = next;
-    fireEvent(this, 'config-changed', { config: next });
-  }
+  _computeLabel = (s) => {
+    const labels = {
+      name: 'Name',
+      temperature: 'Temperature entity',
+      humidity: 'Humidity entity',
+      windspeed: 'Wind speed entity (optional)',
+      default_wind_speed: 'Default wind speed (m/s)',
+      decimals: 'Decimals',
+      temp_min: 'Dot temp min (°C)',
+      temp_max: 'Dot temp max (°C)',
+    };
+    return labels[s.name] ?? s.name;
+  };
 
-  _updateNumber(key, raw, fallback = 0) {
-    const num = raw === '' ? undefined : Number(raw);
-    const val = Number.isFinite(num) ? num : fallback;
-    this._update(key, val);
-  }
+  _onValueChanged = (ev) => {
+    ev.stopPropagation();
+    const cfg = ev.detail.value;
+    this._config = cfg;
+    fireEvent(this, 'config-changed', { config: cfg });
+  };
 }
 
 customElements.define('simple-air-comfort-card-editor', SimpleAirComfortCardEditor);
+
