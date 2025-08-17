@@ -324,8 +324,40 @@ class SimpleAirComfortCard extends LitElement {
     `;
   }
 
+  // Give Lovelace a conservative size on first pass
+  getCardSize() {
+    return 10;
+  }
 
-  getCardSize() { return 4; }
+  // Make HA re-measure after the DOM paints and whenever we update
+  firstUpdated() {
+    this.#pokeLayout();
+    // Also reflow when the card/column width changes
+    this._ro = new ResizeObserver(() => this.#pokeLayout());
+    this._ro.observe(this);
+  }
+
+  updated(changedProps) {
+    super.updated?.(changedProps);
+    this.#pokeLayout();
+  }
+
+  disconnectedCallback() {
+    super.disconnectedCallback?.();
+    if (this._ro) this._ro.disconnect();
+  }
+
+  // Ask both legacy Masonry and new Sections layouts to recalc
+  #pokeLayout() {
+    try {
+      fireEvent(this, 'hass-resize');
+      fireEvent(this, 'iron-resize');
+    } catch (e) { /* no-op */ }
+
+    // Touch a style prop to force layout in stubborn cases
+    const card = this.shadowRoot?.querySelector('ha-card');
+    if (card) card.style.setProperty('--_sac-reflow', String(performance.now()));
+  }
 
   // ==========================================================================
   // Physics
