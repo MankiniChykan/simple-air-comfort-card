@@ -1,3 +1,3 @@
-a09fafab7aa481bf8feeec9a7f319d93dffbe63bc78808c1ecc8250cf4fd6838  dist/simple-air-comfort-card.js
-5a0d126274806c96c27b35c050740fff115c6f3429067620a2fa23d4d1926071  dist/simple-air-comfort-card.js.gz
+128cfcf8579965bc961fd37e88333e119d1f3a81ffd3a7857ab01bc55f76899c  dist/simple-air-comfort-card.js
+bb349629642f111aabc1a683c906cea243f87d8fee5c9fee5cb0a6dc14e426d1  dist/simple-air-comfort-card.js.gz
 87dcc953f86e64c1ea8e3a3abda3dfd9ba1b73dbf0cd72516ed4f39f0463cd51  dist/sac_background_overlay.svg
