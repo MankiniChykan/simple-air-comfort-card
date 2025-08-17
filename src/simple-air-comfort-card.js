@@ -50,11 +50,17 @@ class SimpleAirComfortCard extends LitElement {
   };
 
   static styles = css`
+    :host {
+      display: block;                /* ensure the custom element participates in layout */
+    }  
     ha-card {
       position: relative;
       padding: 0;
       overflow: hidden;
+      isolation: isolate;            /* keep z-index stacking inside this card only */
+      border-radius: var(--ha-card-border-radius, 12px);    
       background: var(--sac-temp-bg, #2a2a2a); /* gradient on the card */
+      clip-path: inset(0 round var(--ha-card-border-radius, 12px));  /* optional: if any browsers render shadows outside, clip-path guarantees it */
     }
 
     /* Square canvas so % math matches your YAML placements */
