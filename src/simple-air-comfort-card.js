@@ -60,14 +60,7 @@ class SimpleAirComfortCard extends LitElement {
       isolation: isolate;                                            /* keep z-index stacking inside this card only */
       border-radius: var(--ha-card-border-radius, 12px);    
       background: var(--sac-temp-bg, #2a2a2a);                     /* gradient on the card */
-    }
-      
-    /* Normal-flow sizer gives the card a real height (square) */
-    .sizer { width: 100%; }
-    .sizer::before {
-      content: "";
-      display: block;
-      padding-bottom: 100%;           /* ← makes the card square */
+      aspect-ratio: 1/1;
     }
 
     /* Square canvas so % math matches your YAML placements */
@@ -281,7 +274,6 @@ class SimpleAirComfortCard extends LitElement {
 
     return html`
       <ha-card style="--sac-temp-bg:${cardBg}">
-        <div class="sizer"></div>
         <div class="canvas">
           <!-- Title + Dewpoint comfort text -->
           <div class="header">
