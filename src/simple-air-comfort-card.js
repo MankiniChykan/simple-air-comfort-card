@@ -52,6 +52,7 @@ class SimpleAirComfortCard extends LitElement {
   static styles = css`
     :host {
       display: block;                /* ensure the custom element participates in layout */
+      height: 100%;
     }  
     ha-card {
       position: relative;
@@ -60,7 +61,7 @@ class SimpleAirComfortCard extends LitElement {
       isolation: isolate;                                            /* keep z-index stacking inside this card only */
       border-radius: var(--ha-card-border-radius, 12px);    
       background: var(--sac-temp-bg, #2a2a2a);                     /* gradient on the card */
-      aspect-ratio: 1/1;
+      height: 100%;
     }
 
     /* Square canvas so % math matches your YAML placements */
@@ -329,34 +330,17 @@ class SimpleAirComfortCard extends LitElement {
     return 10;
   }
 
-  // Make HA re-measure after the DOM paints and whenever we update
-  firstUpdated() {
-    this.#pokeLayout();
-    // Also reflow when the card/column width changes
-    this._ro = new ResizeObserver(() => this.#pokeLayout());
-    this._ro.observe(this);
-  }
-
-  updated(changedProps) {
-    super.updated?.(changedProps);
-    this.#pokeLayout();
-  }
-
-  disconnectedCallback() {
-    super.disconnectedCallback?.();
-    if (this._ro) this._ro.disconnect();
-  }
-
-  // Ask both legacy Masonry and new Sections layouts to recalc
-  #pokeLayout() {
-    try {
-      fireEvent(this, 'hass-resize');
-      fireEvent(this, 'iron-resize');
-    } catch (e) { /* no-op */ }
-
-    // Touch a style prop to force layout in stubborn cases
-    const card = this.shadowRoot?.querySelector('ha-card');
-    if (card) card.style.setProperty('--_sac-reflow', String(performance.now()));
+  // Default grid sizing for Sections view (multiples of 3 recommended)
+  getGridOptions() {
+    const c = this._config ?? {};
+    return {
+      // defaults make a roughly square card by default
+      columns: c.grid_columns ?? 6,
+      min_columns: c.min_grid_columns ?? 3,
+      rows: c.grid_rows ?? 6,
+      min_rows: c.min_grid_rows ?? 3,
+      // max_* optional; omit so HA can grow if user drags
+    };
   }
 
   // ==========================================================================
