@@ -77,7 +77,7 @@ class SimpleAirComfortCard extends LitElement {
     /* Title + subtitle (room name + dewpoint text) */
     .header {
       position: absolute;
-      top: 6%;   /* never closer than ~10px to the top on small cards */
+      top: clamp(5px, 6%, 22px);   /* never closer than ~5px to the top on small cards */
       left: 50%;
       transform: translate(-50%,-50%);
       width: 100%;
