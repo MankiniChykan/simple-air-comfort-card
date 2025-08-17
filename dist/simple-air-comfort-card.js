@@ -42,7 +42,7 @@ const w=globalThis,A=w.trustedTypes,x=A?A.createPolicy("lit-html",{createHTML:t=
 
     /* Square canvas so % math matches your YAML placements */
     .canvas {
-      position: relative;
+      position: absolute;
       inset: 0;                                 /* fill ha-card */
       background: transparent;                  /* was var(--sac-temp-bg, …) */
       padding: 12px 12px 14px;                  /* if you stil want inner spacing */
