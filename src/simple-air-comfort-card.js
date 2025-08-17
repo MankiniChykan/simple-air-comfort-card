@@ -174,29 +174,57 @@ class SimpleAirComfortCard extends LitElement {
     .axis-right  { right: -20px; top: 50%;  transform: translate( 50%, -50%); writing-mode: vertical-rl; }
 
     /* Outer ring: white border + dewpoint gradient fill (macro colours) */
-    .dial {
-      width: 100%;
-      height: 100%;
-      display: block; /* make SVG fill the box cleanly */
+    .outer-ring {
+      position: absolute;
+      inset: 0;
+      border-radius: 50%;
+      border: 2.5px solid white;
+      background: var(--sac-dewpoint-ring, radial-gradient(circle, dimgray, 55%, rgba(100,100,100,0.15), rgba(100,100,100,0.15)));
+      box-shadow:
+        0 0 6px 3px rgba(0,0,0,0.18),
+        0 0 18px 6px rgba(0,0,0,0.22);
     }
 
-    /* SVG-based dot + halo */
-    .dot-core {
-      fill: white;
-      /* use an SVG filter below for shadow (more consistent than box-shadow) */
-      filter: url(#dotShadow);
+    /* Inner comfort circle: black + humidity/temperature gradient (macro) */
+    .inner-circle {
+      position: absolute;
+      left: 50%;
+      top: 50%;
+      transform: translate(-50%, -50%);
+      width: 46.5%;
+      height: 46.5%;
+      border-radius: 50%;
+      background: var(--sac-inner-gradient, radial-gradient(circle, black 0%, black 60%));
+      border: 0;
+      box-shadow: inset 0 0 12px rgba(0,0,0,0.6);
     }
 
-    .halo {
-      pointer-events: none;   /* don't block clicks/hover */
-      opacity: 0;             /* hidden by default */
+    /* Floating dot + alert blink */
+    .dot {
+      position: absolute;
+      width: 15%;
+      height: 15%;
+      border-radius: 50%;
+      background: white;
+      box-shadow: 0 0 6px rgba(0,0,0,0.45);
+      transform: translate(-50%, 50%);
+      transition: left 0.8s ease-in-out, bottom 0.8s ease-in-out;
+      z-index: 2;
     }
-
-    .outside .halo {
+    .dot.outside::before {
+      content: "";
+      position: absolute;
+      inset: -20%;
+      border-radius: 50%;
+      background: radial-gradient(circle,
+        rgba(255,0,0,0.8) 20%,
+        rgba(255,0,0,0.3) 50%,
+        rgba(255,0,0,0.1) 70%,
+        rgba(255,0,0,0) 100%
+      );
       animation: sac-blink 1s infinite alternate;
-      opacity: 1;
+      z-index: -1;
     }
-
     @keyframes sac-blink {
       0%   { opacity: 1; }
       100% { opacity: 0.3; }
@@ -213,6 +241,7 @@ setConfig(config) {
   if (temp_max <= temp_min) {
     throw new Error('simple-air-comfort-card: temp_max must be greater than temp_min.');
   }
+
   this._config = {
     name: config.name ?? 'Air Comfort',
     temperature: config.temperature,
@@ -223,16 +252,12 @@ setConfig(config) {
     temp_min,
     temp_max,
 
-    /* Grid sizing controls for Sections */
-    size_mode: config.size_mode ?? 'auto',                // 'auto' | 'large' | 'small'
+    /* Sections grid sizing — locked to editor choice */
+    size_mode: (config.size_mode === 'large' || config.size_mode === 'small') ? config.size_mode : 'large',
     large_columns: Number.isFinite(toNum(config.large_columns)) ? toNum(config.large_columns) : 12,
     large_rows:    Number.isFinite(toNum(config.large_rows))    ? toNum(config.large_rows)    : 8,
     small_columns: Number.isFinite(toNum(config.small_columns)) ? toNum(config.small_columns) : 6,
     small_rows:    Number.isFinite(toNum(config.small_rows))    ? toNum(config.small_rows)    : 4,
-    auto_breakpoint_px: Number.isFinite(toNum(config.auto_breakpoint_px)) ? toNum(config.auto_breakpoint_px) : 360,
-
-    /* NEW: ring-tile-like single scale knob (affects stroke & dot size) */
-    dial_scale: Math.max(0.75, Math.min(1.5, Number.isFinite(toNum(config.dial_scale)) ? toNum(config.dial_scale) : 1.0)),
   };
 }
 
@@ -304,21 +329,14 @@ setConfig(config) {
             <div class="corner bl"><span class="label">Temperature</span><span class="value">${tempText}</span></div>
             <div class="corner br"><span class="label">Humidity</span><span class="value">${rhText}</span></div>
 
-            <!-- Center dial (SVG scales like ring-tile) -->
-            <div class="graphic">
+            <div class="graphic" style="--sac-dewpoint-ring:${ringGrad}; --sac-inner-gradient:${innerGrad}">
               <div class="axis axis-top">Warm</div>
               <div class="axis axis-bottom">Cold</div>
               <div class="axis axis-left">Dry</div>
               <div class="axis axis-right">Humid</div>
-
-              ${this.#renderDialSVG({
-                xPct,
-                yPct,
-                dewText,
-                RH,
-                Tc,
-                scale: this._config.dial_scale ?? 1,
-              })}
+              <div class="outer-ring"></div>
+              <div class="inner-circle"></div>
+              <div class="dot ${outside ? 'outside' : ''}" style="left:${xPct}%; bottom:${yPct}%;"></div>
             </div>
           </div>
         </div>
@@ -531,95 +549,6 @@ setConfig(config) {
     // Same structure as your macro (radial gradient)
     return `radial-gradient(circle, ${humidityColor} 0%, black, ${temperatureColor} 70%)`;
   }
-
-#dewpointBaseColour(text) {
-  switch (text) {
-    case 'Very Dry':     return 'deepskyblue';
-    case 'Dry':          return 'mediumaquamarine';
-    case 'Pleasant':     return 'limegreen';
-    case 'Comfortable':  return 'yellowgreen';
-    case 'Sticky Humid': return 'yellow';
-    case 'Muggy':        return 'gold';
-    case 'Sweltering':   return 'orange';
-    case 'Stifling':     return 'crimson';
-    default:             return 'dimgray';
-  }
-}
-
-/** Returns { humidityColor, temperatureColor } like your inner-eye macro */
-#innerEyeColours(RH, Tc) {
-  let humidityColor = 'black';
-  if (!Number.isFinite(RH)) humidityColor = 'dimgray';
-  else if (RH < 40 || RH > 60) humidityColor = 'hotpink';
-
-  let temperatureColor = 'dimgray';
-  if (Number.isFinite(Tc)) {
-    if (Tc > 34.9)                         temperatureColor = 'rgba(255, 69, 0, 0.8)';
-    else if (Tc > 26.5 && Tc <= 34.9)      temperatureColor = 'rgba(255, 69, 0, 0.8)';
-    else if (Tc > 24.0 && Tc <= 26.5)      temperatureColor = 'dimgray';
-    else if (Tc > 19.0 && Tc <= 24.0)      temperatureColor = 'dimgray';
-    else if (Tc > 14.0 && Tc <= 19.0)      temperatureColor = 'rgba(0, 102, 255, 0.8)';
-    else if (Tc > 9.0  && Tc <= 14.0)      temperatureColor = 'rgba(0, 102, 255, 0.8)';
-    else if (Tc > 5.0  && Tc <= 9.0)       temperatureColor = 'rgba(0, 102, 255, 0.8)';
-    else if (Tc > 3.0  && Tc <= 5.0)       temperatureColor = 'rgba(0, 102, 255, 0.8)';
-    else if (Tc <= 3.0)                    temperatureColor = 'rgba(0, 102, 255, 0.8)';
-  }
-  return { humidityColor, temperatureColor };
-}
-
-/** One self-contained SVG dial (ring + inner eye + dot), scaled by viewBox */
-#renderDialSVG({ xPct, yPct, dewText, RH, Tc, scale = 1 }) {
-  const ringBase = this.#dewpointBaseColour(dewText);
-  const { humidityColor, temperatureColor } = this.#innerEyeColours(RH, Tc);
-
-  // visual weights (stroke/dot) – small nudges; the SVG itself scales with the box
-  const stroke = 2.5 * scale;       // outer ring stroke width
-  const dotR   = 7.5 * scale;       // dot radius
-
-  // convert our earlier bottom-up y% to SVG top-down y% (0=top, 100=bottom)
-  const cx = this.#clamp(xPct, 0, 100);
-  const cy = this.#clamp(100 - yPct, 0, 100);
-
-  return html`
-    <svg class="dial" viewBox="0 0 100 100" preserveAspectRatio="xMidYMid meet" aria-label="comfort dial">
-      <defs>
-        <!-- Outer ring fill: soft dewpoint tint (matches your macro palette) -->
-        <radialGradient id="sac-ring" cx="50%" cy="50%" r="50%">
-          <stop offset="0%"  stop-color="${ringBase}"></stop>
-          <stop offset="55%" stop-color="${ringBase}"></stop>
-          <stop offset="100%" stop-color="rgba(100,100,100,0.15)"></stop>
-        </radialGradient>
-
-        <!-- Inner eye: humidity core -> temperature rim -->
-        <radialGradient id="sac-inner" cx="50%" cy="50%" r="50%">
-          <stop offset="0%"  stop-color="${humidityColor}"></stop>
-          <stop offset="60%" stop-color="black"></stop>
-          <stop offset="70%" stop-color="${temperatureColor}"></stop>
-          <stop offset="100%" stop-color="${temperatureColor}"></stop>
-        </radialGradient>
-
-        <!-- Soft ring halo (subtle) -->
-        <filter id="sac-glow" x="-50%" y="-50%" width="200%" height="200%">
-          <feGaussianBlur in="SourceGraphic" stdDeviation="${1.2 * scale}" result="blur"/>
-          <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
-        </filter>
-      </defs>
-
-      <!-- Outer ring -->
-      <circle cx="50" cy="50" r="48" fill="url(#sac-ring)" stroke="white" stroke-width="${stroke}" filter="url(#sac-glow)"></circle>
-
-      <!-- Inner eye -->
-      <circle cx="50" cy="50" r="23.25" fill="url(#sac-inner)"></circle>
-
-      <!-- Floating dot -->
-      <circle cx="${cx}" cy="${cy}" r="${dotR}" fill="white">
-        ${((RH < 40 || RH > 60 || Tc < 18 || Tc > 26.4) ? html`
-          <animate attributeName="opacity" values="1;0.35;1" dur="1.2s" repeatCount="indefinite"></animate>
-        ` : '')}
-      </circle>
-    </svg>
-  `;
-} 
 
   // ==========================================================================
   // Helpers
