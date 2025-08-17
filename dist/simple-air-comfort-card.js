@@ -39,7 +39,7 @@ const w=globalThis,A=w.trustedTypes,x=A?A.createPolicy("lit-html",{createHTML:t=
       position: absolute;
       inset: 0;                                 /* fill ha-card */
       background: transparent;                  /* was var(--sac-temp-bg, …) */
-      padding: 12px 12px 14px;                  /* if you stil want inner spacing */
+      padding: 14px 12px 12px;                  /* if you stil want inner spacing */
       border-radius: 0;
       aspect-ratio: 1/1;
     }
@@ -47,9 +47,9 @@ const w=globalThis,A=w.trustedTypes,x=A?A.createPolicy("lit-html",{createHTML:t=
     /* Title + subtitle (room name + dewpoint text) */
     .header {
       position: absolute;
-      top: 6%;
+      top: clamp(10px, 6%, 22px);   /* never closer than ~10px to the top on small cards */
       left: 50%;
-      transform: translate(-50%, -50%);
+      transform: translate(-50%,);
       width: 100%;
       text-align: center;
       pointer-events: none;
