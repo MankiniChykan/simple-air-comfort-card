@@ -41,6 +41,7 @@ const w=globalThis,A=w.trustedTypes,x=A?A.createPolicy("lit-html",{createHTML:t=
       background: transparent;                  /* was var(--sac-temp-bg, …) */
       padding: 12px 12px 14px;                  /* if you stil want inner spacing */
       border-radius: 0;
+      aspect-ratio: 1/1;
     }
 
     /* Title + subtitle (room name + dewpoint text) */
