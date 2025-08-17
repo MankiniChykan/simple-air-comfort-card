@@ -72,11 +72,16 @@ class SimpleAirComfortCard extends LitElement {
       height: 100%;
     }
 
-    /* Ratio wrapper enforces a perfect square inside ha-card */
+    /* Make the inner square center itself inside whatever box Sections gives us */
     .ratio {
-      position: relative;
+      position: absolute;
+      inset: 0;           /* allow centering within the full card box */
+      margin: auto;       /* center both axes */
       width: 100%;
-      padding-top: 100%;             /* 1:1 square */
+      max-width: 100%;
+      height: auto;       /* let aspect-ratio drive the height */
+      max-height: 100%;
+      aspect-ratio: 1 / 1;/* true square without the padding-top hack */
     }
 
     /* Square canvas so % math matches your YAML placements */
