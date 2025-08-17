@@ -60,7 +60,7 @@ class SimpleAirComfortCard extends LitElement {
   static styles = css`
     :host {
       display: block;                /* ensure the custom element participates in layout */
-      height: auto%;
+      height: 100%;
     }  
     ha-card {
       position: relative;
