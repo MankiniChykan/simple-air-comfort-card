@@ -52,8 +52,9 @@ class SimpleAirComfortCard extends LitElement {
   static styles = css`
     ha-card {
       position: relative;
-      padding: 12px 12px 14px;
+      padding: 0;
       overflow: hidden;
+      background: var(--sac-temp-bg, #2a2a2a); /* gradient on the card */
     }
 
     /* Square canvas so % math matches your YAML placements */
@@ -61,9 +62,9 @@ class SimpleAirComfortCard extends LitElement {
       position: relative;
       width: 100%;
       aspect-ratio: 1 / 1;
-      /* Background = temperature macro */
-      background: var(--sac-temp-bg, #2a2a2a);
-      border-radius: 8px;
+      background: transparent;                  /* was var(--sac-temp-bg, …) */
+      padding: 12px 12px 14px;                  /* if you still want inner spacing */
+      border-radius: 0;
     }
 
     /* Title + subtitle (room name + dewpoint text) */
@@ -267,8 +268,8 @@ class SimpleAirComfortCard extends LitElement {
     const atOut  = this.#formatNumber(this.#fromCelsius(atC,  outUnit), d) + ` ${outUnit}`;
 
     return html`
-      <ha-card>
-        <div class="canvas" style="--sac-temp-bg:${cardBg}">
+      <ha-card style="--sac-temp-bg:${cardBg}">
+        <div class="canvas">
           <!-- Title + Dewpoint comfort text -->
           <div class="header">
             <div class="title">${this._config.name ?? 'Air Comfort'}</div>
