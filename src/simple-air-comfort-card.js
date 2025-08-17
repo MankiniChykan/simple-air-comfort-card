@@ -63,7 +63,7 @@ class SimpleAirComfortCard extends LitElement {
       width: 100%;
       aspect-ratio: 1 / 1;
       background: transparent;                  /* was var(--sac-temp-bg, …) */
-      padding: 12px 12px 14px;                  /* if you still want inner spacing */
+      padding: 12px 12px 14px;                  /* if you stil want inner spacing */
       border-radius: 0;
     }
 
