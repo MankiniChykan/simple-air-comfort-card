@@ -70,6 +70,7 @@ class SimpleAirComfortCard extends LitElement {
       border-radius: var(--ha-card-border-radius, 12px);    
       background: var(--sac-temp-bg, #2a2a2a);                     /* gradient on the card */
       height: 100%;
+      display: block; /* keep as block; .ratio handles centering itself */
     }
 
     /* Make the inner square center itself inside whatever box Sections gives us */
