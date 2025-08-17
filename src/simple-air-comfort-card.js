@@ -47,7 +47,15 @@ class SimpleAirComfortCard extends LitElement {
   static properties = {
     hass: { type: Object },
     _config: { state: true },
+    _isNarrow: { state: true }, 
   };
+
+  constructor() {
+    super();
+    this._isNarrow = false;
+    this._resizeObsInitialized = false;
+    this._resizeObs = null;
+  }
 
   static styles = css`
     :host {
@@ -62,6 +70,13 @@ class SimpleAirComfortCard extends LitElement {
       border-radius: var(--ha-card-border-radius, 12px);    
       background: var(--sac-temp-bg, #2a2a2a);                     /* gradient on the card */
       height: 100%;
+    }
+
+    /* Ratio wrapper enforces a perfect square inside ha-card */
+    .ratio {
+      position: relative;
+      width: 100%;
+      padding-top: 100%;             /* 1:1 square */
     }
 
     /* Square canvas so % math matches your YAML placements */
@@ -203,25 +218,56 @@ class SimpleAirComfortCard extends LitElement {
     }
   `;
 
-  setConfig(config) {
-    if (!config || !config.temperature || !config.humidity) {
-      throw new Error('simple-air-comfort-card: "temperature" and "humidity" entities are required.');
-    }
-    this._config = {
-      name: config.name ?? 'Air Comfort',
-      temperature: config.temperature,
-      humidity: config.humidity,
-      windspeed: config.windspeed, // optional
-      decimals: Number.isFinite(config.decimals) ? config.decimals : 1,
-      default_wind_speed: Number.isFinite(config.default_wind_speed) ? config.default_wind_speed : 0.0,
-      // dot vertical scaling (maps temperature to dial vertical pos)
-      temp_min: Number.isFinite(config.temp_min) ? config.temp_min : 15,
-      temp_max: Number.isFinite(config.temp_max) ? config.temp_max : 35,
-    };
+setConfig(config) {
+  if (!config || !config.temperature || !config.humidity) {
+    throw new Error('simple-air-comfort-card: "temperature" and "humidity" entities are required.');
   }
+  const temp_min = Number.isFinite(config.temp_min) ? config.temp_min : 15;
+  const temp_max = Number.isFinite(config.temp_max) ? config.temp_max : 35;
+  if (temp_max <= temp_min) {
+    throw new Error('simple-air-comfort-card: temp_max must be greater than temp_min.');
+  }
+  this._config = {
+    name: config.name ?? 'Air Comfort',
+    temperature: config.temperature,
+    humidity: config.humidity,
+    windspeed: config.windspeed, // optional
+    decimals: Number.isFinite(config.decimals) ? config.decimals : 1,
+    default_wind_speed: Number.isFinite(config.default_wind_speed) ? config.default_wind_speed : 0.0,
+    temp_min,
+    temp_max,
+
+    /* Grid sizing controls for Sections */
+    size_mode: config.size_mode ?? 'auto',                // 'auto' | 'large' | 'small'
+    large_columns: Number.isFinite(config.large_columns) ? config.large_columns : 12,
+    large_rows:    Number.isFinite(config.large_rows)    ? config.large_rows    : 8,
+    small_columns: Number.isFinite(config.small_columns) ? config.small_columns : 6,
+    small_rows:    Number.isFinite(config.small_rows)    ? config.small_rows    : 4,
+    auto_breakpoint_px: Number.isFinite(config.auto_breakpoint_px) ? config.auto_breakpoint_px : 360,
+  };
+}
 
   render() {
     if (!this.hass || !this._config) return html``;
+
+    // Lazily attach ResizeObserver after first render (no connectedCallback required)
+    if (!this._resizeObsInitialized) {
+      this._resizeObsInitialized = true;
+      requestAnimationFrame(() => {
+        const card = this.renderRoot?.querySelector('ha-card');
+        if (!card) return;
+        this._resizeObs = this._resizeObs || new ResizeObserver((entries) => {
+          const br = entries[0]?.contentRect;
+          if (!br) return;
+          const narrow = br.width < (this._config?.auto_breakpoint_px ?? 360);
+          if (narrow !== this._isNarrow) {
+            this._isNarrow = narrow;
+            this.requestUpdate();
+          }
+        });
+        try { this._resizeObs.observe(card); } catch {}
+      });
+    }
 
     // Entities
     const tState  = this.hass.states[this._config.temperature];
@@ -230,19 +276,23 @@ class SimpleAirComfortCard extends LitElement {
 
     if (!tState || !rhState) {
       return html`<ha-card>
-        <div class="canvas">
-          <div class="header">
-            <div class="title">${this._config.name ?? 'Air Comfort'}</div>
-            <div class="subtitle">Entity not found: ${!tState ? this._config.temperature : this._config.humidity}</div>
+        <div class="ratio">
+          <div class="canvas">
+            <div class="header">
+              <div class="title">${this._config.name ?? 'Air Comfort'}</div>
+              <div class="subtitle">Entity not found: ${!tState ? this._config.temperature : this._config.humidity}</div>
+            </div>
           </div>
         </div>
       </ha-card>`;
     }
 
-    // Parse & physics
+    // Parse & physics (safe-parse unknown/unavailable)
     const tempUnitIn = (tState.attributes.unit_of_measurement || '°C').trim();
-    const Tc   = this.#toCelsius(parseFloat(tState.state), tempUnitIn);
-    const RH   = this.#clampRH(parseFloat(rhState.state));
+    const rawT  = tState.state;
+    const rawRH = rhState.state;
+    const Tc   = this.#toCelsius(Number.isFinite(+rawT) ? +rawT : NaN, tempUnitIn);
+    const RH   = this.#clampRH(Number.isFinite(+rawRH) ? +rawRH : NaN);
     const WS   = this.#resolveWind(wsState, this._config.default_wind_speed);
 
     const es   = this.#buckSaturationVapourPressure_hPa(Tc);
@@ -276,49 +326,50 @@ class SimpleAirComfortCard extends LitElement {
 
     return html`
       <ha-card style="--sac-temp-bg:${cardBg}">
-        <div class="canvas">
-          <!-- Title + Dewpoint comfort text -->
-          <div class="header">
-            <div class="title">${this._config.name ?? 'Air Comfort'}</div>
-            <div class="subtitle">${dewText}</div>
-          </div>
+        <div class="ratio">
+          <div class="canvas">
+            <!-- Title + Dewpoint comfort text -->
+            <div class="header">
+              <div class="title">${this._config.name ?? 'Air Comfort'}</div>
+              <div class="subtitle">${dewText}</div>
+            </div>
 
-          <!-- TL: Dew point -->
-          <div class="corner tl">
-            <span class="label">Dew point</span>
-            <span class="value">${dewOut}</span>
-          </div>
+            <!-- TL: Dew point -->
+            <div class="corner tl">
+              <span class="label">Dew point</span>
+              <span class="value">${dewOut}</span>
+            </div>
 
-          <!-- TR: Feels like -->
-          <div class="corner tr">
-            <span class="label">Feels like</span>
-            <span class="value">${atOut}</span>
-          </div>
+            <!-- TR: Feels like -->
+            <div class="corner tr">
+              <span class="label">Feels like</span>
+              <span class="value">${atOut}</span>
+            </div>
 
-          <!-- BL: Temperature comfort -->
-          <div class="corner bl">
-            <span class="label">Temperature</span>
-            <span class="value">${tempText}</span>
-          </div>
+            <!-- BL: Temperature comfort -->
+            <div class="corner bl">
+              <span class="label">Temperature</span>
+              <span class="value">${tempText}</span>
+            </div>
 
-          <!-- BR: Humidity comfort -->
-          <div class="corner br">
-            <span class="label">Humidity</span>
-            <span class="value">${rhText}</span>
-          </div>
+            <!-- BR: Humidity comfort -->
+            <div class="corner br">
+              <span class="label">Humidity</span>
+              <span class="value">${rhText}</span>
+            </div>
 
-          <!-- Center dial -->
-          <div class="graphic">
-            <div class="axis axis-top">Warm</div>
-            <div class="axis axis-bottom">Cold</div>
-            <div class="axis axis-left">Dry</div>
-            <div class="axis axis-right">Humid</div>
+            <!-- Center dial -->
+            <div class="graphic" style="--sac-dewpoint-ring:${ringGrad}; --sac-inner-gradient:${innerGrad}">
+              <div class="axis axis-top">Warm</div>
+              <div class="axis axis-bottom">Cold</div>
+              <div class="axis axis-left">Dry</div>
+              <div class="axis axis-right">Humid</div>
 
-            <div class="outer-ring" style="background:${ringGrad}"></div>
-            <div class="inner-circle" style="background:${innerGrad}"></div>
+              <div class="outer-ring"></div>
+              <div class="inner-circle"></div>
 
-            <div class="dot ${outside ? 'outside' : ''}"
-                style="left:${xPct}%; bottom:${yPct}%;">
+              <div class="dot ${outside ? 'outside' : ''}"
+                  style="left:${xPct}%; bottom:${yPct}%;"></div>
             </div>
           </div>
         </div>
@@ -334,14 +385,33 @@ class SimpleAirComfortCard extends LitElement {
   // Default grid sizing for Sections view (multiples of 3 recommended)
   getGridOptions() {
     const c = this._config ?? {};
+    const sizeMode = c.size_mode ?? 'auto';
+
+    // Defaults if not provided in config
+    const largeColumns = Number.isFinite(c.large_columns) ? c.large_columns : 12;
+    const largeRows    = Number.isFinite(c.large_rows)    ? c.large_rows    : 8;
+    const smallColumns = Number.isFinite(c.small_columns) ? c.small_columns : 6;
+    const smallRows    = Number.isFinite(c.small_rows)    ? c.small_rows    : 4;
+
+    let profile = sizeMode === 'auto' ? (this._isNarrow ? 'small' : 'large') : sizeMode;
+
+    if (profile === 'small') {
+      return {
+        columns: smallColumns, rows: smallRows,
+        min_columns: smallColumns, min_rows: smallRows,
+        max_columns: smallColumns, max_rows: smallRows,
+      };
+    }
     return {
-      // defaults make a roughly square card by default
-      columns: c.grid_columns ?? 6,
-      min_columns: c.min_grid_columns ?? 3,
-      rows: c.grid_rows ?? 6,
-      min_rows: c.min_grid_rows ?? 3,
-      // max_* optional; omit so HA can grow if user drags
+      columns: largeColumns, rows: largeRows,
+      min_columns: largeColumns, min_rows: largeRows,
+      max_columns: largeColumns, max_rows: largeRows,
     };
+  }
+
+  disconnectedCallback() {
+    try { this._resizeObs?.disconnect(); } catch {}
+    super.disconnectedCallback?.();
   }
 
   // ==========================================================================
