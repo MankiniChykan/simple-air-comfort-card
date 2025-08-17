@@ -86,7 +86,6 @@ class SimpleAirComfortCard extends LitElement {
       background: transparent;                  /* was var(--sac-temp-bg, …) */
       padding: 14px 12px 12px;                  /* if you stil want inner spacing */
       border-radius: 0;
-      aspect-ratio: 1/1;
     }
 
     /* Title + subtitle (room name + dewpoint text) */
@@ -222,8 +221,9 @@ setConfig(config) {
   if (!config || !config.temperature || !config.humidity) {
     throw new Error('simple-air-comfort-card: "temperature" and "humidity" entities are required.');
   }
-  const temp_min = Number.isFinite(config.temp_min) ? config.temp_min : 15;
-  const temp_max = Number.isFinite(config.temp_max) ? config.temp_max : 35;
+  const toNum = (v) => (v === undefined || v === null || v === '' ? NaN : Number(v));
+  const temp_min = Number.isFinite(toNum(config.temp_min)) ? toNum(config.temp_min) : 15;
+  const temp_max = Number.isFinite(toNum(config.temp_max)) ? toNum(config.temp_max) : 35;
   if (temp_max <= temp_min) {
     throw new Error('simple-air-comfort-card: temp_max must be greater than temp_min.');
   }
@@ -232,18 +232,18 @@ setConfig(config) {
     temperature: config.temperature,
     humidity: config.humidity,
     windspeed: config.windspeed, // optional
-    decimals: Number.isFinite(config.decimals) ? config.decimals : 1,
-    default_wind_speed: Number.isFinite(config.default_wind_speed) ? config.default_wind_speed : 0.0,
+    decimals: Number.isFinite(toNum(config.decimals)) ? toNum(config.decimals) : 1,
+    default_wind_speed: Number.isFinite(toNum(config.default_wind_speed)) ? toNum(config.default_wind_speed) : 0.0,
     temp_min,
     temp_max,
 
     /* Grid sizing controls for Sections */
     size_mode: config.size_mode ?? 'auto',                // 'auto' | 'large' | 'small'
-    large_columns: Number.isFinite(config.large_columns) ? config.large_columns : 12,
-    large_rows:    Number.isFinite(config.large_rows)    ? config.large_rows    : 8,
-    small_columns: Number.isFinite(config.small_columns) ? config.small_columns : 6,
-    small_rows:    Number.isFinite(config.small_rows)    ? config.small_rows    : 4,
-    auto_breakpoint_px: Number.isFinite(config.auto_breakpoint_px) ? config.auto_breakpoint_px : 360,
+    large_columns: Number.isFinite(toNum(config.large_columns)) ? toNum(config.large_columns) : 12,
+    large_rows:    Number.isFinite(toNum(config.large_rows))    ? toNum(config.large_rows)    : 8,
+    small_columns: Number.isFinite(toNum(config.small_columns)) ? toNum(config.small_columns) : 6,
+    small_rows:    Number.isFinite(toNum(config.small_rows))    ? toNum(config.small_rows)    : 4,
+    auto_breakpoint_px: Number.isFinite(toNum(config.auto_breakpoint_px)) ? toNum(config.auto_breakpoint_px) : 360,
   };
 }
 
