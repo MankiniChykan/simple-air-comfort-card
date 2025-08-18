@@ -60,6 +60,9 @@ class SimpleAirComfortCard extends LitElement {
   static styles = css`
     :host {
       display: block;                /* ensure the custom element participates in layout */
+      width: 100%;
+      box-sizing: border-box;
+    }
 
     }  
     ha-card {
@@ -247,9 +250,9 @@ setConfig(config) {
     /* Sections grid sizing — locked to editor choice */
     size_mode: (config.size_mode === 'large' || config.size_mode === 'small') ? config.size_mode : 'large',
     large_columns: Number.isFinite(toNum(config.large_columns)) ? toNum(config.large_columns) : 12,
-    large_rows:    Number.isFinite(toNum(config.large_rows))    ? toNum(config.large_rows)    : 8,
+    large_rows:    Number.isFinite(toNum(config.large_rows))    ? toNum(config.large_rows)    : 12,
     small_columns: Number.isFinite(toNum(config.small_columns)) ? toNum(config.small_columns) : 6,
-    small_rows:    Number.isFinite(toNum(config.small_rows))    ? toNum(config.small_rows)    : 4,
+    small_rows:    Number.isFinite(toNum(config.small_rows))    ? toNum(config.small_rows)    : 6,
   };
 }
 
@@ -345,9 +348,9 @@ setConfig(config) {
   getGridOptions() {
     const c = this._config ?? {};
     const largeColumns = Number.isFinite(c.large_columns) ? c.large_columns : 12;
-    const largeRows    = Number.isFinite(c.large_rows)    ? c.large_rows    : 8;
+    const largeRows    = Number.isFinite(c.large_rows)    ? c.large_rows    : 12;
     const smallColumns = Number.isFinite(c.small_columns) ? c.small_columns : 6;
-    const smallRows    = Number.isFinite(c.small_rows)    ? c.small_rows    : 4;
+    const smallRows    = Number.isFinite(c.small_rows)    ? c.small_rows    : 6;
 
     const profile = (c.size_mode === 'small' || c.size_mode === 'large') ? c.size_mode : 'large';
 
