@@ -113,7 +113,7 @@ class SimpleAirComfortCard extends LitElement {
       pointer-events: none;
     }
     .title {
-      font-weight: 600;
+      font-weight: 400;
       font-size: 0.9rem;
       color: silver;
     }
