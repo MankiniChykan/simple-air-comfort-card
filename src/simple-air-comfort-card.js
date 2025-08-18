@@ -156,6 +156,8 @@ class SimpleAirComfortCard extends LitElement {
       transform: translate(-50%, -50%);
       width: 45%;
       height: 45%;
+      min-width: 80px;
+      min-height: 80px;
     }
 
     /* Axis labels placed around the dial rim */
