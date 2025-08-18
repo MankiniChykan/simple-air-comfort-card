@@ -325,24 +325,23 @@ setConfig(config) {
   // Default grid sizing for Sections view (multiples of 3 recommended)
   getGridOptions() {
     const c = this._config ?? {};
-    const largeColumns = Number.isFinite(c.large_columns) ? c.large_columns : 12;
-    const largeRows    = Number.isFinite(c.large_rows)    ? c.large_rows    : 8;
-    const smallColumns = Number.isFinite(c.small_columns) ? c.small_columns : 6;
-    const smallRows    = Number.isFinite(c.small_rows)    ? c.small_rows    : 4;
+    // Defaults tuned for a square card that looks right in Sections
+    const large = { columns: 6, rows: 6 };  // ~big square
+    const small = { columns: 3, rows: 3 };  // ~half footprint
 
-    const profile = (c.size_mode === 'small' || c.size_mode === 'large') ? c.size_mode : 'large';
-
-    if (profile === 'small') {
-      return {
-        columns: smallColumns, rows: smallRows,
-        min_columns: smallColumns, min_rows: smallRows,
-        max_columns: smallColumns, max_rows: smallRows,
-      };
+    let profile = 'large';
+    if (c.size_mode === 'small') profile = 'small';
+    else if (c.size_mode === 'auto') {
+      // Simple heuristic: assume narrow if the card's rendered width is < 360px
+      const w = this.getBoundingClientRect?.().width ?? 9999;
+      profile = w < (c.auto_breakpoint_px ?? 360) ? 'small' : 'large';
     }
+
+    const p = (profile === 'small') ? small : large;
     return {
-      columns: largeColumns, rows: largeRows,
-      min_columns: largeColumns, min_rows: largeRows,
-      max_columns: largeColumns, max_rows: largeRows,
+      columns: p.columns, rows: p.rows,
+      min_columns: p.columns, min_rows: p.rows,
+      max_columns: p.columns, max_rows: p.rows,
     };
   }
 
