@@ -46,9 +46,9 @@ const v=globalThis,x=v.trustedTypes,A=x?x.createPolicy("lit-html",{createHTML:t=
       position: absolute;
       inset: 0;           /* allow centering within the full card box */
       margin: auto;       /* center both axes */
-      width: 100%;
+      width: auto%;
       max-width: 100%;
-      height: auto;       /* let aspect-ratio drive the height */
+      height: 100;       /* let aspect-ratio drive the height */
       max-height: 100%;
       aspect-ratio: 1 / 1;/* true square without the padding-top hack */
       box-sizing: border-box;
