@@ -86,7 +86,7 @@ class SimpleAirComfortCard extends LitElement {
       margin: auto;       /* center both axes */
       width: auto%;
       max-width: 100%;
-      height: 100;       /* let aspect-ratio drive the height */
+      height: 100%;       /* let aspect-ratio drive the height */
       max-height: 100%;
       aspect-ratio: 1 / 1;/* true square without the padding-top hack */
       box-sizing: border-box;
