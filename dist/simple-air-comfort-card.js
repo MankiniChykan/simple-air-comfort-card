@@ -75,17 +75,17 @@ const v=globalThis,x=v.trustedTypes,A=x?x.createPolicy("lit-html",{createHTML:t=
       pointer-events: none;
     }
     .title {
+      font-weight: 600;
+      font-size: 0.9rem;
+      color: silver;
+    }
+    .subtitle {
+      margin-top: 0.15rem;
       font-weight: 700;
       font-size: 1.05rem;
       color: white;
       text-shadow: 0 1px 2px rgba(0,0,0,0.35);
       line-height: 1.15;
-    }
-    .subtitle {
-      font-weight: 600;
-      font-size: 0.9rem;
-      color: silver;
-      margin-top: 0.15rem;
     }
 
     /* Four corners (TL/TR/BL/BR) */
