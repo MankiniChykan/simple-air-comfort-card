@@ -116,8 +116,8 @@ const v=globalThis,x=v.trustedTypes,A=x?x.createPolicy("lit-html",{createHTML:t=
       top: 50%;
       left: 50%;
       transform: translate(-50%, -50%);
-      width: 56%;
-      height: 56%;
+      width: 45%;
+      height: 45%;
       min-width: 120px;
       min-height: 120px;
     }
