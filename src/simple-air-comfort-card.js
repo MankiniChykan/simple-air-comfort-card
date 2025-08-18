@@ -59,74 +59,67 @@ class SimpleAirComfortCard extends LitElement {
 
   static styles = css`
     :host {
-      display: block;                /* ensure the custom element participates in layout */
-      height: 100%;
-    }  
+      display: block;
+      width: 100%;
+      box-sizing: border-box;
+    }
+
     ha-card {
       position: relative;
       padding: 0;
       overflow: hidden;
-      isolation: isolate;                                            /* keep z-index stacking inside this card only */
-      border-radius: var(--ha-card-border-radius, 12px);    
-      background: var(--sac-temp-bg, #2a2a2a);                     /* gradient on the card */
-      height: 100%;
-
-      /* NEW: center an inner square in any grid cell, no bottom creep */
-      display: flex;
-      align-items: center;
-      justify-content: center;
+      isolation: isolate;
+      border-radius: var(--ha-card-border-radius, 12px);
+      background: var(--sac-temp-bg, #2a2a2a);
+      display: block;           /* IMPORTANT: no flex here */
       box-sizing: border-box;
       min-height: 0;
     }
 
-    /* Make the inner square center itself inside whatever box Sections gives us */
+    /* Square stage defines the card height */
     .ratio {
-      position: absolute;
-      inset: 0;           /* allow centering within the full card box */
-      margin: auto;       /* center both axes */
-      width: auto%;
-      max-width: 100%;
-      height: 100%;       /* let aspect-ratio drive the height */
-      max-height: 100%;
-      aspect-ratio: 1 / 1;/* true square without the padding-top hack */
+      position: relative;       /* not absolute: it must size the card */
+      width: 100%;
+      aspect-ratio: 1 / 1;      /* keep it perfectly square */
+      margin: 0 auto;
       box-sizing: border-box;
     }
 
-    /* Square canvas so % math matches your YAML placements */
+    /* Fill the square with the face layout */
     .canvas {
       position: absolute;
-      inset: 0;                                 /* fill ha-card */
-      background: transparent;                  /* was var(--sac-temp-bg, …) */
-      padding: 14px 12px 12px;                  /* if you stil want inner spacing */
+      inset: 0;
+      background: transparent;
+      padding: 14px 12px 12px;
       border-radius: 0;
       box-sizing: border-box;
     }
 
-    /* Title + subtitle (room name + dewpoint text) */
+    /* Header (matches original) */
     .header {
       position: absolute;
-      top: 10%;   /* never closer than ~10px to the top on small cards */
+      top: 10%;
       left: 50%;
-      transform: translate(-50%,-50%);
+      transform: translate(-50%, -50%);
       width: 100%;
       text-align: center;
       pointer-events: none;
     }
     .title {
-      font-weight: 400;
-      font-size: 0.9rem;
-      color: silver;
-    }
-    .subtitle {
-      margin-top: 0.15rem;
-      font-weight: 700;
+      font-weight: 700;          /* bold room name */
       font-size: 1.05rem;
       color: white;
       text-shadow: 0 1px 2px rgba(0,0,0,0.35);
       line-height: 1.15;
     }
+    .subtitle {
+      font-weight: 600;          /* dewpoint text (Dry, Muggy, …) */
+      font-size: 0.9rem;
+      color: silver;
+      margin-top: 0.15rem;
+    }
 
-    /* Four corners (TL/TR/BL/BR) */
+    /* Corners (match original weights/sizes) */
     .corner {
       position: absolute;
       color: white;
@@ -143,24 +136,24 @@ class SimpleAirComfortCard extends LitElement {
     .corner .value {
       font-size: 1.05rem;
     }
-    .tl { left: 8%;  top: 18%; transform: translate(0, -50%);  text-align: left;  }
-    .tr { right: 8%; top: 18%; transform: translate(0, -50%);  text-align: right; }
-    .bl { left: 8%;  bottom: 8%;  transform: translate(0,  0%);  text-align: left;  }
-    .br { right: 8%; bottom: 8%;  transform: translate(0,  0%);  text-align: right; }
+    .tl { left: 8%;  top: 18%; transform: translate(0,-50%);  text-align: left;  }
+    .tr { right: 8%; top: 18%; transform: translate(0,-50%);  text-align: right; }
+    .bl { left: 8%;  bottom: 8%; transform: translate(0, 0%); text-align: left;  }
+    .br { right: 8%; bottom: 8%; transform: translate(0, 0%); text-align: right; }
 
-    /* Center graphic: perfectly centered concentric circles */
+    /* Center graphic: back to original proportions */
     .graphic {
       position: absolute;
       top: 50%;
       left: 50%;
       transform: translate(-50%, -50%);
-      width: 45%;
-      height: 45%;
+      width: 56%;
+      height: 56%;
       min-width: 120px;
-      min-heightL 120px;
+      min-height: 120px;
     }
 
-    /* Axis labels placed around the dial rim */
+    /* Axis labels (same look as before) */
     .axis {
       position: absolute;
       color: rgba(255,255,255,0.92);
@@ -170,10 +163,10 @@ class SimpleAirComfortCard extends LitElement {
     }
     .axis-top    { top: -12px; left: 50%; transform: translate(-50%, -50%); }
     .axis-bottom { bottom: -12px; left: 50%; transform: translate(-50%,  50%); }
-    .axis-left   { left: -20px;  top: 50%;  transform: translate(-50%, -50%) rotate(180deg); writing-mode: vertical-rl; }
-    .axis-right  { right: -20px; top: 50%;  transform: translate( 50%, -50%); writing-mode: vertical-rl; }
+    .axis-left   { left: -20px; top: 50%; transform: translate(-50%, -50%) rotate(180deg); writing-mode: vertical-rl; }
+    .axis-right  { right: -20px; top: 50%; transform: translate( 50%, -50%); writing-mode: vertical-rl; }
 
-    /* Outer ring: white border + dewpoint gradient fill (macro colours) */
+    /* Rings */
     .outer-ring {
       position: absolute;
       inset: 0;
@@ -184,8 +177,6 @@ class SimpleAirComfortCard extends LitElement {
         0 0 6px 3px rgba(0,0,0,0.18),
         0 0 18px 6px rgba(0,0,0,0.22);
     }
-
-    /* Inner comfort circle: black + humidity/temperature gradient (macro) */
     .inner-circle {
       position: absolute;
       left: 50%;
@@ -199,7 +190,7 @@ class SimpleAirComfortCard extends LitElement {
       box-shadow: inset 0 0 12px rgba(0,0,0,0.6);
     }
 
-    /* Floating dot + alert blink */
+    /* Dot & alert halo */
     .dot {
       position: absolute;
       width: 15%;
@@ -220,7 +211,7 @@ class SimpleAirComfortCard extends LitElement {
         rgba(255,0,0,0.8) 20%,
         rgba(255,0,0,0.3) 50%,
         rgba(255,0,0,0.1) 70%,
-        rgba(255,0,0,0) 100%
+        rgba(255,0,0,0)   100%
       );
       animation: sac-blink 1s infinite alternate;
       z-index: -1;
