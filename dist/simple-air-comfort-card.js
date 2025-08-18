@@ -118,7 +118,7 @@ const v=globalThis,x=v.trustedTypes,A=x?x.createPolicy("lit-html",{createHTML:t=
       transform: translate(-50%, -50%);
       width: 45%;
       height: 45%;
-      boder radius: 50%;
+      border radius: 50%;
     }
 
     /* Axis labels placed around the dial rim */
