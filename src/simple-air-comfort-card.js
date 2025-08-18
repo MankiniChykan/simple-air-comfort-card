@@ -59,45 +59,39 @@ class SimpleAirComfortCard extends LitElement {
 
   static styles = css`
     :host {
-      display: block;                /* ensure the custom element participates in layout */
-      height: 100%;
-    }  
+      display: block;
+      width: 100%;
+      box-sizing: border-box;
+    }
+
     ha-card {
       position: relative;
       padding: 0;
       overflow: hidden;
-      isolation: isolate;                                            /* keep z-index stacking inside this card only */
-      border-radius: var(--ha-card-border-radius, 12px);    
-      background: var(--sac-temp-bg, #2a2a2a);                     /* gradient on the card */
-      height: 100%;
-
-      /* NEW: center an inner square in any grid cell, no bottom creep */
-      display: flex;
-      align-items: center;
-      justify-content: center;
+      isolation: isolate;
+      border-radius: var(--ha-card-border-radius, 12px);
+      background: var(--sac-temp-bg, #2a2a2a);
+      /* IMPORTANT: let content define height; do NOT force 100% */
+      display: block;
       box-sizing: border-box;
       min-height: 0;
     }
 
-    /* Make the inner square center itself inside whatever box Sections gives us */
+    /* Square inner stage that *defines* the card height */
     .ratio {
-      position: absolute;
-      inset: 0;           /* allow centering within the full card box */
-      margin: auto;       /* center both axes */
+      position: relative;          /* not absolute: it must size the card */
       width: 100%;
-      max-width: 100%;
-      height: auto;       /* let aspect-ratio drive the height */
-      max-height: 100%;
-      aspect-ratio: 1 / 1;/* true square without the padding-top hack */
+      aspect-ratio: 1 / 1;         /* keep it perfectly square */
+      margin: 0 auto;              /* horizontal centering safety */
       box-sizing: border-box;
     }
 
-    /* Square canvas so % math matches your YAML placements */
+    /* Fill the square with your layout */
     .canvas {
       position: absolute;
-      inset: 0;                                 /* fill ha-card */
-      background: transparent;                  /* was var(--sac-temp-bg, …) */
-      padding: 14px 12px 12px;                  /* if you stil want inner spacing */
+      inset: 0;
+      background: transparent;
+      padding: 14px 12px 12px;
       border-radius: 0;
       box-sizing: border-box;
     }
