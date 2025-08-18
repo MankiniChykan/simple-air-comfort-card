@@ -57,149 +57,179 @@ class SimpleAirComfortCard extends LitElement {
     this._resizeObs = null;
   }
 
-static styles = css`
-  :host {
-    display: block;            /* participate in layout */
-  }
+  static styles = css`
+    :host {
+      display: block;                /* ensure the custom element participates in layout */
+      height: 100%;
+    }  
+    ha-card {
+      position: relative;
+      padding: 0;
+      overflow: hidden;
+      isolation: isolate;                                            /* keep z-index stacking inside this card only */
+      border-radius: var(--ha-card-border-radius, 12px);    
+      background: var(--sac-temp-bg, #2a2a2a);                     /* gradient on the card */
+      height: 100%;
 
-  ha-card {
-    position: relative;
-    padding: 0;
-    overflow: hidden;
-    isolation: isolate;        /* keep shadows inside */
-    border-radius: var(--ha-card-border-radius, 12px);
-    background: var(--sac-temp-bg, #2a2a2a);  /* you set this inline in render */
-    box-sizing: border-box;
+      /* NEW: center an inner square in any grid cell, no bottom creep */
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-sizing: border-box;
+      min-height: 0;
+    }
 
-    /* IMPORTANT: let the Sections grid cell define height; do not force 100% */
-    min-height: 0;             /* prevents overflow in tight cells */
-  }
+    /* Make the inner square center itself inside whatever box Sections gives us */
+    .ratio {
+      position: absolute;
+      inset: 0;           /* allow centering within the full card box */
+      margin: auto;       /* center both axes */
+      width: 100%;
+      max-width: 100%;
+      height: auto;       /* let aspect-ratio drive the height */
+      max-height: 100%;
+      aspect-ratio: 1 / 1;/* true square without the padding-top hack */
+      box-sizing: border-box;
+    }
 
-  /* Fills the card area. This is the bounding box we fit our square into. */
-  .cell {
-    position: relative;
-    width: 100%;
-    height: 100%;
-    box-sizing: border-box;
-  }
+    /* Square canvas so % math matches your YAML placements */
+    .canvas {
+      position: absolute;
+      inset: 0;                                 /* fill ha-card */
+      background: transparent;                  /* was var(--sac-temp-bg, …) */
+      padding: 14px 12px 12px;                  /* if you stil want inner spacing */
+      border-radius: 0;
+      box-sizing: border-box;
+    }
 
-  /* Perfect square that auto-scales to the smaller of width/height, centered. */
-  .square {
-    position: absolute;
-    inset: 0;
-    margin: auto;             /* centers both axes */
-    max-width: 100%;
-    max-height: 100%;
-    aspect-ratio: 1 / 1;      /* the magic: keeps it square */
-    box-sizing: border-box;
-  }
+    /* Title + subtitle (room name + dewpoint text) */
+    .header {
+      position: absolute;
+      top: 10%;   /* never closer than ~10px to the top on small cards */
+      left: 50%;
+      transform: translate(-50%,-50%);
+      width: 100%;
+      text-align: center;
+      pointer-events: none;
+    }
+    .title {
+      font-weight: 700;
+      font-size: 1.05rem;
+      color: white;
+      text-shadow: 0 1px 2px rgba(0,0,0,0.35);
+      line-height: 1.15;
+    }
+    .subtitle {
+      font-weight: 600;
+      font-size: 0.9rem;
+      color: silver;
+      margin-top: 0.15rem;
+    }
 
-  /* Your existing canvas now just fills the square. */
-  .canvas {
-    position: absolute;
-    inset: 0;
-    background: transparent;  /* keep card background visible on ha-card */
-    padding: 14px 12px 12px;  /* your inner spacing */
-    box-sizing: border-box;
-  }
+    /* Four corners (TL/TR/BL/BR) */
+    .corner {
+      position: absolute;
+      color: white;
+      text-shadow: 0 1px 2px rgba(0,0,0,0.35);
+      font-weight: 700;
+      letter-spacing: 0.2px;
+    }
+    .corner .label {
+      font-size: 0.75rem;
+      opacity: 0.85;
+      display: block;
+      font-weight: 600;
+    }
+    .corner .value {
+      font-size: 1.05rem;
+    }
+    .tl { left: 8%;  top: 18%; transform: translate(0, -50%);  text-align: left;  }
+    .tr { right: 8%; top: 18%; transform: translate(0, -50%);  text-align: right; }
+    .bl { left: 8%;  bottom: 8%;  transform: translate(0,  0%);  text-align: left;  }
+    .br { right: 8%; bottom: 8%;  transform: translate(0,  0%);  text-align: right; }
 
-  /* Header (unchanged) */
-  .header {
-    position: absolute;
-    top: 10%;
-    left: 50%;
-    transform: translate(-50%,-50%);
-    width: 100%;
-    text-align: center;
-    pointer-events: none;
-  }
-  .title {
-    font-weight: 700;
-    font-size: 1.05rem;
-    color: white;
-    text-shadow: 0 1px 2px rgba(0,0,0,0.35);
-    line-height: 1.15;
-  }
-  .subtitle {
-    font-weight: 600;
-    font-size: 0.9rem;
-    color: silver;
-    margin-top: 0.15rem;
-  }
+    /* Center graphic: perfectly centered concentric circles */
+    .graphic {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: 56%;
+      height: 56%;
+      min-width: 120px;
+      min-height: 120px;
+    }
 
-  /* Four corners (unchanged) */
-  .corner {
-    position: absolute;
-    color: white;
-    text-shadow: 0 1px 2px rgba(0,0,0,0.35);
-    font-weight: 700;
-    letter-spacing: 0.2px;
-  }
-  .corner .label { font-size: 0.75rem; opacity: 0.85; display: block; font-weight: 600; }
-  .corner .value { font-size: 1.05rem; }
-  .tl { left: 8%;  top: 18%; transform: translate(0,-50%);  text-align: left;  }
-  .tr { right: 8%; top: 18%; transform: translate(0,-50%);  text-align: right; }
-  .bl { left: 8%;  bottom: 8%; text-align: left;  }
-  .br { right: 8%; bottom: 8%; text-align: right; }
+    /* Axis labels placed around the dial rim */
+    .axis {
+      position: absolute;
+      color: rgba(255,255,255,0.92);
+      font-weight: 700;
+      text-shadow: 0 1px 2px rgba(0,0,0,0.45);
+      pointer-events: none;
+    }
+    .axis-top    { top: -12px; left: 50%; transform: translate(-50%, -50%); }
+    .axis-bottom { bottom: -12px; left: 50%; transform: translate(-50%,  50%); }
+    .axis-left   { left: -20px;  top: 50%;  transform: translate(-50%, -50%) rotate(180deg); writing-mode: vertical-rl; }
+    .axis-right  { right: -20px; top: 50%;  transform: translate( 50%, -50%); writing-mode: vertical-rl; }
 
-  /* Center graphic (unchanged sizes are fine) */
-  .graphic {
-    position: absolute;
-    top: 50%; left: 50%;
-    transform: translate(-50%, -50%);
-    width: 56%; height: 56%;
-    min-width: 120px; min-height: 120px;
-  }
+    /* Outer ring: white border + dewpoint gradient fill (macro colours) */
+    .outer-ring {
+      position: absolute;
+      inset: 0;
+      border-radius: 50%;
+      border: 2.5px solid white;
+      background: var(--sac-dewpoint-ring, radial-gradient(circle, dimgray, 55%, rgba(100,100,100,0.15), rgba(100,100,100,0.15)));
+      box-shadow:
+        0 0 6px 3px rgba(0,0,0,0.18),
+        0 0 18px 6px rgba(0,0,0,0.22);
+    }
 
-  .axis {
-    position: absolute; color: rgba(255,255,255,0.92);
-    font-weight: 700; text-shadow: 0 1px 2px rgba(0,0,0,0.45);
-    pointer-events: none;
-  }
-  .axis-top    { top: -12px; left: 50%; transform: translate(-50%, -50%); }
-  .axis-bottom { bottom: -12px; left: 50%; transform: translate(-50%,  50%); }
-  .axis-left   { left: -20px;  top: 50%;  transform: translate(-50%, -50%) rotate(180deg); writing-mode: vertical-rl; }
-  .axis-right  { right: -20px; top: 50%;  transform: translate( 50%, -50%); writing-mode: vertical-rl; }
+    /* Inner comfort circle: black + humidity/temperature gradient (macro) */
+    .inner-circle {
+      position: absolute;
+      left: 50%;
+      top: 50%;
+      transform: translate(-50%, -50%);
+      width: 46.5%;
+      height: 46.5%;
+      border-radius: 50%;
+      background: var(--sac-inner-gradient, radial-gradient(circle, black 0%, black 60%));
+      border: 0;
+      box-shadow: inset 0 0 12px rgba(0,0,0,0.6);
+    }
 
-  .outer-ring {
-    position: absolute; inset: 0; border-radius: 50%;
-    border: 2.5px solid white;
-    background: var(--sac-dewpoint-ring, radial-gradient(circle, dimgray, 55%, rgba(100,100,100,0.15), rgba(100,100,100,0.15)));
-    /* halo is injected inline via style attr in render() */
-  }
-
-  .inner-circle {
-    position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%);
-    width: 46.5%; height: 46.5%; border-radius: 50%;
-    background: var(--sac-inner-gradient, radial-gradient(circle, black 0%, black 60%));
-    box-shadow: inset 0 0 12px rgba(0,0,0,0.6);
-  }
-
-  .dot {
-    position: absolute;
-    width: 15%; height: 15%; border-radius: 50%;
-    background: white; box-shadow: 0 0 6px rgba(0,0,0,0.45);
-    transform: translate(-50%, 50%);
-    transition: left 0.8s ease-in-out, bottom 0.8s ease-in-out;
-    z-index: 2;
-  }
-
-  .dot.outside::before {
-    content: "";
-    position: absolute; inset: -20%;
-    border-radius: 50%;
-    background: radial-gradient(circle,
-      rgba(255,0,0,0.8) 20%,
-      rgba(255,0,0,0.3) 50%,
-      rgba(255,0,0,0.1) 70%,
-      rgba(255,0,0,0)   100%
-    );
-    animation: sac-blink 1s infinite alternate;
-    z-index: -1;
-  }
-  @keyframes sac-blink { 0% { opacity: 1; } 100% { opacity: 0.3; } }
-`;
-
+    /* Floating dot + alert blink */
+    .dot {
+      position: absolute;
+      width: 15%;
+      height: 15%;
+      border-radius: 50%;
+      background: white;
+      box-shadow: 0 0 6px rgba(0,0,0,0.45);
+      transform: translate(-50%, 50%);
+      transition: left 0.8s ease-in-out, bottom 0.8s ease-in-out;
+      z-index: 2;
+    }
+    .dot.outside::before {
+      content: "";
+      position: absolute;
+      inset: -20%;
+      border-radius: 50%;
+      background: radial-gradient(circle,
+        rgba(255,0,0,0.8) 20%,
+        rgba(255,0,0,0.3) 50%,
+        rgba(255,0,0,0.1) 70%,
+        rgba(255,0,0,0) 100%
+      );
+      animation: sac-blink 1s infinite alternate;
+      z-index: -1;
+    }
+    @keyframes sac-blink {
+      0%   { opacity: 1; }
+      100% { opacity: 0.3; }
+    }
+  `;
 
 setConfig(config) {
   if (!config || !config.temperature || !config.humidity) {
@@ -287,29 +317,26 @@ setConfig(config) {
 
     return html`
       <ha-card style="--sac-temp-bg:${cardBg}">
-        <div class="cell">
-          <div class="square">
-            <div class="canvas">
-              <!-- your existing header/corners/graphic elements unchanged -->
-              <div class="header">
-                <div class="title">${this._config.name ?? 'Air Comfort'}</div>
-                <div class="subtitle">${dewText}</div>
-              </div>
+        <div class="ratio">
+          <div class="canvas">
+            <div class="header">
+              <div class="title">${this._config.name ?? 'Air Comfort'}</div>
+              <div class="subtitle">${dewText}</div>
+            </div>
 
-              <div class="corner tl"><span class="label">Dew point</span><span class="value">${dewOut}</span></div>
-              <div class="corner tr"><span class="label">Feels like</span><span class="value">${atOut}</span></div>
-              <div class="corner bl"><span class="label">Temperature</span><span class="value">${tempText}</span></div>
-              <div class="corner br"><span class="label">Humidity</span><span class="value">${rhText}</span></div>
+            <div class="corner tl"><span class="label">Dew point</span><span class="value">${dewOut}</span></div>
+            <div class="corner tr"><span class="label">Feels like</span><span class="value">${atOut}</span></div>
+            <div class="corner bl"><span class="label">Temperature</span><span class="value">${tempText}</span></div>
+            <div class="corner br"><span class="label">Humidity</span><span class="value">${rhText}</span></div>
 
-              <div class="graphic" style="--sac-dewpoint-ring:${ringGrad}; --sac-inner-gradient:${innerGrad}">
-                <div class="axis axis-top">Warm</div>
-                <div class="axis axis-bottom">Cold</div>
-                <div class="axis axis-left">Dry</div>
-                <div class="axis axis-right">Humid</div>
-                <div class="outer-ring" style="box-shadow:${this.#dewpointGlowForText(dewText)}"></div>
-                <div class="inner-circle"></div>
-                <div class="dot ${outside ? 'outside' : ''}" style="left:${xPct}%; bottom:${yPct}%;"></div>
-              </div>
+            <div class="graphic" style="--sac-dewpoint-ring:${ringGrad}; --sac-inner-gradient:${innerGrad}">
+              <div class="axis axis-top">Warm</div>
+              <div class="axis axis-bottom">Cold</div>
+              <div class="axis axis-left">Dry</div>
+              <div class="axis axis-right">Humid</div>
+              <div class="outer-ring"></div>
+              <div class="inner-circle"></div>
+              <div class="dot ${outside ? 'outside' : ''}" style="left:${xPct}%; bottom:${yPct}%;"></div>
             </div>
           </div>
         </div>
@@ -325,23 +352,24 @@ setConfig(config) {
   // Default grid sizing for Sections view (multiples of 3 recommended)
   getGridOptions() {
     const c = this._config ?? {};
-    // Defaults tuned for a square card that looks right in Sections
-    const large = { columns: 6, rows: 6 };  // ~big square
-    const small = { columns: 3, rows: 3 };  // ~half footprint
+    const largeColumns = Number.isFinite(c.large_columns) ? c.large_columns : 12;
+    const largeRows    = Number.isFinite(c.large_rows)    ? c.large_rows    : 8;
+    const smallColumns = Number.isFinite(c.small_columns) ? c.small_columns : 6;
+    const smallRows    = Number.isFinite(c.small_rows)    ? c.small_rows    : 4;
 
-    let profile = 'large';
-    if (c.size_mode === 'small') profile = 'small';
-    else if (c.size_mode === 'auto') {
-      // Simple heuristic: assume narrow if the card's rendered width is < 360px
-      const w = this.getBoundingClientRect?.().width ?? 9999;
-      profile = w < (c.auto_breakpoint_px ?? 360) ? 'small' : 'large';
+    const profile = (c.size_mode === 'small' || c.size_mode === 'large') ? c.size_mode : 'large';
+
+    if (profile === 'small') {
+      return {
+        columns: smallColumns, rows: smallRows,
+        min_columns: smallColumns, min_rows: smallRows,
+        max_columns: smallColumns, max_rows: smallRows,
+      };
     }
-
-    const p = (profile === 'small') ? small : large;
     return {
-      columns: p.columns, rows: p.rows,
-      min_columns: p.columns, min_rows: p.rows,
-      max_columns: p.columns, max_rows: p.rows,
+      columns: largeColumns, rows: largeRows,
+      min_columns: largeColumns, min_rows: largeRows,
+      max_columns: largeColumns, max_rows: largeRows,
     };
   }
 
