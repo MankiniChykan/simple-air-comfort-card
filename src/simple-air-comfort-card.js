@@ -60,39 +60,44 @@ class SimpleAirComfortCard extends LitElement {
   static styles = css`
     :host {
       display: block;                /* ensure the custom element participates in layout */
-      width: 100%;
-      box-sizing: border-box;
-    }
-
+      height: 100%;
     }  
     ha-card {
       position: relative;
       padding: 0;
       overflow: hidden;
-      isolation: isolate;
-      border-radius: var(--ha-card-border-radius, 12px);
-      background: var(--sac-temp-bg, #2a2a2a);
-      /* IMPORTANT: let content define height; do NOT force 100% */
-      display: block;
+      isolation: isolate;                                            /* keep z-index stacking inside this card only */
+      border-radius: var(--ha-card-border-radius, 12px);    
+      background: var(--sac-temp-bg, #2a2a2a);                     /* gradient on the card */
+      height: 100%;
+
+      /* NEW: center an inner square in any grid cell, no bottom creep */
+      display: flex;
+      align-items: center;
+      justify-content: center;
       box-sizing: border-box;
       min-height: 0;
     }
 
-    /* Square inner stage that *defines* the card height */
+    /* Make the inner square center itself inside whatever box Sections gives us */
     .ratio {
-      position: relative;          /* not absolute: it must size the card */
+      position: absolute;
+      inset: 0;           /* allow centering within the full card box */
+      margin: auto;       /* center both axes */
       width: 100%;
-      aspect-ratio: 1 / 1;         /* keep it perfectly square */
-      margin: 0 auto;              /* horizontal centering safety */
+      max-width: 100%;
+      height: auto;       /* let aspect-ratio drive the height */
+      max-height: 100%;
+      aspect-ratio: 1 / 1;/* true square without the padding-top hack */
       box-sizing: border-box;
     }
 
-    /* Fill the square with your layout */
+    /* Square canvas so % math matches your YAML placements */
     .canvas {
       position: absolute;
-      inset: 0;
-      background: transparent;
-      padding: 14px 12px 12px;
+      inset: 0;                                 /* fill ha-card */
+      background: transparent;                  /* was var(--sac-temp-bg, …) */
+      padding: 14px 12px 12px;                  /* if you stil want inner spacing */
       border-radius: 0;
       box-sizing: border-box;
     }
@@ -250,9 +255,9 @@ setConfig(config) {
     /* Sections grid sizing — locked to editor choice */
     size_mode: (config.size_mode === 'large' || config.size_mode === 'small') ? config.size_mode : 'large',
     large_columns: Number.isFinite(toNum(config.large_columns)) ? toNum(config.large_columns) : 12,
-    large_rows:    Number.isFinite(toNum(config.large_rows))    ? toNum(config.large_rows)    : 12,
+    large_rows:    Number.isFinite(toNum(config.large_rows))    ? toNum(config.large_rows)    : 8,
     small_columns: Number.isFinite(toNum(config.small_columns)) ? toNum(config.small_columns) : 6,
-    small_rows:    Number.isFinite(toNum(config.small_rows))    ? toNum(config.small_rows)    : 6,
+    small_rows:    Number.isFinite(toNum(config.small_rows))    ? toNum(config.small_rows)    : 4,
   };
 }
 
@@ -348,9 +353,9 @@ setConfig(config) {
   getGridOptions() {
     const c = this._config ?? {};
     const largeColumns = Number.isFinite(c.large_columns) ? c.large_columns : 12;
-    const largeRows    = Number.isFinite(c.large_rows)    ? c.large_rows    : 12;
+    const largeRows    = Number.isFinite(c.large_rows)    ? c.large_rows    : 8;
     const smallColumns = Number.isFinite(c.small_columns) ? c.small_columns : 6;
-    const smallRows    = Number.isFinite(c.small_rows)    ? c.small_rows    : 6;
+    const smallRows    = Number.isFinite(c.small_rows)    ? c.small_rows    : 4;
 
     const profile = (c.size_mode === 'small' || c.size_mode === 'large') ? c.size_mode : 'large';
 
