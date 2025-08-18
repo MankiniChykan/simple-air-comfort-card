@@ -59,45 +59,35 @@ class SimpleAirComfortCard extends LitElement {
 
   static styles = css`
     :host {
-      display: block;                /* ensure the custom element participates in layout */
-      height: 100%;
-    }  
+      display: block;                /* participate in layout; let Sections set height */
+    }
+
     ha-card {
       position: relative;
       padding: 0;
       overflow: hidden;
-      isolation: isolate;                                            /* keep z-index stacking inside this card only */
-      border-radius: var(--ha-card-border-radius, 12px);    
-      background: var(--sac-temp-bg, #2a2a2a);                     /* gradient on the card */
-      height: 100%;
-
-      /* NEW: center an inner square in any grid cell, no bottom creep */
-      display: flex;
-      align-items: center;
-      justify-content: center;
+      isolation: isolate;
+      border-radius: var(--ha-card-border-radius, 12px);
+      background: var(--sac-temp-bg, #2a2a2a);
       box-sizing: border-box;
-      min-height: 0;
+      min-height: 0;                 /* avoid min-content creep */
+      display: block;                /* do NOT force a flex centering box */
     }
 
-    /* Make the inner square center itself inside whatever box Sections gives us */
+    /* Fill the grid-sized box; DO NOT force a square here */
     .ratio {
-      position: absolute;
-      inset: 0;           /* allow centering within the full card box */
-      margin: auto;       /* center both axes */
+      position: relative;
+      inset: 0;
       width: 100%;
-      max-width: 100%;
-      height: auto;       /* let aspect-ratio drive the height */
-      max-height: 100%;
-      aspect-ratio: 1 / 1;/* true square without the padding-top hack */
+      height: 100%;                  /* take the grid row height exactly */
       box-sizing: border-box;
     }
 
-    /* Square canvas so % math matches your YAML placements */
     .canvas {
       position: absolute;
-      inset: 0;                                 /* fill ha-card */
-      background: transparent;                  /* was var(--sac-temp-bg, …) */
-      padding: 14px 12px 12px;                  /* if you stil want inner spacing */
+      inset: 0;                      /* fill ha-card */
+      background: transparent;
+      padding: 14px 12px 12px;
       border-radius: 0;
       box-sizing: border-box;
     }
@@ -105,7 +95,7 @@ class SimpleAirComfortCard extends LitElement {
     /* Title + subtitle (room name + dewpoint text) */
     .header {
       position: absolute;
-      top: 10%;   /* never closer than ~10px to the top on small cards */
+      top: 10%;
       left: 50%;
       transform: translate(-50%,-50%);
       width: 100%;
@@ -145,10 +135,10 @@ class SimpleAirComfortCard extends LitElement {
     }
     .tl { left: 8%;  top: 18%; transform: translate(0, -50%);  text-align: left;  }
     .tr { right: 8%; top: 18%; transform: translate(0, -50%);  text-align: right; }
-    .bl { left: 8%;  bottom: 8%;  transform: translate(0,  0%);  text-align: left;  }
-    .br { right: 8%; bottom: 8%;  transform: translate(0,  0%);  text-align: right; }
+    .bl { left: 8%;  bottom: 8%;  transform: translate(0,  0%); text-align: left;  }
+    .br { right: 8%; bottom: 8%;  transform: translate(0,  0%); text-align: right; }
 
-    /* Center graphic: perfectly centered concentric circles */
+    /* Center graphic */
     .graphic {
       position: absolute;
       top: 50%;
@@ -173,7 +163,7 @@ class SimpleAirComfortCard extends LitElement {
     .axis-left   { left: -20px;  top: 50%;  transform: translate(-50%, -50%) rotate(180deg); writing-mode: vertical-rl; }
     .axis-right  { right: -20px; top: 50%;  transform: translate( 50%, -50%); writing-mode: vertical-rl; }
 
-    /* Outer ring: white border + dewpoint gradient fill (macro colours) */
+    /* Outer ring */
     .outer-ring {
       position: absolute;
       inset: 0;
@@ -185,7 +175,7 @@ class SimpleAirComfortCard extends LitElement {
         0 0 18px 6px rgba(0,0,0,0.22);
     }
 
-    /* Inner comfort circle: black + humidity/temperature gradient (macro) */
+    /* Inner comfort circle */
     .inner-circle {
       position: absolute;
       left: 50%;
@@ -352,24 +342,28 @@ setConfig(config) {
   // Default grid sizing for Sections view (multiples of 3 recommended)
   getGridOptions() {
     const c = this._config ?? {};
-    const largeColumns = Number.isFinite(c.large_columns) ? c.large_columns : 12;
-    const largeRows    = Number.isFinite(c.large_rows)    ? c.large_rows    : 8;
-    const smallColumns = Number.isFinite(c.small_columns) ? c.small_columns : 6;
-    const smallRows    = Number.isFinite(c.small_rows)    ? c.small_rows    : 4;
+    const large = {
+      columns: Number.isFinite(c.large_columns) ? c.large_columns : 12,
+      rows:    Number.isFinite(c.large_rows)    ? c.large_rows    : 8,
+    };
+    const small = {
+      columns: Number.isFinite(c.small_columns) ? c.small_columns : 6,
+      rows:    Number.isFinite(c.small_rows)    ? c.small_rows    : 4,
+    };
+    const mode = c.size_mode ?? 'large';
 
-    const profile = (c.size_mode === 'small' || c.size_mode === 'large') ? c.size_mode : 'large';
-
-    if (profile === 'small') {
-      return {
-        columns: smallColumns, rows: smallRows,
-        min_columns: smallColumns, min_rows: smallRows,
-        max_columns: smallColumns, max_rows: smallRows,
-      };
+    let pick = mode;
+    if (mode === 'auto') {
+      const bp = Number.isFinite(c.auto_breakpoint_px) ? c.auto_breakpoint_px : 360;
+      const w = this.offsetWidth || 0;
+      pick = w && w < bp ? 'small' : 'large';
     }
+
+    const sel = pick === 'small' ? small : large;
     return {
-      columns: largeColumns, rows: largeRows,
-      min_columns: largeColumns, min_rows: largeRows,
-      max_columns: largeColumns, max_rows: largeRows,
+      columns: sel.columns, rows: sel.rows,
+      min_columns: sel.columns, min_rows: sel.rows,
+      max_columns: sel.columns, max_rows: sel.rows,
     };
   }
 
