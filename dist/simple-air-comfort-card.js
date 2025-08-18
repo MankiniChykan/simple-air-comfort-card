@@ -118,8 +118,8 @@ const v=globalThis,x=v.trustedTypes,A=x?x.createPolicy("lit-html",{createHTML:t=
       transform: translate(-50%, -50%);
       width: 45%;
       height: 45%;
-      min-width: 120px;
-      min-height: 120px;
+      min-width: 8em;
+      min-height: 8em;
     }
 
     /* Axis labels placed around the dial rim */
