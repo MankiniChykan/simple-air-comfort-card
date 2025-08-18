@@ -58,12 +58,6 @@ class SimpleAirComfortCard extends LitElement {
   }
 
   static styles = css`
-    :host {
-      display: block;
-      width: 100%;
-      box-sizing: border-box;
-    }
-
     ha-card {
       position: relative;
       padding: 0;
