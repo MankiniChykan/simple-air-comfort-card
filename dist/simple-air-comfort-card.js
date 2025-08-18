@@ -22,8 +22,7 @@ const v=globalThis,x=v.trustedTypes,A=x?x.createPolicy("lit-html",{createHTML:e=
  */class oe extends w{constructor(){super(...arguments),this.renderOptions={host:this},this._$Do=void 0}createRenderRoot(){const e=super.createRenderRoot();return this.renderOptions.renderBefore??=e.firstChild,e}update(e){const t=this.render();this.hasUpdated||(this.renderOptions.isConnected=this.isConnected),super.update(e),this._$Do=((e,t,i)=>{const s=i?.renderBefore??t;let r=s._$litPart$;if(void 0===r){const e=i?.renderBefore??null;s._$litPart$=r=new Z(t.insertBefore(P(),e),e,void 0,i??{})}return r._$AI(e),r})(t,this.renderRoot,this.renderOptions)}connectedCallback(){super.connectedCallback(),this._$Do?.setConnected(!0)}disconnectedCallback(){super.disconnectedCallback(),this._$Do?.setConnected(!1)}render(){return B}}oe._$litElement$=!0,oe.finalized=!0,re.litElementHydrateSupport?.({LitElement:oe});const ne=re.litElementPolyfillSupport;ne?.({LitElement:oe}),(re.litElementVersions??=[]).push("4.2.1");class ae extends oe{static properties={hass:{type:Object},_config:{state:!0},_isNarrow:{state:!0}};constructor(){super(),this._isNarrow=!1,this._resizeObsInitialized=!1,this._resizeObs=null}static styles=o`
     :host {
       display: block;                /* ensure the custom element participates in layout */
-      width: 100%;          /* let width be controlled by HA’s grid */
-      box-sizing: border-box;      
+  
     }  
     ha-card {
       position: relative;
