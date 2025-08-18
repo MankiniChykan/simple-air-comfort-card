@@ -5,17 +5,23 @@ on:
     tags:
       - 'v*'
 
+permissions:
+  contents: write
+
 jobs:
   release:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Install Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '20'
+          cache: 'npm'
 
       - name: Install Dependencies
         run: npm ci
@@ -23,15 +29,20 @@ jobs:
       - name: Build
         run: npm run build
 
-      - name: Commit built file
+      - name: Create checksums
         run: |
-          git config user.name github-actions
-          git config user.email github-actions@github.com
-          git add dist/simple-air-comfort-card.js
-          git commit -m "Build release"
-          git push
+          cd dist
+          sha256sum simple-air-comfort-card.js > simple-air-comfort-card.js.sha256
+          sha256sum simple-air-comfort-card.js.gz > simple-air-comfort-card.js.gz.sha256
+          ls -l
 
       - name: Create Release
         uses: softprops/action-gh-release@v2
         with:
-          files: dist/simple-air-comfort-card.js
+          files: |
+            dist/simple-air-comfort-card.js
+            dist/simple-air-comfort-card.js.gz
+            dist/simple-air-comfort-card.js.sha256
+            dist/simple-air-comfort-card.js.gz.sha256
+          fail_on_unmatched_files: true
+
