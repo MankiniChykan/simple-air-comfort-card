@@ -59,7 +59,7 @@ class SimpleAirComfortCard extends LitElement {
 
   static styles = css`
     :host {
-      display: flex;                /* ensure the custom element participates in layout */
+      display: block;                /* ensure the custom element participates in layout */
 
     }  
     ha-card {
