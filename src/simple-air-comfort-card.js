@@ -174,7 +174,7 @@ class SimpleAirComfortCard extends LitElement {
       background: white;
       transform: translate(-50%, 50%); /* matches macro */
       transition: bottom 0.8s ease-in-out, left 0.8s ease-in-out;
-      z-index: 2;
+      z-index: 3;
     }
     .dot.outside::before{
       content:""; position:absolute; inset:-20%; border-radius:50%;
@@ -295,50 +295,50 @@ class SimpleAirComfortCard extends LitElement {
     dewOut, atOut, tempRaw, rhRaw
   }) {
     return html`
-      <div class="header">
-        <div class="title">${this._config.name ?? 'Air Comfort'}</div>
-        <div class="subtitle">${dewText}</div>
+      <!-- padding-free stage: percent mapping matches your original macro -->
+      <div class="stage">
+        <div class="graphic" style="--sac-dewpoint-ring:${ringGrad}; --sac-inner-gradient:${innerGrad}">
+          <div class="axis axis-top">Warm</div>
+          <div class="axis axis-bottom">Cold</div>
+          <div class="axis axis-left">Dry</div>
+          <div class="axis axis-right">Humid</div>
+          <div class="outer-ring"></div>
+          <div class="inner-circle"></div>
+        </div>
+
+        <!-- DOT lives in the stage, so bottom:% is the full square (no padding) -->
+        <div class="dot ${outside ? 'outside' : ''}"
+            style="left:${xPct}%; bottom:${yPct}%; transform: translate(-50%, 50%);"></div>
       </div>
 
-      <!-- TL / TR -->
-      <div class="corner tl">
-        <span class="label">Dew point</span>
-        <span class="metric">${dewOut}</span>
-      </div>
-      <div class="corner tr">
-        <span class="label">Feels like</span>
-        <span class="metric">${atOut}</span>
-      </div>
+      <!-- padded overlay for all labels/text -->
+      <div class="overlay">
+        <div class="header">
+          <div class="title">${this._config.name ?? 'Air Comfort'}</div>
+          <div class="subtitle">${dewText}</div>
+        </div>
 
-      <!-- BL / BR (raw values + comfort words) -->
-      <div class="corner bl">
-        <span class="label">Temp</span>
-        <span class="metric">${tempRaw}</span>
-        <span class="comfort">${tempText}</span>
+        <div class="corner tl">
+          <span class="label">Dew point</span>
+          <span class="metric">${dewOut}</span>
+        </div>
+        <div class="corner tr">
+          <span class="label">Feels like</span>
+          <span class="metric">${atOut}</span>
+        </div>
+        <div class="corner bl">
+          <span class="label">Temp</span>
+          <span class="metric">${tempRaw}</span>
+          <span class="comfort">${tempText}</span>
+        </div>
+        <div class="corner br">
+          <span class="label">Humidity</span>
+          <span class="metric">${rhRaw}</span>
+          <span class="comfort">${rhText}</span>
+        </div>
       </div>
-      <div class="corner br">
-        <span class="label">Humidity</span>
-        <span class="metric">${rhRaw}</span>
-        <span class="comfort">${rhText}</span>
-      </div>
-
-      <!-- Dial -->
-      <div class="graphic" style="--sac-dewpoint-ring:${ringGrad}; --sac-inner-gradient:${innerGrad}">
-        <div class="axis axis-top">Warm</div>
-        <div class="axis axis-bottom">Cold</div>
-        <div class="axis axis-left">Dry</div>
-        <div class="axis axis-right">Humid</div>
-
-        <div class="outer-ring"></div>
-        <div class="inner-circle"></div>
-      </div>
-    <!-- DOT (positioned relative to .canvas / full square) -->
-    <div
-      class="dot ${outside ? 'outside' : ''}"
-      style="left:${xPct}%; bottom:${yPct}%; transform: translate(-50%, 50%);"
-    ></div>      
     `;
-  }
+
 
   // ============================== Physics ===============================
   #apparentTemperatureC(Tc, e_hPa, ws_mps){ return Tc + 0.33*e_hPa - 0.70*ws_mps - 4.0; }
