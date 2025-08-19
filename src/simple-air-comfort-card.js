@@ -37,26 +37,48 @@ class SimpleAirComfortCard extends LitElement {
   // ================================ Styles ================================
   static styles = css`
     /* Host should not force a height; HA grid drives width, .ratio drives height */
-    :host{ display:block; width:100%; box-sizing:border-box; }
+    :host{ 
+    display:block; 
+    width:100%; 
+    box-sizing:border-box; 
+    }
 
     ha-card{
-      position:relative; padding:0; overflow:hidden; isolation:isolate;
+      position:relative; 
+      padding:0; 
+      overflow:hidden; 
+      isolation:isolate;
       border-radius:var(--ha-card-border-radius,12px);
       background:var(--sac-temp-bg,#2a2a2a);
       display:block; box-sizing:border-box; min-height:0;
     }
 
     /* Square stage defines height (no absolute here) */
-    .ratio{ position:relative; width:100%; aspect-ratio:1/1; margin:0 auto; }
+    .ratio{ 
+    position:relative; 
+    width:100%; 
+    aspect-ratio:1/1; 
+    margin:0 auto; 
+    }
 
     /* Fill the square with the face */
-    .canvas{ position:absolute; inset:0; padding:14px 12px 12px; }
+    .canvas{ 
+    position:absolute; 
+    inset:0; 
+    padding:14px 12px 12px; 
+    }
 
     /* Header (room name + dew-point comfort text under it) */
     .header{
-      position:absolute; top:10%; left:50%; transform:translate(-50%,-50%);
-      width:100%; text-align:center; pointer-events:none;
+      position:absolute; 
+      top:10%; 
+      left:50%; 
+      transform:translate(-50%,-50%);
+      width:100%; 
+      text-align:center; 
+      pointer-events:none;
     }
+
     .title{
       color:#c9c9c9; font-weight:600;
       font-size:clamp(10px,1.8vw,14px);
@@ -70,7 +92,12 @@ class SimpleAirComfortCard extends LitElement {
     }
 
     /* Corners */
-    .corner{ position:absolute; color:#fff; text-shadow:0 1px 2px rgba(0,0,0,.35); }
+    .corner{ 
+    position:absolute; 
+    color:#fff; 
+    text-shadow:0 1px 2px rgba(0,0,0,.35); 
+    }
+
     .corner .label{
       font-weight:600; opacity:.75; letter-spacing:.1px;
       font-size:clamp(9px,1.6vw,12px);
@@ -93,40 +120,61 @@ class SimpleAirComfortCard extends LitElement {
 
     /* Dial — 45% like original */
     .graphic{
-      position:absolute; top:50%; left:50%; transform:translate(-50%,-50%);
-      width:45%; height:45%; min-width:120px; min-height:120px;
+      position:absolute; 
+      top:50%; 
+      left:50%; 
+      transform:translate(-50%,-50%);
+      width:45%; 
+      height:45%; 
+      min-width:120px; 
+      min-height:120px;
     }
 
     /* Axis labels: smaller & dim grey */
     .axis{
-      position:absolute; color:rgba(200,200,200,.8);
-      font-weight:700; text-shadow:0 1px 2px rgba(0,0,0,.25);
+      position:absolute; 
+      color:rgba(200,200,200,.8);
+      font-weight:700; 
+      text-shadow:0 1px 2px rgba(0,0,0,.25);
       font-size:clamp(9px,1.7vw,12px);
       pointer-events:none;
     }
+  
     .axis-top    { top:-10px;  left:50%; transform:translate(-50%,-50%); }
     .axis-bottom { bottom:-10px;left:50%; transform:translate(-50%, 50%); }
     .axis-left   { left:-18px; top:50%;  transform:translate(-50%,-50%) rotate(180deg); writing-mode:vertical-rl; }
     .axis-right  { right:-18px;top:50%;  transform:translate( 50%,-50%); writing-mode:vertical-rl; }
 
     .outer-ring{
-      position:absolute; inset:0; border-radius:50%; border:2.5px solid #fff;
+      position:absolute; 
+      inset:0; 
+      border-radius:50%; 
+      border:2.5px solid #fff;
       background:var(--sac-dewpoint-ring,radial-gradient(circle,dimgray,55%,rgba(100,100,100,.15),rgba(100,100,100,.15)));
       box-shadow:0 0 6px 3px rgba(0,0,0,.18), 0 0 18px 6px rgba(0,0,0,.22);
     }
     .inner-circle{
-      position:absolute; left:50%; top:50%; transform:translate(-50%,-50%);
-      width:46.5%; height:46.5%; border-radius:50%;
+      position:absolute; 
+      left:50%; 
+      top:50%; 
+      transform:translate(-50%,-50%);
+      width:46.5%; 
+      height:46.5%; 
+      border-radius:50%;
       background:var(--sac-inner-gradient,radial-gradient(circle,black 0%,black 60%));
       box-shadow:inset 0 0 12px rgba(0,0,0,.6);
     }
 
     /* Dot (+ halo when outside) — positioned in % of the whole card */
-    .dot{
-      position:absolute; width:15%; height:15%; border-radius:50%;
-      background:#fff; box-shadow:0 0 6px rgba(0,0,0,.45);
-      transform:translate(-50%, 50%);
-      transition:left .8s ease-in-out,bottom .8s ease-in-out; z-index:2;
+    .dot {
+      position: absolute;
+      width: 8%;       /* smaller than 15% */
+      height: 8%;
+      border-radius: 50%;
+      background: white;
+      transform: translate(-50%, 50%); /* matches macro */
+      transition: bottom 0.8s ease-in-out, left 0.8s ease-in-out;
+      z-index: 2;
     }
     .dot.outside::before{
       content:""; position:absolute; inset:-20%; border-radius:50%;
@@ -284,7 +332,8 @@ class SimpleAirComfortCard extends LitElement {
         <div class="outer-ring"></div>
         <div class="inner-circle"></div>
       </div>
-      <div class="dot ${outside ? 'outside' : ''}" style="left:${xPct}%; bottom:${yPct}%;"></div>
+      <div class="dot ${outside ? 'outside' : ''}" 
+        style="left:${xPct}%; bottom:${yPct}%; transform: translate(-50%, 50%);"></div>
     `;
   }
 
