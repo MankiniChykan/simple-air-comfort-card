@@ -221,7 +221,7 @@ class SimpleAirComfortCard extends LitElement {
     // Temp scaled bottom→top across the whole card
     const yPct = Number.isFinite(Tc) ? this.#scaleClamped(Tc, temp_min, temp_max, 0, 100) : 50;
     const bias = 0;
-    const yTopPct = 100 - yPct + bias;  // flip for 'top' positioning
+    const yTopPct = 100 - yPct + bias;  // flip for 'top' positioning.
 
     const outside = (Number.isFinite(RH) && Number.isFinite(Tc))
       ? (RH < 40 || RH > 60 || Tc < 18 || Tc > 26.4)
