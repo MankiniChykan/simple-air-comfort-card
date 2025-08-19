@@ -112,7 +112,7 @@ const x=globalThis,w=x.trustedTypes,A=w?w.createPolicy("lit-html",{createHTML:t=
     /* Dot (positioned against the stage; on top of everything) */
     .dot{
       position:absolute; width:6%; height:6%; border-radius:50%;
-      background:#fff; transform:translate(-50%, 50%);
+      background:#fff; transform:translate(-50%, -50%);
       box-shadow:0 0 6px rgba(0,0,0,.45);
       transition: left .8s ease-in-out, bottom .8s ease-in-out;
       z-index:3;
@@ -155,6 +155,7 @@ const x=globalThis,w=x.trustedTypes,A=w?w.createPolicy("lit-html",{createHTML:t=
       <div
         class="dot ${a?"outside":""}"
         style="left:${n}%; bottom:${o}%;"
+        style="left:${n}%; top:${yTopPct}%;
       ></div>
 
       <!-- Text overlay with padding -->

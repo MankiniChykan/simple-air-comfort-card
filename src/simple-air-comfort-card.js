@@ -128,7 +128,7 @@ class SimpleAirComfortCard extends LitElement {
     /* Dot (positioned against the stage; on top of everything) */
     .dot{
       position:absolute; width:6%; height:6%; border-radius:50%;
-      background:#fff; transform:translate(-50%, 50%);
+      background:#fff; transform:translate(-50%, -50%);
       box-shadow:0 0 6px rgba(0,0,0,.45);
       transition: left .8s ease-in-out, bottom .8s ease-in-out;
       z-index:3;
@@ -220,6 +220,8 @@ class SimpleAirComfortCard extends LitElement {
 
     // Temp scaled bottom→top across the whole card
     const yPct = Number.isFinite(Tc) ? this.#scaleClamped(Tc, temp_min, temp_max, 0, 100) : 50;
+    const bias = 0;
+    const yTopPct = 100 - yPct + bias;  // flip for 'top' positioning
 
     const outside = (Number.isFinite(RH) && Number.isFinite(Tc))
       ? (RH < 40 || RH > 60 || Tc < 18 || Tc > 26.4)
@@ -271,6 +273,7 @@ class SimpleAirComfortCard extends LitElement {
       <div
         class="dot ${outside ? 'outside' : ''}"
         style="left:${xPct}%; bottom:${yPct}%;"
+        style="left:${xPct}%; top:${yTopPct}%;
       ></div>
 
       <!-- Text overlay with padding -->
