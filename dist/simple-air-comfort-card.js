@@ -114,7 +114,7 @@ const x=globalThis,w=x.trustedTypes,A=w?w.createPolicy("lit-html",{createHTML:t=
       position:absolute; width:6%; height:6%; border-radius:50%;
       background:#fff; transform:translate(-50%, -50%);
       box-shadow:0 0 6px rgba(0,0,0,.45);
-      transition: left .8s ease-in-out, bottom .8s ease-in-out;
+      transition: left .8s ease-in-out, top .8s ease-in-out;
       z-index:3;
     }
     .dot.outside::before{
@@ -130,16 +130,16 @@ const x=globalThis,w=x.trustedTypes,A=w?w.createPolicy("lit-html",{createHTML:t=
   `;setConfig(t){if(!t||!t.temperature||!t.humidity)throw new Error('simple-air-comfort-card: "temperature" and "humidity" are required.');const e=t=>null==t||""===t?NaN:Number(t),i=Number.isFinite(e(t.temp_min))?e(t.temp_min):15,s=Number.isFinite(e(t.temp_max))?e(t.temp_max):35;if(s<=i)throw new Error("simple-air-comfort-card: temp_max must be > temp_min.");this._config={name:t.name??"Air Comfort",temperature:t.temperature,humidity:t.humidity,windspeed:t.windspeed,decimals:Number.isFinite(e(t.decimals))?e(t.decimals):1,default_wind_speed:Number.isFinite(e(t.default_wind_speed))?e(t.default_wind_speed):0,temp_min:i,temp_max:s}}render(){if(!this.hass||!this._config)return B``;const t=this.hass.states[this._config.temperature],e=this.hass.states[this._config.humidity],i=this._config.windspeed?this.hass.states[this._config.windspeed]:void 0;if(!t||!e)return B`<ha-card>
         <div class="ratio">
           <div class="canvas">
-            ${this.#t({Tc:NaN,RH:NaN,dpC:NaN,atC:NaN,dewText:"Unknown",tempText:"N/A",rhText:"N/A",cardBg:this.#e(NaN),ringGrad:this.#i("Unknown"),innerGrad:this.#s(NaN,NaN),xPct:50,yPct:50,outside:!1,outUnit:t?.attributes?.unit_of_measurement||"°C",d:this._config.decimals,dewOut:"—",atOut:"—",tempRaw:"—",rhRaw:"—"})}
+            ${this.#t({Tc:NaN,RH:NaN,dpC:NaN,atC:NaN,dewText:"Unknown",tempText:"N/A",rhText:"N/A",cardBg:this.#e(NaN),ringGrad:this.#i("Unknown"),innerGrad:this.#s(NaN,NaN),xPct:50,yPct:50,yTopPct:50,outside:!1,outUnit:t?.attributes?.unit_of_measurement||"°C",d:this._config.decimals,dewOut:"—",atOut:"—",tempRaw:"—",rhRaw:"—"})}
           </div>
         </div>
-      </ha-card>`;const s=(t.attributes.unit_of_measurement||"°C").trim(),r=this.#r(Number.isFinite(+t.state)?+t.state:NaN,s),n=this.#n(Number.isFinite(+e.state)?+e.state:NaN),o=this.#o(i,this._config.default_wind_speed),a=n/100*this.#a(r),l=this.#l(a),h=this.#h(r,a,o),d=this.#d(l),c=this.#c(r),p=this.#p(n),u=this.#e(r),m=this.#i(d),f=this.#s(n,r),{temp_min:g,temp_max:_}=this._config,b=Number.isFinite(n)?this.#u(n+.5,0,100):50,$=Number.isFinite(r)?this.#m(r,g,_,0,100):50,y=!(!Number.isFinite(n)||!Number.isFinite(r))&&(n<40||n>60||r<18||r>26.4),v=this._config.decimals,x=s,w=this.#f(this.#g(l,x),v)+` ${x}`,A=this.#f(this.#g(h,x),v)+` ${x}`,C=this.#f(this.#g(r,x),v)+` ${x}`,N=Number.isFinite(n)?this.#_(n,v).toFixed(v)+" %":"—";return B`<ha-card style="--sac-temp-bg:${u}">
+      </ha-card>`;const s=(t.attributes.unit_of_measurement||"°C").trim(),r=this.#r(Number.isFinite(+t.state)?+t.state:NaN,s),n=this.#n(Number.isFinite(+e.state)?+e.state:NaN),o=this.#o(i,this._config.default_wind_speed),a=n/100*this.#a(r),l=this.#l(a),h=this.#h(r,a,o),d=this.#d(l),c=this.#c(r),p=this.#p(n),u=this.#e(r),m=this.#i(d),f=this.#s(n,r),{temp_min:g,temp_max:_}=this._config,b=Number.isFinite(n)?this.#u(n+.5,0,100):50,$=Number.isFinite(r)?this.#m(r,g,_,0,100):50,y=100-$+0,v=!(!Number.isFinite(n)||!Number.isFinite(r))&&(n<40||n>60||r<18||r>26.4),x=this._config.decimals,w=s,A=this.#f(this.#g(l,w),x)+` ${w}`,C=this.#f(this.#g(h,w),x)+` ${w}`,N=this.#f(this.#g(r,w),x)+` ${w}`,E=Number.isFinite(n)?this.#_(n,x).toFixed(x)+" %":"—";return B`<ha-card style="--sac-temp-bg:${u}">
       <div class="ratio">
         <div class="canvas">
-          ${this.#t({Tc:r,RH:n,dpC:l,atC:h,dewText:d,tempText:c,rhText:p,cardBg:u,ringGrad:m,innerGrad:f,xPct:b,yPct:$,outside:y,outUnit:x,d:v,dewOut:w,atOut:A,tempRaw:C,rhRaw:N})}
+          ${this.#t({Tc:r,RH:n,dpC:l,atC:h,dewText:d,tempText:c,rhText:p,cardBg:u,ringGrad:m,innerGrad:f,xPct:b,yPct:$,yTopPct:y,outside:v,outUnit:w,d:x,dewOut:A,atOut:C,tempRaw:N,rhRaw:E})}
         </div>
       </div>
-    </ha-card>`}#t({dewText:t,tempText:e,rhText:i,ringGrad:s,innerGrad:r,xPct:n,yPct:o,outside:a,dewOut:l,atOut:h,tempRaw:d,rhRaw:c}){return B`
+    </ha-card>`}#t({dewText:t,tempText:e,rhText:i,ringGrad:s,innerGrad:r,xPct:n,yPct:o,yTopPct:a,outside:l,dewOut:h,atOut:d,tempRaw:c,rhRaw:p}){return B`
     <div class="stage">
       <!-- Dial (no padding) -->
       <div class="graphic" style="--sac-dewpoint-ring:${s}; --sac-inner-gradient:${r}">
@@ -153,9 +153,9 @@ const x=globalThis,w=x.trustedTypes,A=w?w.createPolicy("lit-html",{createHTML:t=
 
       <!-- Dot positioned as % of the full square -->
       <div
-        class="dot ${a?"outside":""}"
+        class="dot ${l?"outside":""}"
         style="left:${n}%; bottom:${o}%;"
-        style="left:${n}%; top:${yTopPct}%;
+        style="left:${n}%; top:${a}%;
       ></div>
 
       <!-- Text overlay with padding -->
@@ -167,21 +167,21 @@ const x=globalThis,w=x.trustedTypes,A=w?w.createPolicy("lit-html",{createHTML:t=
 
         <div class="corner tl">
           <span class="label">Dew point</span>
-          <span class="metric">${l}</span>
+          <span class="metric">${h}</span>
         </div>
         <div class="corner tr">
           <span class="label">Feels like</span>
-          <span class="metric">${h}</span>
+          <span class="metric">${d}</span>
         </div>
 
         <div class="corner bl">
           <span class="label">Temp</span>
-          <span class="metric">${d}</span>
+          <span class="metric">${c}</span>
           <span class="comfort">${e}</span>
         </div>
         <div class="corner br">
           <span class="label">Humidity</span>
-          <span class="metric">${c}</span>
+          <span class="metric">${p}</span>
           <span class="comfort">${i}</span>
         </div>
       </div>
