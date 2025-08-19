@@ -36,8 +36,9 @@ class SimpleAirComfortCard extends LitElement {
 
   // ================================ Styles ================================
   static styles = css`
-    /* Host / card */
+    /* Host should not force a height; HA grid drives width, .ratio drives height */
     :host{ display:block; width:100%; box-sizing:border-box; }
+
     ha-card{
       position:relative; padding:0; overflow:hidden; isolation:isolate;
       border-radius:var(--ha-card-border-radius,12px);
@@ -45,22 +46,13 @@ class SimpleAirComfortCard extends LitElement {
       display:block; box-sizing:border-box; min-height:0;
     }
 
-    /* Square stage defines height */
+    /* Square stage defines height (no absolute here) */
     .ratio{ position:relative; width:100%; aspect-ratio:1/1; margin:0 auto; }
 
-    /* --- NEW LAYERS ----------------------------------------------------- */
-    /* Padding-free stage: use this for % positioning (dot, dial) */
-    .stage{ position:absolute; inset:0; z-index:0; }
+    /* Fill the square with the face */
+    .canvas{ position:absolute; inset:0; padding:14px 12px 12px; }
 
-    /* Text-only overlay: padding lives here so dot math isn’t offset */
-    .overlay{
-      position:absolute; inset:0; padding:14px 12px 12px; z-index:2;
-    }
-
-    /* Legacy hook (safe no-op): keep if your template still uses .canvas */
-    .canvas{ position:absolute; inset:0; }
-
-    /* Header (room name + dewpoint comfort) */
+    /* Header (room name + dew-point comfort text under it) */
     .header{
       position:absolute; top:10%; left:50%; transform:translate(-50%,-50%);
       width:100%; text-align:center; pointer-events:none;
@@ -85,28 +77,32 @@ class SimpleAirComfortCard extends LitElement {
       display:block;
     }
     .corner .metric{
-      font-weight:700; font-size:clamp(12px,2.2vw,16px); line-height:1.05;
+      font-weight:700;
+      font-size:clamp(12px,2.2vw,16px);
+      line-height:1.05;
     }
     .corner .comfort{
-      font-weight:800; font-size:clamp(11px,2vw,15px); letter-spacing:.2px;
+      font-weight:800;
+      font-size:clamp(11px,2vw,15px);
+      letter-spacing:.2px;
     }
     .tl{ left:8%;  top:18%;  transform:translate(0,-50%); text-align:left; }
     .tr{ right:8%; top:18%;  transform:translate(0,-50%); text-align:right; }
     .bl{ left:8%;  bottom:6%; transform:translate(0,0);   text-align:left; }
     .br{ right:8%; bottom:6%; transform:translate(0,0);   text-align:right; }
 
-    /* Dial (centred in the stage) */
+    /* Dial — 45% like original */
     .graphic{
       position:absolute; top:50%; left:50%; transform:translate(-50%,-50%);
       width:45%; height:45%; min-width:120px; min-height:120px;
-      z-index:1; /* sits above stage, below overlay text & dot */
     }
 
     /* Axis labels: smaller & dim grey */
     .axis{
       position:absolute; color:rgba(200,200,200,.8);
       font-weight:700; text-shadow:0 1px 2px rgba(0,0,0,.25);
-      font-size:clamp(9px,1.7vw,12px); pointer-events:none; z-index:2;
+      font-size:clamp(9px,1.7vw,12px);
+      pointer-events:none;
     }
     .axis-top    { top:-10px;  left:50%; transform:translate(-50%,-50%); }
     .axis-bottom { bottom:-10px;left:50%; transform:translate(-50%, 50%); }
@@ -125,21 +121,16 @@ class SimpleAirComfortCard extends LitElement {
       box-shadow:inset 0 0 12px rgba(0,0,0,.6);
     }
 
-    /* Dot (positioned against the stage; on top of everything) */
+    /* Dot (+ halo when outside) — positioned in % of the whole card */
     .dot{
-      position:absolute; width:6%; height:6%; border-radius:50%;
-      background:#fff; transform:translate(-50%, -50%);
-      box-shadow:0 0 6px rgba(0,0,0,.45);
-      transition: left .8s ease-in-out, top .8s ease-in-out;
-      z-index:3;
+      position:absolute; width:15%; height:15%; border-radius:50%;
+      background:#fff; box-shadow:0 0 6px rgba(0,0,0,.45);
+      transform:translate(-50%, 50%);
+      transition:left .8s ease-in-out,bottom .8s ease-in-out; z-index:2;
     }
     .dot.outside::before{
       content:""; position:absolute; inset:-20%; border-radius:50%;
-      background:radial-gradient(circle,
-        rgba(255,0,0,.8) 20%,
-        rgba(255,0,0,.3) 50%,
-        rgba(255,0,0,.1) 70%,
-        rgba(255,0,0,0) 100%);
+      background:radial-gradient(circle, rgba(255,0,0,.8) 20%, rgba(255,0,0,.3) 50%, rgba(255,0,0,.1) 70%, rgba(255,0,0,0) 100%);
       animation:sac-blink 1s infinite alternate; z-index:-1;
     }
     @keyframes sac-blink{ 0%{opacity:1} 100%{opacity:.3} }
@@ -182,7 +173,7 @@ class SimpleAirComfortCard extends LitElement {
                            tempText: 'N/A', rhText: 'N/A', cardBg: this.#backgroundGradientForTempC(NaN),
                            ringGrad: this.#dewpointRingGradientFromText('Unknown'),
                            innerGrad: this.#innerEyeGradient(NaN, NaN),
-                           xPct: 50, yPct: 50, yTopPct: 50, outside: false,
+                           xPct: 50, yPct: 50, outside: false,
                            outUnit: (tState?.attributes?.unit_of_measurement || '°C'), d: this._config.decimals,
                            dewOut: '—', atOut: '—', tempRaw: '—', rhRaw: '—' })}
           </div>
@@ -211,21 +202,12 @@ class SimpleAirComfortCard extends LitElement {
     const ringGrad  = this.#dewpointRingGradientFromText(dewText);
     const innerGrad = this.#innerEyeGradient(RH, Tc);
 
-
-    // --- DOT across full square (.ratio) with 10px clamp from edges ---
+    // Dot (percent of the whole card; defaults to exact center if NaN)
     const { temp_min, temp_max } = this._config;
-
-    // RH across the whole card (add 0.5 like the macro)
-    const xPct = Number.isFinite(RH) ? this.#clamp(RH + 0.5, 0, 100) : 50;
-
-    // Temp scaled bottom→top across the whole card
-    const yPct = Number.isFinite(Tc) ? this.#scaleClamped(Tc, temp_min, temp_max, 0, 100) : 50;   
-    const bias = 0;
-    const yTopPct = 100 - yPct + bias;  // flip for 'top' positioning.
-
-    const outside = (Number.isFinite(RH) && Number.isFinite(Tc))
-      ? (RH < 40 || RH > 60 || Tc < 18 || Tc > 26.4)
-      : false;
+    const yPct = Number.isFinite(Tc) ? this.#scaleClamped(Tc, temp_min, temp_max, 0, 100) : 50;
+    const xPct = Number.isFinite(RH) ? this.#clamp(RH + 0.0, 0, 100) : 50; // +0 so 0..100 maps 1:1
+    const outside = (Number.isFinite(RH) && Number.isFinite(Tc)) ?
+      (RH < 40 || RH > 60 || Tc < 18 || Tc > 26.4) : false;
 
     // Output strings
     const d = this._config.decimals;
@@ -242,7 +224,7 @@ class SimpleAirComfortCard extends LitElement {
             Tc, RH, dpC, atC,
             dewText, tempText, rhText,
             cardBg, ringGrad, innerGrad,
-            xPct, yPct, yTopPct, outside,
+            xPct, yPct, outside,
             outUnit, d, dewOut, atOut, tempRaw, rhRaw
           })}
         </div>
@@ -251,61 +233,53 @@ class SimpleAirComfortCard extends LitElement {
   }
 
   // Render the face elements
-#face({
-  dewText, tempText, rhText,
-  ringGrad, innerGrad,
-  xPct, yPct, yTopPct, outside,
-  dewOut, atOut, tempRaw, rhRaw
-}) {
-  return html`
-    <div class="stage">
-      <!-- Dial (no padding) -->
+  #face({
+    dewText, tempText, rhText,
+    ringGrad, innerGrad,
+    xPct, yPct, outside,
+    dewOut, atOut, tempRaw, rhRaw
+  }) {
+    return html`
+      <div class="header">
+        <div class="title">${this._config.name ?? 'Air Comfort'}</div>
+        <div class="subtitle">${dewText}</div>
+      </div>
+
+      <!-- TL / TR -->
+      <div class="corner tl">
+        <span class="label">Dew point</span>
+        <span class="metric">${dewOut}</span>
+      </div>
+      <div class="corner tr">
+        <span class="label">Feels like</span>
+        <span class="metric">${atOut}</span>
+      </div>
+
+      <!-- BL / BR (raw values + comfort words) -->
+      <div class="corner bl">
+        <span class="label">Temp</span>
+        <span class="metric">${tempRaw}</span>
+        <span class="comfort">${tempText}</span>
+      </div>
+      <div class="corner br">
+        <span class="label">Humidity</span>
+        <span class="metric">${rhRaw}</span>
+        <span class="comfort">${rhText}</span>
+      </div>
+
+      <!-- Dial -->
       <div class="graphic" style="--sac-dewpoint-ring:${ringGrad}; --sac-inner-gradient:${innerGrad}">
         <div class="axis axis-top">Warm</div>
         <div class="axis axis-bottom">Cold</div>
         <div class="axis axis-left">Dry</div>
         <div class="axis axis-right">Humid</div>
+
         <div class="outer-ring"></div>
         <div class="inner-circle"></div>
+        <div class="dot ${outside ? 'outside' : ''}" style="left:${xPct}%; bottom:${yPct}%;"></div>
       </div>
-
-      <!-- Dot positioned as % of the full square -->
-      <div
-        class="dot ${outside ? 'outside' : ''}"
-        style="left:${xPct}%; bottom:${yPct}%;"
-        style="left:${xPct}%; top:${yTopPct}%;
-      ></div>
-
-      <!-- Text overlay with padding -->
-      <div class="overlay">
-        <div class="header">
-          <div class="title">${this._config.name ?? 'Air Comfort'}</div>
-          <div class="subtitle">${dewText}</div>
-        </div>
-
-        <div class="corner tl">
-          <span class="label">Dew point</span>
-          <span class="metric">${dewOut}</span>
-        </div>
-        <div class="corner tr">
-          <span class="label">Feels like</span>
-          <span class="metric">${atOut}</span>
-        </div>
-
-        <div class="corner bl">
-          <span class="label">Temp</span>
-          <span class="metric">${tempRaw}</span>
-          <span class="comfort">${tempText}</span>
-        </div>
-        <div class="corner br">
-          <span class="label">Humidity</span>
-          <span class="metric">${rhRaw}</span>
-          <span class="comfort">${rhText}</span>
-        </div>
-      </div>
-    </div>
-  `;
-}
+    `;
+  }
 
   // ============================== Physics ===============================
   #apparentTemperatureC(Tc, e_hPa, ws_mps){ return Tc + 0.33*e_hPa - 0.70*ws_mps - 4.0; }
@@ -413,7 +387,6 @@ class SimpleAirComfortCard extends LitElement {
   }
 
   // =============================== Helpers ===============================
-  
   #clamp(v,a,b){ return Math.min(b, Math.max(a,v)); }
   #scaleClamped(v, inMin, inMax, outMin, outMax){
     if (!Number.isFinite(v)) return (outMin+outMax)/2;
