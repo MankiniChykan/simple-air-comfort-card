@@ -130,7 +130,7 @@ class SimpleAirComfortCard extends LitElement {
       position:absolute; width:6%; height:6%; border-radius:50%;
       background:#fff; transform:translate(-50%, -50%);
       box-shadow:0 0 6px rgba(0,0,0,.45);
-      transition: left .8s ease-in-out, bottom .8s ease-in-out;
+      transition: left .8s ease-in-out, top .8s ease-in-out;
       z-index:3;
     }
     .dot.outside::before{
@@ -182,7 +182,7 @@ class SimpleAirComfortCard extends LitElement {
                            tempText: 'N/A', rhText: 'N/A', cardBg: this.#backgroundGradientForTempC(NaN),
                            ringGrad: this.#dewpointRingGradientFromText('Unknown'),
                            innerGrad: this.#innerEyeGradient(NaN, NaN),
-                           xPct: 50, yPct: 50, outside: false,
+                           xPct: 50, yPct: 50, yTopPct: 50, outside: false,
                            outUnit: (tState?.attributes?.unit_of_measurement || '°C'), d: this._config.decimals,
                            dewOut: '—', atOut: '—', tempRaw: '—', rhRaw: '—' })}
           </div>
@@ -219,7 +219,7 @@ class SimpleAirComfortCard extends LitElement {
     const xPct = Number.isFinite(RH) ? this.#clamp(RH + 0.5, 0, 100) : 50;
 
     // Temp scaled bottom→top across the whole card
-    const yPct = Number.isFinite(Tc) ? this.#scaleClamped(Tc, temp_min, temp_max, 0, 100) : 50;
+    const yPct = Number.isFinite(Tc) ? this.#scaleClamped(Tc, temp_min, temp_max, 0, 100) : 50;   
     const bias = 0;
     const yTopPct = 100 - yPct + bias;  // flip for 'top' positioning.
 
@@ -242,7 +242,7 @@ class SimpleAirComfortCard extends LitElement {
             Tc, RH, dpC, atC,
             dewText, tempText, rhText,
             cardBg, ringGrad, innerGrad,
-            xPct, yPct, outside,
+            xPct, yPct, yTopPct, outside,
             outUnit, d, dewOut, atOut, tempRaw, rhRaw
           })}
         </div>
@@ -254,7 +254,7 @@ class SimpleAirComfortCard extends LitElement {
 #face({
   dewText, tempText, rhText,
   ringGrad, innerGrad,
-  xPct, yPct, outside,
+  xPct, yPct, yTopPct, outside,
   dewOut, atOut, tempRaw, rhRaw
 }) {
   return html`
