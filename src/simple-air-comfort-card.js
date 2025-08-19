@@ -177,7 +177,6 @@ class SimpleAirComfortCard extends LitElement {
                            outUnit: (tState?.attributes?.unit_of_measurement || '°C'), d: this._config.decimals,
                            dewOut: '—', atOut: '—', tempRaw: '—', rhRaw: '—' })}
           </div>
-          <div class="dot ${outside ? 'outside' : ''}" style="left:${xPct}%; bottom:${yPct}%;"></div>
         </div>
       </ha-card>`;
     }
@@ -207,12 +206,11 @@ class SimpleAirComfortCard extends LitElement {
     // --- DOT across full square (.ratio) with 10px clamp from edges ---
     const { temp_min, temp_max } = this._config;
 
-    // 1) Raw mapping (card-wide): RH → X, Tc → Y
-    let xPctRaw = Number.isFinite(RH) ? this.#clamp(RH, 0, 100) : 50; // 0..100% of card width
-    let yPctRaw = Number.isFinite(Tc) ? this.#scaleClamped(Tc, temp_min, temp_max, 0, 100) : 50; // 0..100% of card height
+    // RH across the whole card (add 0.5 like the macro)
+    const xPct = Number.isFinite(RH) ? this.#clamp(RH + 0.5, 0, 100) : 50;
 
-    // 2) Convert a 10px clamp to percents using the live size of the square stage
-    const { xPct, yPct } = this.#_clampDotToPx(xPctRaw, yPctRaw, 10); // 10px safety from each edge
+    // Temp scaled bottom→top across the whole card
+    const yPct = Number.isFinite(Tc) ? this.#scaleClamped(Tc, temp_min, temp_max, 0, 100) : 50;
 
     const outside = (Number.isFinite(RH) && Number.isFinite(Tc))
       ? (RH < 40 || RH > 60 || Tc < 18 || Tc > 26.4)
@@ -285,8 +283,8 @@ class SimpleAirComfortCard extends LitElement {
 
         <div class="outer-ring"></div>
         <div class="inner-circle"></div>
-        <div class="dot ${outside ? 'outside' : ''}" style="left:${xPct}%; bottom:${yPct}%;"></div>
       </div>
+      <div class="dot ${outside ? 'outside' : ''}" style="left:${xPct}%; bottom:${yPct}%;"></div>
     `;
   }
 
@@ -396,23 +394,6 @@ class SimpleAirComfortCard extends LitElement {
   }
 
   // =============================== Helpers ===============================
-  
-  #_clampDotToPx(xPct, yPct, padPx = 10) {
-    const host = this.renderRoot?.querySelector('.ratio'); // the square stage
-    if (!host) return { xPct, yPct };
-
-    const w = host.clientWidth || 0;
-    const h = host.clientHeight || 0;
-    if (w > 0 && h > 0) {
-      const minXPct = (padPx / w) * 100;
-      const maxXPct = 100 - minXPct;
-      const minYPct = (padPx / h) * 100;
-      const maxYPct = 100 - minYPct;
-      xPct = this.#clamp(xPct, minXPct, maxXPct);
-      yPct = this.#clamp(yPct, minYPct, maxYPct);
-    }
-    return { xPct, yPct };
-  }
   
   #clamp(v,a,b){ return Math.min(b, Math.max(a,v)); }
   #scaleClamped(v, inMin, inMax, outMin, outMax){
