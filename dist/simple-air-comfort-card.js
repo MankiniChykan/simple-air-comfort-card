@@ -3,12 +3,12 @@
  * Copyright 2019 Google LLC
  * SPDX-License-Identifier: BSD-3-Clause
  */
-const t=globalThis,e=t.ShadowRoot&&(void 0===t.ShadyCSS||t.ShadyCSS.nativeShadow)&&"adoptedStyleSheets"in Document.prototype&&"replace"in CSSStyleSheet.prototype,i=Symbol(),s=new WeakMap;let r=class{constructor(t,e,s){if(this._$cssResult$=!0,s!==i)throw Error("CSSResult is not constructable. Use `unsafeCSS` or `css` instead.");this.cssText=t,this.t=e}get styleSheet(){let t=this.o;const i=this.t;if(e&&void 0===t){const e=void 0!==i&&1===i.length;e&&(t=s.get(i)),void 0===t&&((this.o=t=new CSSStyleSheet).replaceSync(this.cssText),e&&s.set(i,t))}return t}toString(){return this.cssText}};const n=(t,...e)=>{const s=1===t.length?t[0]:e.reduce((e,i,s)=>e+(t=>{if(!0===t._$cssResult$)return t.cssText;if("number"==typeof t)return t;throw Error("Value passed to 'css' function must be a 'css' function result: "+t+". Use 'unsafeCSS' to pass non-literal values, but take care to ensure page security.")})(i)+t[s+1],t[0]);return new r(s,t,i)},o=e?t=>t:t=>t instanceof CSSStyleSheet?(t=>{let e="";for(const i of t.cssRules)e+=i.cssText;return(t=>new r("string"==typeof t?t:t+"",void 0,i))(e)})(t):t,{is:a,defineProperty:h,getOwnPropertyDescriptor:l,getOwnPropertyNames:d,getOwnPropertySymbols:c,getPrototypeOf:p}=Object,u=globalThis,m=u.trustedTypes,f=m?m.emptyScript:"",g=u.reactiveElementPolyfillSupport,_=(t,e)=>t,b={toAttribute(t,e){switch(e){case Boolean:t=t?f:null;break;case Object:case Array:t=null==t?t:JSON.stringify(t)}return t},fromAttribute(t,e){let i=t;switch(e){case Boolean:i=null!==t;break;case Number:i=null===t?null:Number(t);break;case Object:case Array:try{i=JSON.parse(t)}catch(t){i=null}}return i}},$=(t,e)=>!a(t,e),y={attribute:!0,type:String,converter:b,reflect:!1,useDefault:!1,hasChanged:$};
+const t=globalThis,e=t.ShadowRoot&&(void 0===t.ShadyCSS||t.ShadyCSS.nativeShadow)&&"adoptedStyleSheets"in Document.prototype&&"replace"in CSSStyleSheet.prototype,i=Symbol(),s=new WeakMap;let r=class{constructor(t,e,s){if(this._$cssResult$=!0,s!==i)throw Error("CSSResult is not constructable. Use `unsafeCSS` or `css` instead.");this.cssText=t,this.t=e}get styleSheet(){let t=this.o;const i=this.t;if(e&&void 0===t){const e=void 0!==i&&1===i.length;e&&(t=s.get(i)),void 0===t&&((this.o=t=new CSSStyleSheet).replaceSync(this.cssText),e&&s.set(i,t))}return t}toString(){return this.cssText}};const n=(t,...e)=>{const s=1===t.length?t[0]:e.reduce((e,i,s)=>e+(t=>{if(!0===t._$cssResult$)return t.cssText;if("number"==typeof t)return t;throw Error("Value passed to 'css' function must be a 'css' function result: "+t+". Use 'unsafeCSS' to pass non-literal values, but take care to ensure page security.")})(i)+t[s+1],t[0]);return new r(s,t,i)},o=e?t=>t:t=>t instanceof CSSStyleSheet?(t=>{let e="";for(const i of t.cssRules)e+=i.cssText;return(t=>new r("string"==typeof t?t:t+"",void 0,i))(e)})(t):t,{is:a,defineProperty:h,getOwnPropertyDescriptor:l,getOwnPropertyNames:d,getOwnPropertySymbols:c,getPrototypeOf:p}=Object,m=globalThis,u=m.trustedTypes,f=u?u.emptyScript:"",g=m.reactiveElementPolyfillSupport,_=(t,e)=>t,b={toAttribute(t,e){switch(e){case Boolean:t=t?f:null;break;case Object:case Array:t=null==t?t:JSON.stringify(t)}return t},fromAttribute(t,e){let i=t;switch(e){case Boolean:i=null!==t;break;case Number:i=null===t?null:Number(t);break;case Object:case Array:try{i=JSON.parse(t)}catch(t){i=null}}return i}},$=(t,e)=>!a(t,e),y={attribute:!0,type:String,converter:b,reflect:!1,useDefault:!1,hasChanged:$};
 /**
  * @license
  * Copyright 2017 Google LLC
  * SPDX-License-Identifier: BSD-3-Clause
- */Symbol.metadata??=Symbol("metadata"),u.litPropertyMetadata??=new WeakMap;let v=class extends HTMLElement{static addInitializer(t){this._$Ei(),(this.l??=[]).push(t)}static get observedAttributes(){return this.finalize(),this._$Eh&&[...this._$Eh.keys()]}static createProperty(t,e=y){if(e.state&&(e.attribute=!1),this._$Ei(),this.prototype.hasOwnProperty(t)&&((e=Object.create(e)).wrapped=!0),this.elementProperties.set(t,e),!e.noAccessor){const i=Symbol(),s=this.getPropertyDescriptor(t,i,e);void 0!==s&&h(this.prototype,t,s)}}static getPropertyDescriptor(t,e,i){const{get:s,set:r}=l(this.prototype,t)??{get(){return this[e]},set(t){this[e]=t}};return{get:s,set(e){const n=s?.call(this);r?.call(this,e),this.requestUpdate(t,n,i)},configurable:!0,enumerable:!0}}static getPropertyOptions(t){return this.elementProperties.get(t)??y}static _$Ei(){if(this.hasOwnProperty(_("elementProperties")))return;const t=p(this);t.finalize(),void 0!==t.l&&(this.l=[...t.l]),this.elementProperties=new Map(t.elementProperties)}static finalize(){if(this.hasOwnProperty(_("finalized")))return;if(this.finalized=!0,this._$Ei(),this.hasOwnProperty(_("properties"))){const t=this.properties,e=[...d(t),...c(t)];for(const i of e)this.createProperty(i,t[i])}const t=this[Symbol.metadata];if(null!==t){const e=litPropertyMetadata.get(t);if(void 0!==e)for(const[t,i]of e)this.elementProperties.set(t,i)}this._$Eh=new Map;for(const[t,e]of this.elementProperties){const i=this._$Eu(t,e);void 0!==i&&this._$Eh.set(i,t)}this.elementStyles=this.finalizeStyles(this.styles)}static finalizeStyles(t){const e=[];if(Array.isArray(t)){const i=new Set(t.flat(1/0).reverse());for(const t of i)e.unshift(o(t))}else void 0!==t&&e.push(o(t));return e}static _$Eu(t,e){const i=e.attribute;return!1===i?void 0:"string"==typeof i?i:"string"==typeof t?t.toLowerCase():void 0}constructor(){super(),this._$Ep=void 0,this.isUpdatePending=!1,this.hasUpdated=!1,this._$Em=null,this._$Ev()}_$Ev(){this._$ES=new Promise(t=>this.enableUpdating=t),this._$AL=new Map,this._$E_(),this.requestUpdate(),this.constructor.l?.forEach(t=>t(this))}addController(t){(this._$EO??=new Set).add(t),void 0!==this.renderRoot&&this.isConnected&&t.hostConnected?.()}removeController(t){this._$EO?.delete(t)}_$E_(){const t=new Map,e=this.constructor.elementProperties;for(const i of e.keys())this.hasOwnProperty(i)&&(t.set(i,this[i]),delete this[i]);t.size>0&&(this._$Ep=t)}createRenderRoot(){const i=this.shadowRoot??this.attachShadow(this.constructor.shadowRootOptions);return((i,s)=>{if(e)i.adoptedStyleSheets=s.map(t=>t instanceof CSSStyleSheet?t:t.styleSheet);else for(const e of s){const s=document.createElement("style"),r=t.litNonce;void 0!==r&&s.setAttribute("nonce",r),s.textContent=e.cssText,i.appendChild(s)}})(i,this.constructor.elementStyles),i}connectedCallback(){this.renderRoot??=this.createRenderRoot(),this.enableUpdating(!0),this._$EO?.forEach(t=>t.hostConnected?.())}enableUpdating(t){}disconnectedCallback(){this._$EO?.forEach(t=>t.hostDisconnected?.())}attributeChangedCallback(t,e,i){this._$AK(t,i)}_$ET(t,e){const i=this.constructor.elementProperties.get(t),s=this.constructor._$Eu(t,i);if(void 0!==s&&!0===i.reflect){const r=(void 0!==i.converter?.toAttribute?i.converter:b).toAttribute(e,i.type);this._$Em=t,null==r?this.removeAttribute(s):this.setAttribute(s,r),this._$Em=null}}_$AK(t,e){const i=this.constructor,s=i._$Eh.get(t);if(void 0!==s&&this._$Em!==s){const t=i.getPropertyOptions(s),r="function"==typeof t.converter?{fromAttribute:t.converter}:void 0!==t.converter?.fromAttribute?t.converter:b;this._$Em=s;const n=r.fromAttribute(e,t.type);this[s]=n??this._$Ej?.get(s)??n,this._$Em=null}}requestUpdate(t,e,i){if(void 0!==t){const s=this.constructor,r=this[t];if(i??=s.getPropertyOptions(t),!((i.hasChanged??$)(r,e)||i.useDefault&&i.reflect&&r===this._$Ej?.get(t)&&!this.hasAttribute(s._$Eu(t,i))))return;this.C(t,e,i)}!1===this.isUpdatePending&&(this._$ES=this._$EP())}C(t,e,{useDefault:i,reflect:s,wrapped:r},n){i&&!(this._$Ej??=new Map).has(t)&&(this._$Ej.set(t,n??e??this[t]),!0!==r||void 0!==n)||(this._$AL.has(t)||(this.hasUpdated||i||(e=void 0),this._$AL.set(t,e)),!0===s&&this._$Em!==t&&(this._$Eq??=new Set).add(t))}async _$EP(){this.isUpdatePending=!0;try{await this._$ES}catch(t){Promise.reject(t)}const t=this.scheduleUpdate();return null!=t&&await t,!this.isUpdatePending}scheduleUpdate(){return this.performUpdate()}performUpdate(){if(!this.isUpdatePending)return;if(!this.hasUpdated){if(this.renderRoot??=this.createRenderRoot(),this._$Ep){for(const[t,e]of this._$Ep)this[t]=e;this._$Ep=void 0}const t=this.constructor.elementProperties;if(t.size>0)for(const[e,i]of t){const{wrapped:t}=i,s=this[e];!0!==t||this._$AL.has(e)||void 0===s||this.C(e,void 0,i,s)}}let t=!1;const e=this._$AL;try{t=this.shouldUpdate(e),t?(this.willUpdate(e),this._$EO?.forEach(t=>t.hostUpdate?.()),this.update(e)):this._$EM()}catch(e){throw t=!1,this._$EM(),e}t&&this._$AE(e)}willUpdate(t){}_$AE(t){this._$EO?.forEach(t=>t.hostUpdated?.()),this.hasUpdated||(this.hasUpdated=!0,this.firstUpdated(t)),this.updated(t)}_$EM(){this._$AL=new Map,this.isUpdatePending=!1}get updateComplete(){return this.getUpdateComplete()}getUpdateComplete(){return this._$ES}shouldUpdate(t){return!0}update(t){this._$Eq&&=this._$Eq.forEach(t=>this._$ET(t,this[t])),this._$EM()}updated(t){}firstUpdated(t){}};v.elementStyles=[],v.shadowRootOptions={mode:"open"},v[_("elementProperties")]=new Map,v[_("finalized")]=new Map,g?.({ReactiveElement:v}),(u.reactiveElementVersions??=[]).push("2.1.1");
+ */Symbol.metadata??=Symbol("metadata"),m.litPropertyMetadata??=new WeakMap;let v=class extends HTMLElement{static addInitializer(t){this._$Ei(),(this.l??=[]).push(t)}static get observedAttributes(){return this.finalize(),this._$Eh&&[...this._$Eh.keys()]}static createProperty(t,e=y){if(e.state&&(e.attribute=!1),this._$Ei(),this.prototype.hasOwnProperty(t)&&((e=Object.create(e)).wrapped=!0),this.elementProperties.set(t,e),!e.noAccessor){const i=Symbol(),s=this.getPropertyDescriptor(t,i,e);void 0!==s&&h(this.prototype,t,s)}}static getPropertyDescriptor(t,e,i){const{get:s,set:r}=l(this.prototype,t)??{get(){return this[e]},set(t){this[e]=t}};return{get:s,set(e){const n=s?.call(this);r?.call(this,e),this.requestUpdate(t,n,i)},configurable:!0,enumerable:!0}}static getPropertyOptions(t){return this.elementProperties.get(t)??y}static _$Ei(){if(this.hasOwnProperty(_("elementProperties")))return;const t=p(this);t.finalize(),void 0!==t.l&&(this.l=[...t.l]),this.elementProperties=new Map(t.elementProperties)}static finalize(){if(this.hasOwnProperty(_("finalized")))return;if(this.finalized=!0,this._$Ei(),this.hasOwnProperty(_("properties"))){const t=this.properties,e=[...d(t),...c(t)];for(const i of e)this.createProperty(i,t[i])}const t=this[Symbol.metadata];if(null!==t){const e=litPropertyMetadata.get(t);if(void 0!==e)for(const[t,i]of e)this.elementProperties.set(t,i)}this._$Eh=new Map;for(const[t,e]of this.elementProperties){const i=this._$Eu(t,e);void 0!==i&&this._$Eh.set(i,t)}this.elementStyles=this.finalizeStyles(this.styles)}static finalizeStyles(t){const e=[];if(Array.isArray(t)){const i=new Set(t.flat(1/0).reverse());for(const t of i)e.unshift(o(t))}else void 0!==t&&e.push(o(t));return e}static _$Eu(t,e){const i=e.attribute;return!1===i?void 0:"string"==typeof i?i:"string"==typeof t?t.toLowerCase():void 0}constructor(){super(),this._$Ep=void 0,this.isUpdatePending=!1,this.hasUpdated=!1,this._$Em=null,this._$Ev()}_$Ev(){this._$ES=new Promise(t=>this.enableUpdating=t),this._$AL=new Map,this._$E_(),this.requestUpdate(),this.constructor.l?.forEach(t=>t(this))}addController(t){(this._$EO??=new Set).add(t),void 0!==this.renderRoot&&this.isConnected&&t.hostConnected?.()}removeController(t){this._$EO?.delete(t)}_$E_(){const t=new Map,e=this.constructor.elementProperties;for(const i of e.keys())this.hasOwnProperty(i)&&(t.set(i,this[i]),delete this[i]);t.size>0&&(this._$Ep=t)}createRenderRoot(){const i=this.shadowRoot??this.attachShadow(this.constructor.shadowRootOptions);return((i,s)=>{if(e)i.adoptedStyleSheets=s.map(t=>t instanceof CSSStyleSheet?t:t.styleSheet);else for(const e of s){const s=document.createElement("style"),r=t.litNonce;void 0!==r&&s.setAttribute("nonce",r),s.textContent=e.cssText,i.appendChild(s)}})(i,this.constructor.elementStyles),i}connectedCallback(){this.renderRoot??=this.createRenderRoot(),this.enableUpdating(!0),this._$EO?.forEach(t=>t.hostConnected?.())}enableUpdating(t){}disconnectedCallback(){this._$EO?.forEach(t=>t.hostDisconnected?.())}attributeChangedCallback(t,e,i){this._$AK(t,i)}_$ET(t,e){const i=this.constructor.elementProperties.get(t),s=this.constructor._$Eu(t,i);if(void 0!==s&&!0===i.reflect){const r=(void 0!==i.converter?.toAttribute?i.converter:b).toAttribute(e,i.type);this._$Em=t,null==r?this.removeAttribute(s):this.setAttribute(s,r),this._$Em=null}}_$AK(t,e){const i=this.constructor,s=i._$Eh.get(t);if(void 0!==s&&this._$Em!==s){const t=i.getPropertyOptions(s),r="function"==typeof t.converter?{fromAttribute:t.converter}:void 0!==t.converter?.fromAttribute?t.converter:b;this._$Em=s;const n=r.fromAttribute(e,t.type);this[s]=n??this._$Ej?.get(s)??n,this._$Em=null}}requestUpdate(t,e,i){if(void 0!==t){const s=this.constructor,r=this[t];if(i??=s.getPropertyOptions(t),!((i.hasChanged??$)(r,e)||i.useDefault&&i.reflect&&r===this._$Ej?.get(t)&&!this.hasAttribute(s._$Eu(t,i))))return;this.C(t,e,i)}!1===this.isUpdatePending&&(this._$ES=this._$EP())}C(t,e,{useDefault:i,reflect:s,wrapped:r},n){i&&!(this._$Ej??=new Map).has(t)&&(this._$Ej.set(t,n??e??this[t]),!0!==r||void 0!==n)||(this._$AL.has(t)||(this.hasUpdated||i||(e=void 0),this._$AL.set(t,e)),!0===s&&this._$Em!==t&&(this._$Eq??=new Set).add(t))}async _$EP(){this.isUpdatePending=!0;try{await this._$ES}catch(t){Promise.reject(t)}const t=this.scheduleUpdate();return null!=t&&await t,!this.isUpdatePending}scheduleUpdate(){return this.performUpdate()}performUpdate(){if(!this.isUpdatePending)return;if(!this.hasUpdated){if(this.renderRoot??=this.createRenderRoot(),this._$Ep){for(const[t,e]of this._$Ep)this[t]=e;this._$Ep=void 0}const t=this.constructor.elementProperties;if(t.size>0)for(const[e,i]of t){const{wrapped:t}=i,s=this[e];!0!==t||this._$AL.has(e)||void 0===s||this.C(e,void 0,i,s)}}let t=!1;const e=this._$AL;try{t=this.shouldUpdate(e),t?(this.willUpdate(e),this._$EO?.forEach(t=>t.hostUpdate?.()),this.update(e)):this._$EM()}catch(e){throw t=!1,this._$EM(),e}t&&this._$AE(e)}willUpdate(t){}_$AE(t){this._$EO?.forEach(t=>t.hostUpdated?.()),this.hasUpdated||(this.hasUpdated=!0,this.firstUpdated(t)),this.updated(t)}_$EM(){this._$AL=new Map,this.isUpdatePending=!1}get updateComplete(){return this.getUpdateComplete()}getUpdateComplete(){return this._$ES}shouldUpdate(t){return!0}update(t){this._$Eq&&=this._$Eq.forEach(t=>this._$ET(t,this[t])),this._$EM()}updated(t){}firstUpdated(t){}};v.elementStyles=[],v.shadowRootOptions={mode:"open"},v[_("elementProperties")]=new Map,v[_("finalized")]=new Map,g?.({ReactiveElement:v}),(m.reactiveElementVersions??=[]).push("2.1.1");
 /**
  * @license
  * Copyright 2017 Google LLC
@@ -21,26 +21,48 @@ const x=globalThis,w=x.trustedTypes,A=w?w.createPolicy("lit-html",{createHTML:t=
  * SPDX-License-Identifier: BSD-3-Clause
  */class nt extends v{constructor(){super(...arguments),this.renderOptions={host:this},this._$Do=void 0}createRenderRoot(){const t=super.createRenderRoot();return this.renderOptions.renderBefore??=t.firstChild,t}update(t){const e=this.render();this.hasUpdated||(this.renderOptions.isConnected=this.isConnected),super.update(t),this._$Do=((t,e,i)=>{const s=i?.renderBefore??e;let r=s._$litPart$;if(void 0===r){const t=i?.renderBefore??null;s._$litPart$=r=new Z(e.insertBefore(T(),t),t,void 0,i??{})}return r._$AI(t),r})(e,this.renderRoot,this.renderOptions)}connectedCallback(){super.connectedCallback(),this._$Do?.setConnected(!0)}disconnectedCallback(){super.disconnectedCallback(),this._$Do?.setConnected(!1)}render(){return I}}nt._$litElement$=!0,nt.finalized=!0,rt.litElementHydrateSupport?.({LitElement:nt});const ot=rt.litElementPolyfillSupport;ot?.({LitElement:nt}),(rt.litElementVersions??=[]).push("4.2.1");class at extends nt{static properties={hass:{type:Object},_config:{state:!0}};constructor(){super(),this._config=void 0}static styles=n`
     /* Host should not force a height; HA grid drives width, .ratio drives height */
-    :host{ display:block; width:100%; box-sizing:border-box; }
+    :host{ 
+    display:block; 
+    width:100%; 
+    box-sizing:border-box; 
+    }
 
     ha-card{
-      position:relative; padding:0; overflow:hidden; isolation:isolate;
+      position:relative; 
+      padding:0; 
+      overflow:hidden; 
+      isolation:isolate;
       border-radius:var(--ha-card-border-radius,12px);
       background:var(--sac-temp-bg,#2a2a2a);
       display:block; box-sizing:border-box; min-height:0;
     }
 
     /* Square stage defines height (no absolute here) */
-    .ratio{ position:relative; width:100%; aspect-ratio:1/1; margin:0 auto; }
+    .ratio{ 
+    position:relative; 
+    width:100%; 
+    aspect-ratio:1/1; 
+    margin:0 auto; 
+    }
 
     /* Fill the square with the face */
-    .canvas{ position:absolute; inset:0; padding:14px 12px 12px; }
+    .canvas{ 
+    position:absolute; 
+    inset:0; 
+    padding:14px 12px 12px; 
+    }
 
     /* Header (room name + dew-point comfort text under it) */
     .header{
-      position:absolute; top:10%; left:50%; transform:translate(-50%,-50%);
-      width:100%; text-align:center; pointer-events:none;
+      position:absolute; 
+      top:10%; 
+      left:50%; 
+      transform:translate(-50%,-50%);
+      width:100%; 
+      text-align:center; 
+      pointer-events:none;
     }
+
     .title{
       color:#c9c9c9; font-weight:600;
       font-size:clamp(10px,1.8vw,14px);
@@ -54,7 +76,12 @@ const x=globalThis,w=x.trustedTypes,A=w?w.createPolicy("lit-html",{createHTML:t=
     }
 
     /* Corners */
-    .corner{ position:absolute; color:#fff; text-shadow:0 1px 2px rgba(0,0,0,.35); }
+    .corner{ 
+    position:absolute; 
+    color:#fff; 
+    text-shadow:0 1px 2px rgba(0,0,0,.35); 
+    }
+
     .corner .label{
       font-weight:600; opacity:.75; letter-spacing:.1px;
       font-size:clamp(9px,1.6vw,12px);
@@ -77,40 +104,61 @@ const x=globalThis,w=x.trustedTypes,A=w?w.createPolicy("lit-html",{createHTML:t=
 
     /* Dial — 45% like original */
     .graphic{
-      position:absolute; top:50%; left:50%; transform:translate(-50%,-50%);
-      width:45%; height:45%; min-width:120px; min-height:120px;
+      position:absolute; 
+      top:50%; 
+      left:50%; 
+      transform:translate(-50%,-50%);
+      width:45%; 
+      height:45%; 
+      min-width:120px; 
+      min-height:120px;
     }
 
     /* Axis labels: smaller & dim grey */
     .axis{
-      position:absolute; color:rgba(200,200,200,.8);
-      font-weight:700; text-shadow:0 1px 2px rgba(0,0,0,.25);
+      position:absolute; 
+      color:rgba(200,200,200,.8);
+      font-weight:700; 
+      text-shadow:0 1px 2px rgba(0,0,0,.25);
       font-size:clamp(9px,1.7vw,12px);
       pointer-events:none;
     }
+  
     .axis-top    { top:-10px;  left:50%; transform:translate(-50%,-50%); }
     .axis-bottom { bottom:-10px;left:50%; transform:translate(-50%, 50%); }
     .axis-left   { left:-18px; top:50%;  transform:translate(-50%,-50%) rotate(180deg); writing-mode:vertical-rl; }
     .axis-right  { right:-18px;top:50%;  transform:translate( 50%,-50%); writing-mode:vertical-rl; }
 
     .outer-ring{
-      position:absolute; inset:0; border-radius:50%; border:2.5px solid #fff;
+      position:absolute; 
+      inset:0; 
+      border-radius:50%; 
+      border:2.5px solid #fff;
       background:var(--sac-dewpoint-ring,radial-gradient(circle,dimgray,55%,rgba(100,100,100,.15),rgba(100,100,100,.15)));
       box-shadow:0 0 6px 3px rgba(0,0,0,.18), 0 0 18px 6px rgba(0,0,0,.22);
     }
     .inner-circle{
-      position:absolute; left:50%; top:50%; transform:translate(-50%,-50%);
-      width:46.5%; height:46.5%; border-radius:50%;
+      position:absolute; 
+      left:50%; 
+      top:50%; 
+      transform:translate(-50%,-50%);
+      width:46.5%; 
+      height:46.5%; 
+      border-radius:50%;
       background:var(--sac-inner-gradient,radial-gradient(circle,black 0%,black 60%));
       box-shadow:inset 0 0 12px rgba(0,0,0,.6);
     }
 
     /* Dot (+ halo when outside) — positioned in % of the whole card */
-    .dot{
-      position:absolute; width:15%; height:15%; border-radius:50%;
-      background:#fff; box-shadow:0 0 6px rgba(0,0,0,.45);
-      transform:translate(-50%, 50%);
-      transition:left .8s ease-in-out,bottom .8s ease-in-out; z-index:2;
+    .dot {
+      position: absolute;
+      width: 8%;       /* smaller than 15% */
+      height: 8%;
+      border-radius: 50%;
+      background: white;
+      transform: translate(-50%, 50%); /* matches macro */
+      transition: bottom 0.8s ease-in-out, left 0.8s ease-in-out;
+      z-index: 2;
     }
     .dot.outside::before{
       content:""; position:absolute; inset:-20%; border-radius:50%;
@@ -124,10 +172,10 @@ const x=globalThis,w=x.trustedTypes,A=w?w.createPolicy("lit-html",{createHTML:t=
             ${this.#t({Tc:NaN,RH:NaN,dpC:NaN,atC:NaN,dewText:"Unknown",tempText:"N/A",rhText:"N/A",cardBg:this.#e(NaN),ringGrad:this.#i("Unknown"),innerGrad:this.#s(NaN,NaN),xPct:50,yPct:50,outside:!1,outUnit:t?.attributes?.unit_of_measurement||"°C",d:this._config.decimals,dewOut:"—",atOut:"—",tempRaw:"—",rhRaw:"—"})}
           </div>
         </div>
-      </ha-card>`;const s=(t.attributes.unit_of_measurement||"°C").trim(),r=this.#r(Number.isFinite(+t.state)?+t.state:NaN,s),n=this.#n(Number.isFinite(+e.state)?+e.state:NaN),o=this.#o(i,this._config.default_wind_speed),a=n/100*this.#a(r),h=this.#h(a),l=this.#l(r,a,o),d=this.#d(h),c=this.#c(r),p=this.#p(n),u=this.#e(r),m=this.#i(d),f=this.#s(n,r),{temp_min:g,temp_max:_}=this._config,b=Number.isFinite(n)?this.#u(n+.5,0,100):50,$=Number.isFinite(r)?this.#m(r,g,_,0,100):50,y=!(!Number.isFinite(n)||!Number.isFinite(r))&&(n<40||n>60||r<18||r>26.4),v=this._config.decimals,x=s,w=this.#f(this.#g(h,x),v)+` ${x}`,A=this.#f(this.#g(l,x),v)+` ${x}`,C=this.#f(this.#g(r,x),v)+` ${x}`,N=Number.isFinite(n)?this.#_(n,v).toFixed(v)+" %":"—";return B`<ha-card style="--sac-temp-bg:${u}">
+      </ha-card>`;const s=(t.attributes.unit_of_measurement||"°C").trim(),r=this.#r(Number.isFinite(+t.state)?+t.state:NaN,s),n=this.#n(Number.isFinite(+e.state)?+e.state:NaN),o=this.#o(i,this._config.default_wind_speed),a=n/100*this.#a(r),h=this.#h(a),l=this.#l(r,a,o),d=this.#d(h),c=this.#c(r),p=this.#p(n),m=this.#e(r),u=this.#i(d),f=this.#s(n,r),{temp_min:g,temp_max:_}=this._config,b=Number.isFinite(n)?this.#m(n+.5,0,100):50,$=Number.isFinite(r)?this.#u(r,g,_,0,100):50,y=!(!Number.isFinite(n)||!Number.isFinite(r))&&(n<40||n>60||r<18||r>26.4),v=this._config.decimals,x=s,w=this.#f(this.#g(h,x),v)+` ${x}`,A=this.#f(this.#g(l,x),v)+` ${x}`,C=this.#f(this.#g(r,x),v)+` ${x}`,N=Number.isFinite(n)?this.#_(n,v).toFixed(v)+" %":"—";return B`<ha-card style="--sac-temp-bg:${m}">
       <div class="ratio">
         <div class="canvas">
-          ${this.#t({Tc:r,RH:n,dpC:h,atC:l,dewText:d,tempText:c,rhText:p,cardBg:u,ringGrad:m,innerGrad:f,xPct:b,yPct:$,outside:y,outUnit:x,d:v,dewOut:w,atOut:A,tempRaw:C,rhRaw:N})}
+          ${this.#t({Tc:r,RH:n,dpC:h,atC:l,dewText:d,tempText:c,rhText:p,cardBg:m,ringGrad:u,innerGrad:f,xPct:b,yPct:$,outside:y,outUnit:x,d:v,dewOut:w,atOut:A,tempRaw:C,rhRaw:N})}
         </div>
       </div>
     </ha-card>`}#t({dewText:t,tempText:e,rhText:i,ringGrad:s,innerGrad:r,xPct:n,yPct:o,outside:a,dewOut:h,atOut:l,tempRaw:d,rhRaw:c}){return B`
@@ -168,8 +216,9 @@ const x=globalThis,w=x.trustedTypes,A=w?w.createPolicy("lit-html",{createHTML:t=
         <div class="outer-ring"></div>
         <div class="inner-circle"></div>
       </div>
-      <div class="dot ${a?"outside":""}" style="left:${n}%; bottom:${o}%;"></div>
-    `}#l(t,e,i){return t+.33*e-.7*i-4}#a(t){return Number.isFinite(t)?t>=0?6.1121*Math.exp(t/(257.14+t)*(18.678-t/234.5)):6.1115*Math.exp(t/(279.82+t)*(23.036-t/333.7)):NaN}#h(t){if(!Number.isFinite(t)||t<=0)return NaN;let e=-80,i=60,s=0;for(let r=0;r<60;r++){s=(e+i)/2;const r=this.#a(s);if(!Number.isFinite(r))break;if(r>t?i=s:e=s,Math.abs(i-e)<1e-4)break}return s}#d(t){return Number.isFinite(t)?t<5?"Very Dry":t<=10?"Dry":t<=12.79?"Pleasant":t<=15.49?"Comfortable":t<=18.39?"Sticky Humid":t<=21.19?"Muggy":t<=23.9?"Sweltering":"Stifling":"Unknown"}#c(t){return Number.isFinite(t)?t<3?"FROSTY":t<=4.99?"COLD":t<=8.99?"CHILLY":t<=13.99?"COOL":t<=18.99?"MILD":t<=23.99?"PERFECT":t<=27.99?"WARM":t<=34.99?"HOT":"BOILING":"N/A"}#p(t){return Number.isFinite(t)?t<40?"DRY":t<=60?"COMFY":"HUMID":"N/A"}#b(t){return Number.isFinite(t)?t<3?"frosty":t<=4.99?"cold":t<=8.99?"chilly":t<=13.99?"cool":t<=18.99?"mild":t<=23.99?"perfect":t<=27.99?"warm":t<=34.99?"hot":"boiling":"n/a"}#$(t){const e=String(t||"").toLowerCase();return"frosty"===e?"mediumblue":"cold"===e?"dodgerblue":"chilly"===e?"deepskyblue":"cool"===e?"mediumaquamarine":"mild"===e?"seagreen":"perfect"===e?"limegreen":"warm"===e?"gold":"hot"===e?"orange":"boiling"===e?"crimson":"dimgray"}#e(t){const e=this.#b(t);return`radial-gradient(circle, rgba(100,100,100,0.15), rgba(100,100,100,0.15), rgba(100,100,100,0.15), ${this.#$(e)})`}#i(t){return`radial-gradient(circle, ${{"Very Dry":"deepskyblue",Dry:"mediumaquamarine",Pleasant:"limegreen",Comfortable:"yellowgreen","Sticky Humid":"yellow",Muggy:"gold",Sweltering:"orange",Stifling:"crimson"}[t]||"dimgray"}, 55%, rgba(100,100,100,0.15), rgba(100,100,100,0.15))`}#s(t,e){let i="black";Number.isFinite(t)?(t<40||t>60)&&(i="hotpink"):i="dimgray";let s="dimgray";return Number.isFinite(e)&&(s=e>34.9||e>26.5?"rgba(255,69,0,0.8)":e>24||e>19?"dimgray":"rgba(0,102,255,0.8)"),`radial-gradient(circle, ${i} 0%, black, ${s} 70%)`}#u(t,e,i){return Math.min(i,Math.max(e,t))}#m(t,e,i,s,r){if(!Number.isFinite(t))return(s+r)/2;const n=(t-e)/(i-e);return this.#u(s+n*(r-s),s,r)}#n(t){return Number.isFinite(t)?Math.min(100,Math.max(0,t)):NaN}#r(t,e){return Number.isFinite(t)?(e||"").toLowerCase().includes("f")?5/9*(t-32):t:NaN}#g(t,e){return Number.isFinite(t)?(e||"").toLowerCase().includes("f")?9*t/5+32:t:NaN}#o(t,e){if(!t)return e??0;const i=parseFloat(t.state);if(!Number.isFinite(i))return e??0;const s=(t.attributes.unit_of_measurement||"m/s").toLowerCase();return s.includes("m/s")?i:s.includes("km/h")||s.includes("kph")?i/3.6:s.includes("mph")?.44704*i:s.includes("kn")?.514444*i:i}#_(t,e=1){if(!Number.isFinite(t))return NaN;const i=Math.pow(10,e);return Math.round(t*i)/i}#f(t,e=1){return Number.isFinite(t)?this.#_(t,e).toLocaleString(void 0,{minimumFractionDigits:e,maximumFractionDigits:e}):"—"}set hass(t){this._hass=t,this.requestUpdate()}get hass(){return this._hass}static getConfigElement(){return document.createElement("simple-air-comfort-card-editor")}static getStubConfig(){return{name:"Air Comfort",temperature:"sensor.temperature",humidity:"sensor.humidity",decimals:1,default_wind_speed:0,temp_min:15,temp_max:35}}}customElements.define("simple-air-comfort-card",at);class ht extends nt{static properties={hass:{type:Object},_config:{state:!0},_schema:{state:!0}};static styles=n`.wrap{ padding:8px 12px 16px; }`;connectedCallback(){super.connectedCallback(),window.loadCardHelpers?.().catch(()=>{})}set hass(t){this._hass=t,this.requestUpdate()}get hass(){return this._hass}setConfig(t){this._config={name:"Air Comfort",temperature:void 0,humidity:void 0,windspeed:void 0,decimals:1,default_wind_speed:0,temp_min:15,temp_max:35,...t??{}},this._schema=[{name:"name",selector:{text:{}}},{name:"temperature",required:!0,selector:{entity:{domain:"sensor"}}},{name:"humidity",required:!0,selector:{entity:{domain:"sensor"}}},{name:"windspeed",selector:{entity:{domain:"sensor"}}},{name:"default_wind_speed",selector:{number:{min:0,max:50,step:.1,mode:"box",unit_of_measurement:"m/s"}}},{name:"decimals",selector:{number:{min:0,max:3,step:1,mode:"box"}}},{name:"temp_min",selector:{number:{min:-20,max:50,step:.1,mode:"box",unit_of_measurement:"°C"}}},{name:"temp_max",selector:{number:{min:-20,max:60,step:.1,mode:"box",unit_of_measurement:"°C"}}}]}render(){return this.hass&&this._config?B`<div class="wrap">
+      <div class="dot ${a?"outside":""}" 
+        style="left:${n}%; bottom:${o}%; transform: translate(-50%, 50%);"></div>
+    `}#l(t,e,i){return t+.33*e-.7*i-4}#a(t){return Number.isFinite(t)?t>=0?6.1121*Math.exp(t/(257.14+t)*(18.678-t/234.5)):6.1115*Math.exp(t/(279.82+t)*(23.036-t/333.7)):NaN}#h(t){if(!Number.isFinite(t)||t<=0)return NaN;let e=-80,i=60,s=0;for(let r=0;r<60;r++){s=(e+i)/2;const r=this.#a(s);if(!Number.isFinite(r))break;if(r>t?i=s:e=s,Math.abs(i-e)<1e-4)break}return s}#d(t){return Number.isFinite(t)?t<5?"Very Dry":t<=10?"Dry":t<=12.79?"Pleasant":t<=15.49?"Comfortable":t<=18.39?"Sticky Humid":t<=21.19?"Muggy":t<=23.9?"Sweltering":"Stifling":"Unknown"}#c(t){return Number.isFinite(t)?t<3?"FROSTY":t<=4.99?"COLD":t<=8.99?"CHILLY":t<=13.99?"COOL":t<=18.99?"MILD":t<=23.99?"PERFECT":t<=27.99?"WARM":t<=34.99?"HOT":"BOILING":"N/A"}#p(t){return Number.isFinite(t)?t<40?"DRY":t<=60?"COMFY":"HUMID":"N/A"}#b(t){return Number.isFinite(t)?t<3?"frosty":t<=4.99?"cold":t<=8.99?"chilly":t<=13.99?"cool":t<=18.99?"mild":t<=23.99?"perfect":t<=27.99?"warm":t<=34.99?"hot":"boiling":"n/a"}#$(t){const e=String(t||"").toLowerCase();return"frosty"===e?"mediumblue":"cold"===e?"dodgerblue":"chilly"===e?"deepskyblue":"cool"===e?"mediumaquamarine":"mild"===e?"seagreen":"perfect"===e?"limegreen":"warm"===e?"gold":"hot"===e?"orange":"boiling"===e?"crimson":"dimgray"}#e(t){const e=this.#b(t);return`radial-gradient(circle, rgba(100,100,100,0.15), rgba(100,100,100,0.15), rgba(100,100,100,0.15), ${this.#$(e)})`}#i(t){return`radial-gradient(circle, ${{"Very Dry":"deepskyblue",Dry:"mediumaquamarine",Pleasant:"limegreen",Comfortable:"yellowgreen","Sticky Humid":"yellow",Muggy:"gold",Sweltering:"orange",Stifling:"crimson"}[t]||"dimgray"}, 55%, rgba(100,100,100,0.15), rgba(100,100,100,0.15))`}#s(t,e){let i="black";Number.isFinite(t)?(t<40||t>60)&&(i="hotpink"):i="dimgray";let s="dimgray";return Number.isFinite(e)&&(s=e>34.9||e>26.5?"rgba(255,69,0,0.8)":e>24||e>19?"dimgray":"rgba(0,102,255,0.8)"),`radial-gradient(circle, ${i} 0%, black, ${s} 70%)`}#m(t,e,i){return Math.min(i,Math.max(e,t))}#u(t,e,i,s,r){if(!Number.isFinite(t))return(s+r)/2;const n=(t-e)/(i-e);return this.#m(s+n*(r-s),s,r)}#n(t){return Number.isFinite(t)?Math.min(100,Math.max(0,t)):NaN}#r(t,e){return Number.isFinite(t)?(e||"").toLowerCase().includes("f")?5/9*(t-32):t:NaN}#g(t,e){return Number.isFinite(t)?(e||"").toLowerCase().includes("f")?9*t/5+32:t:NaN}#o(t,e){if(!t)return e??0;const i=parseFloat(t.state);if(!Number.isFinite(i))return e??0;const s=(t.attributes.unit_of_measurement||"m/s").toLowerCase();return s.includes("m/s")?i:s.includes("km/h")||s.includes("kph")?i/3.6:s.includes("mph")?.44704*i:s.includes("kn")?.514444*i:i}#_(t,e=1){if(!Number.isFinite(t))return NaN;const i=Math.pow(10,e);return Math.round(t*i)/i}#f(t,e=1){return Number.isFinite(t)?this.#_(t,e).toLocaleString(void 0,{minimumFractionDigits:e,maximumFractionDigits:e}):"—"}set hass(t){this._hass=t,this.requestUpdate()}get hass(){return this._hass}static getConfigElement(){return document.createElement("simple-air-comfort-card-editor")}static getStubConfig(){return{name:"Air Comfort",temperature:"sensor.temperature",humidity:"sensor.humidity",decimals:1,default_wind_speed:0,temp_min:15,temp_max:35}}}customElements.define("simple-air-comfort-card",at);class ht extends nt{static properties={hass:{type:Object},_config:{state:!0},_schema:{state:!0}};static styles=n`.wrap{ padding:8px 12px 16px; }`;connectedCallback(){super.connectedCallback(),window.loadCardHelpers?.().catch(()=>{})}set hass(t){this._hass=t,this.requestUpdate()}get hass(){return this._hass}setConfig(t){this._config={name:"Air Comfort",temperature:void 0,humidity:void 0,windspeed:void 0,decimals:1,default_wind_speed:0,temp_min:15,temp_max:35,...t??{}},this._schema=[{name:"name",selector:{text:{}}},{name:"temperature",required:!0,selector:{entity:{domain:"sensor"}}},{name:"humidity",required:!0,selector:{entity:{domain:"sensor"}}},{name:"windspeed",selector:{entity:{domain:"sensor"}}},{name:"default_wind_speed",selector:{number:{min:0,max:50,step:.1,mode:"box",unit_of_measurement:"m/s"}}},{name:"decimals",selector:{number:{min:0,max:3,step:1,mode:"box"}}},{name:"temp_min",selector:{number:{min:-20,max:50,step:.1,mode:"box",unit_of_measurement:"°C"}}},{name:"temp_max",selector:{number:{min:-20,max:60,step:.1,mode:"box",unit_of_measurement:"°C"}}}]}render(){return this.hass&&this._config?B`<div class="wrap">
       <ha-form
         .hass=${this.hass}
         .data=${this._config}
