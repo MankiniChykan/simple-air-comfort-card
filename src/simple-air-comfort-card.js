@@ -80,7 +80,7 @@ class SimpleAirComfortCard extends LitElement {
       color:#fff; font-weight:600;
       font-size:clamp(13px,2.4vw,18px);
       text-shadow:0 1px 2px rgba(0,0,0,.35);
-      margin-top:.18rem;
+      margin-top:.15rem;
     }
 
     /* Corners */
