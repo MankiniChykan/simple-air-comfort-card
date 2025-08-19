@@ -49,8 +49,22 @@ class SimpleAirComfortCard extends LitElement {
     /* Square stage defines height (no absolute here) */
     .ratio{ position:relative; width:100%; aspect-ratio:1/1; margin:0 auto; }
 
+    /* Dot (+ halo when outside) — positioned in % of the whole card */
+    .dot{
+      position:absolute; width:15%; height:15%; border-radius:50%;
+      background:#fff; box-shadow:0 0 6px rgba(0,0,0,.45);
+      transform:translate(-50%, 50%);
+      transition:left .8s ease-in-out,bottom .8s ease-in-out; z-index:2;
+    }
+    .dot.outside::before{
+      content:""; position:absolute; inset:-20%; border-radius:50%;
+      background:radial-gradient(circle, rgba(255,0,0,.8) 20%, rgba(255,0,0,.3) 50%, rgba(255,0,0,.1) 70%, rgba(255,0,0,0) 100%);
+      animation:sac-blink 1s infinite alternate; z-index:-1;
+    }
+    @keyframes sac-blink{ 0%{opacity:1} 100%{opacity:.3} }
+
     /* Fill the square with the face */
-    .canvas{ position:absolute; inset:0; padding:14px 12px 12px; }
+    .canvas{ position:absolute; inset:0; padding:0px 0px 0px; }
 
     /* Header (room name + dew-point comfort text under it) */
     .header{
@@ -121,19 +135,6 @@ class SimpleAirComfortCard extends LitElement {
       box-shadow:inset 0 0 12px rgba(0,0,0,.6);
     }
 
-    /* Dot (+ halo when outside) — positioned in % of the whole card */
-    .dot{
-      position:absolute; width:15%; height:15%; border-radius:50%;
-      background:#fff; box-shadow:0 0 6px rgba(0,0,0,.45);
-      transform:translate(-50%, 50%);
-      transition:left .8s ease-in-out,bottom .8s ease-in-out; z-index:2;
-    }
-    .dot.outside::before{
-      content:""; position:absolute; inset:-20%; border-radius:50%;
-      background:radial-gradient(circle, rgba(255,0,0,.8) 20%, rgba(255,0,0,.3) 50%, rgba(255,0,0,.1) 70%, rgba(255,0,0,0) 100%);
-      animation:sac-blink 1s infinite alternate; z-index:-1;
-    }
-    @keyframes sac-blink{ 0%{opacity:1} 100%{opacity:.3} }
   `;
 
   // ============================== Config ==============================
