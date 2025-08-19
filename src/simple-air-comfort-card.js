@@ -94,11 +94,14 @@ class SimpleAirComfortCard extends LitElement {
       font-weight:500;
       font-size:clamp(12px,2.2vw,16px);
       line-height:1.05;
+      display: block;
     }
     .corner .comfort{
       font-weight:500;
       font-size:clamp(11px,2vw,15px);
       letter-spacing:.2px;
+      display: block;
+      margin-top: 0.15rem;
     }
     .tl{ left:8%;  top:18%;  transform:translate(0,-50%); text-align:left; }
     .tr{ right:8%; top:18%;  transform:translate(0,-50%); text-align:right; }
