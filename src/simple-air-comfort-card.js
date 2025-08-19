@@ -168,8 +168,8 @@ class SimpleAirComfortCard extends LitElement {
     /* Dot (+ halo when outside) — positioned in % of the whole card */
     .dot {
       position: absolute;
-      width: 8%;       /* smaller than 15% */
-      height: 8%;
+      width: 6%;       /* smaller than 15% */
+      height: 6%;
       border-radius: 50%;
       background: white;
       transform: translate(-50%, 50%); /* matches macro */
@@ -225,6 +225,8 @@ class SimpleAirComfortCard extends LitElement {
                            outUnit: (tState?.attributes?.unit_of_measurement || '°C'), d: this._config.decimals,
                            dewOut: '—', atOut: '—', tempRaw: '—', rhRaw: '—' })}
           </div>
+          <div class="dot ${outside ? 'outside' : ''}" 
+            style="left:${xPct}%; bottom:${yPct}%; transform: translate(-50%, 50%);"></div>
         </div>
       </ha-card>`;
     }
@@ -332,8 +334,6 @@ class SimpleAirComfortCard extends LitElement {
         <div class="outer-ring"></div>
         <div class="inner-circle"></div>
       </div>
-      <div class="dot ${outside ? 'outside' : ''}" 
-        style="left:${xPct}%; bottom:${yPct}%; transform: translate(-50%, 50%);"></div>
     `;
   }
 
