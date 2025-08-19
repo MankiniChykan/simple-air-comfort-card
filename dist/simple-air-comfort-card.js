@@ -85,7 +85,7 @@ const x=globalThis,w=x.trustedTypes,A=w?w.createPolicy("lit-html",{createHTML:t=
       font-size:clamp(11px,2vw,15px);
       letter-spacing:.2px;
       display: block;
-      margin-top: 0.15rem;
+      margin-top: 0.1rem;
     }
     .tl{ left:8%;  top:18%;  transform:translate(0,-50%); text-align:left; }
     .tr{ right:8%; top:18%;  transform:translate(0,-50%); text-align:right; }
