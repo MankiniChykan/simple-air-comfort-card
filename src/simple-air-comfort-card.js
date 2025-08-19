@@ -52,6 +52,13 @@ class SimpleAirComfortCard extends LitElement {
     /* Fill the square with the face */
     .canvas{ position:absolute; inset:0; padding:14px 12px 12px; }
 
+    .dot.outside::before{
+      content:""; position:absolute; inset:-20%; border-radius:50%;
+      background:radial-gradient(circle, rgba(255,0,0,.8) 20%, rgba(255,0,0,.3) 50%, rgba(255,0,0,.1) 70%, rgba(255,0,0,0) 100%);
+      animation:sac-blink 1s infinite alternate; z-index:-1;
+    }
+    @keyframes sac-blink{ 0%{opacity:1} 100%{opacity:.3} }
+
     /* Header (room name + dew-point comfort text under it) */
     .header{
       position:absolute; top:10%; left:50%; transform:translate(-50%,-50%);
@@ -128,12 +135,6 @@ class SimpleAirComfortCard extends LitElement {
       transform:translate(-50%, 50%);
       transition:left .8s ease-in-out,bottom .8s ease-in-out; z-index:2;
     }
-    .dot.outside::before{
-      content:""; position:absolute; inset:-20%; border-radius:50%;
-      background:radial-gradient(circle, rgba(255,0,0,.8) 20%, rgba(255,0,0,.3) 50%, rgba(255,0,0,.1) 70%, rgba(255,0,0,0) 100%);
-      animation:sac-blink 1s infinite alternate; z-index:-1;
-    }
-    @keyframes sac-blink{ 0%{opacity:1} 100%{opacity:.3} }
   `;
 
   // ============================== Config ==============================
@@ -255,7 +256,7 @@ class SimpleAirComfortCard extends LitElement {
         <span class="metric">${atOut}</span>
       </div>
 
-      <!-- BL / BR (raw values + comfort words) -->
+      <!-- BL / BR -->
       <div class="corner bl">
         <span class="label">Temp</span>
         <span class="metric">${tempRaw}</span>
@@ -267,7 +268,7 @@ class SimpleAirComfortCard extends LitElement {
         <span class="comfort">${rhText}</span>
       </div>
 
-      <!-- Dial -->
+      <!-- Dial (no dot inside here anymore) -->
       <div class="graphic" style="--sac-dewpoint-ring:${ringGrad}; --sac-inner-gradient:${innerGrad}">
         <div class="axis axis-top">Warm</div>
         <div class="axis axis-bottom">Cold</div>
@@ -276,8 +277,10 @@ class SimpleAirComfortCard extends LitElement {
 
         <div class="outer-ring"></div>
         <div class="inner-circle"></div>
-        <div class="dot ${outside ? 'outside' : ''}" style="left:${xPct}%; bottom:${yPct}%;"></div>
       </div>
+
+      <!-- Floating dot now positioned against the WHOLE square face -->
+      <div class="dot ${outside ? 'outside' : ''}" style="left:${xPct}%; bottom:${yPct}%;"></div>
     `;
   }
 
