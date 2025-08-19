@@ -47,7 +47,7 @@ class SimpleAirComfortCard extends LitElement {
     }
 
     /* Square stage defines height (no absolute here) */
-    .ratio{ position:relative; width:100%; aspect-ratio:1/1; margin:0 auto; }
+    .ratio{ position:relative; width:100%; aspect-ratio:1/1; margin:0; }
 
     /* Dot (+ halo when outside) — positioned in % of the whole card */
     .dot{
