@@ -104,8 +104,8 @@ class SimpleAirComfortCard extends LitElement {
     }
     .tl{ left:8%;  top:18%;  transform:translate(0,-50%); text-align:left; }
     .tr{ right:8%; top:18%;  transform:translate(0,-50%); text-align:right; }
-    .bl{ left:8%;  bottom:18%; transform:translate(0,0);   text-align:left; }
-    .br{ right:8%; bottom:18%; transform:translate(0,0);   text-align:right; }
+    .bl{ left:8%;  bottom:3%; transform:translate(0,0);   text-align:left; }
+    .br{ right:8%; bottom:3%; transform:translate(0,0);   text-align:right; }
 
     /* Dial — 45% like original */
     .graphic{
