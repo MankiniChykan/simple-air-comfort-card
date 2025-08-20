@@ -139,7 +139,7 @@ class SimpleAirComfortCard extends LitElement {
 
   `;
 
-  // ============================== Config ==============================
+  // ============================== Configs ==============================
   setConfig(config) {
     if (!config || !config.temperature || !config.humidity) {
       throw new Error('simple-air-comfort-card: "temperature" and "humidity" are required.');
