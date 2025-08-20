@@ -64,7 +64,7 @@ class SimpleAirComfortCard extends LitElement {
     @keyframes sac-blink{ 0%{opacity:1} 100%{opacity:.3} }
 
     /* Fill the square with the face */
-    .canvas{ position:absolute; inset:0; padding:0px 0px 0px; }
+    .canvas{ position:relative; inset:0; padding:0px 0px 0px; }
 
     /* Header (room name + dew-point comfort text under it) */
     .header{
