@@ -116,7 +116,7 @@ const x=globalThis,w=x.trustedTypes,A=w?w.createPolicy("lit-html",{createHTML:t=
     }
     .inner-circle{
       position:absolute; left:50%; top:50%; transform:translate(-50%,-50%);
-      width:46.5%; height:46.5%; border-radius:50%;
+      width:20%; height:20%; border-radius:50%;
       background:var(--sac-inner-gradient,radial-gradient(circle,black 0%,black 60%));
       box-shadow:inset 0 0 12px rgba(0,0,0,.6);
     }
