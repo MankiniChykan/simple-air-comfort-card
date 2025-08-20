@@ -280,8 +280,8 @@ class SimpleAirComfortCard extends LitElement {
 
         <div class="outer-ring"></div>
         <div class="inner-circle"></div>
-        <div class="dot ${outside ? 'outside' : ''}" style="left:${xPct}%; bottom:${yPct}%;"></div>
       </div>
+      <div class="dot ${outside ? 'outside' : ''}" style="left:${xPct}%; bottom:${yPct}%;"></div>
     `;
   }
 
