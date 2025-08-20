@@ -58,7 +58,7 @@ const x=globalThis,w=x.trustedTypes,A=w?w.createPolicy("lit-html",{createHTML:t=
     .title{
       color:#c9c9c9; font-weight:300;
       font-size:clamp(10px,1.8vw,14px);
-      line-height:1.1; letter-spacing:.2px;
+      line-height:1.0; letter-spacing:.2px;
     }
     .subtitle{
       color:#fff; font-weight:600;
