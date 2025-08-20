@@ -27,7 +27,7 @@ const x=globalThis,w=x.trustedTypes,A=w?w.createPolicy("lit-html",{createHTML:t=
       position:relative; padding:0; overflow:hidden; isolation:isolate;
       border-radius:var(--ha-card-border-radius,12px);
       background:var(--sac-temp-bg,#2a2a2a);
-      display:block; box-sizing:border-box; min-height:0;
+      display:block; box-sizing:border-box; min-height:0; aspect-ratio:1/1
     }
 
     /* Square stage defines height (no absolute here) */
