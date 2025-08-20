@@ -63,7 +63,7 @@ class SimpleAirComfortCard extends LitElement {
     }
     @keyframes sac-blink{ 0%{opacity:1} 100%{opacity:.3} }
 
-    /* Fill the square with the face. */
+    /* Fill the square with the face */
     .canvas{ position:absolute; inset:0; padding:0px 0px 0px; }
 
     /* Header (room name + dew-point comfort text under it) */
@@ -205,7 +205,7 @@ class SimpleAirComfortCard extends LitElement {
     const ringGrad  = this.#dewpointRingGradientFromText(dewText);
     const innerGrad = this.#innerEyeGradient(RH, Tc);
 
-    // Dot (percent of the whole card; defaults to exact center if. NaN)
+    // Dot (percent of the whole card; defaults to exact center if NaN)
     const { temp_min, temp_max } = this._config;
     const yPct = Number.isFinite(Tc) ? this.#scaleClamped(Tc, temp_min, temp_max, 0, 100) : 50;
     const xPct = Number.isFinite(RH) ? this.#clamp(RH + 0.5, 0, 100) : 50;
