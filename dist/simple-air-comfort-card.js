@@ -47,7 +47,7 @@ const x=globalThis,w=x.trustedTypes,A=w?w.createPolicy("lit-html",{createHTML:t=
     }
     @keyframes sac-blink{ 0%{opacity:1} 100%{opacity:.3} }
 
-    /* Fill the square with the face. */
+    /* Fill the square with the face */
     .canvas{ position:absolute; inset:0; padding:0px 0px 0px; }
 
     /* Header (room name + dew-point comfort text under it) */
