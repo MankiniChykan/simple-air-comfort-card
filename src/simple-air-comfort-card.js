@@ -516,6 +516,7 @@ class SimpleAirComfortCardEditor extends LitElement {
         .data=${this._config}
         .schema=${this._schema}
         .computeLabel=${this._label}
+        .computeHelper=${this._helper} 
         @value-changed=${this._onChange}>
       </ha-form>
     </div>`;
@@ -526,6 +527,34 @@ class SimpleAirComfortCardEditor extends LitElement {
     default_wind_speed:'Default wind speed (m/s)', decimals:'Decimals',
     temp_min:'Dot temp min (°C)', temp_max:'Dot temp max (°C)',
   })[s.name] ?? s.name;
+
+  _helper = (s) => {
+    const id = s.name;
+    const st = (key) => this.hass?.states?.[this._config?.[key]];
+    const unit = (key) => st(key)?.attributes?.unit_of_measurement ?? "";
+    const dclass = (key) => st(key)?.attributes?.device_class ?? "";
+
+    switch (id) {
+      case 'name':
+        return 'Shown as the small grey title at the top of the card.';
+      case 'temperature':
+        return `Pick an indoor temperature sensor. ${unit('temperature') ? `Current unit: ${unit('temperature')}.` : ''}`;
+      case 'humidity':
+        return `Pick a relative humidity sensor (0–100%). ${unit('humidity') ? `Current unit: ${unit('humidity')}.` : ''}`;
+      case 'windspeed':
+        return 'Optional. If set, Apparent Temperature uses this wind; if empty, the “Default wind speed” below is used.';
+      case 'default_wind_speed':
+        return 'Indoor fallback for Apparent Temperature when no wind sensor is set. Typical indoors: 0.0–0.2 m/s.';
+      case 'decimals':
+        return 'How many decimal places to show for temperatures and humidity.';
+      case 'temp_min':
+        return 'Lower bound of the dot’s vertical scale (affects Y mapping only).';
+      case 'temp_max':
+        return 'Upper bound of the dot’s vertical scale. Must be greater than min.';
+      default:
+        return 'Tip: values update immediately; click Save when done.';
+    }
+  };
 
   _onChange = (ev) => {
     ev.stopPropagation();
