@@ -37,19 +37,19 @@ class SimpleAirComfortCard extends LitElement {
   // ================================ Styles ================================
   static styles = css`
     /* Host should not force a height; HA grid drives width, .ratio drives height */
-    :host{ display:block; width:100%; box-sizing:border-box; }
+    :host{ display:inline-block; width:100%; box-sizing:border-box; }
 
     ha-card{
       position:relative; padding:0; overflow:hidden; isolation:isolate;
       border-radius:var(--ha-card-border-radius,12px);
       background:var(--sac-temp-bg,#2a2a2a);
-      display:block; box-sizing:border-box; min-height:0; display:flex; align-items: center; justify-content: center; height: 100%;
+      display:block; box-sizing:border-box; min-height:0; aspect-ratio:1/1
     }
 
     /* Square stage defines height (no absolute here) */
-    .ratio{ position:relative; height: 100%; width: auto; max-width:100%;aspect-ratio: 1/1; margin:0; }
+    .ratio{ position:relative; width:100%; height:100%; margin:0; }
 
-    /* Dot (+ halo when outside) — positioneds in % of the whole card */
+    /* Dot (+ halo when outside) — positioned in % of the whole card */
     .dot{
       position:absolute; width:6%; height:6%; border-radius:50%;
       background:#fff; box-shadow:0 0 6px rgba(0,0,0,.45);
@@ -159,17 +159,6 @@ class SimpleAirComfortCard extends LitElement {
     };
   }
 
-  // Sections view sizing (HA calls this when laying out in Sections)
-  getGridOptions() {
-    return {
-      columns: 6,  // default width (Sections grid is 12 columns)
-      rows: 3,     // default height in rows
-      min_columns: 6,
-      min_rows: 3,
-      max_columns: 12,
-      max_rows: 8,
-    };
-  }
   // =============================== Render ===============================
   render() {
     if (!this.hass || !this._config) return html``;
