@@ -424,12 +424,44 @@ class SimpleAirComfortCard extends LitElement {
   get hass(){ return this._hass; }
 
   static getConfigElement(){ return document.createElement('simple-air-comfort-card-editor'); }
-  static getStubConfig(){
+  static getStubConfig(hass){
+    // Fallback if HA doesn’t pass hass (older paths)
+    const ha = hass ?? document.querySelector('home-assistant')?.hass;
+    const states = ha?.states ?? {};
+
+    const first = (pred) => {
+      for (const [id, st] of Object.entries(states)) if (pred(id, st)) return id;
+      return undefined;
+    };
+    const dc  = (st) => st?.attributes?.device_class;
+    const uom = (st) => (st?.attributes?.unit_of_measurement || '').toLowerCase();
+
+    // Temperature: prefer device_class, then unit; finally any sensor
+    const temperature =
+      first((id, st) => id.startsWith('sensor.') && dc(st) === 'temperature') ||
+      first((id, st) => id.startsWith('sensor.') && (/°c|°f/.test(uom(st)))) ||
+      first((id) => id.startsWith('sensor.'));
+
+    // Humidity: prefer device_class, then % unit; finally any sensor
+    const humidity =
+      first((id, st) => id.startsWith('sensor.') && dc(st) === 'humidity') ||
+      first((id, st) => id.startsWith('sensor.') && uom(st).includes('%')) ||
+      first((id) => id.startsWith('sensor.'));
+
+    // Optional wind speed: prefer device_class, else known speed units
+    const windspeed =
+      first((id, st) => id.startsWith('sensor.') && dc(st) === 'wind_speed') ||
+      first((id, st) => id.startsWith('sensor.') && /(m\/s|km\/h|kph|mph|kn)/.test(uom(st)));
+
     return {
-      name:'Air Comfort',
-      temperature:'sensor.temperature',
-      humidity:'sensor.humidity',
-      decimals:1, default_wind_speed:0, temp_min:15, temp_max:35,
+      name: 'Area Name',
+      temperature,
+      humidity,
+      windspeed,
+      decimals: 1,
+      default_wind_speed: 0.1,
+      temp_min: 15,
+      temp_max: 35,
     };
   }
 }
