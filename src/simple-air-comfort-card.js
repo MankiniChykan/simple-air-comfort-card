@@ -37,17 +37,17 @@ class SimpleAirComfortCard extends LitElement {
   // ================================ Styles ================================
   static styles = css`
     /* Host should not force a height; HA grid drives width, .ratio drives height */
-    :host{ display:inline-block; width:100%; box-sizing:border-box; }
+    :host{ display:block; width:100%; box-sizing:border-box; }
 
     ha-card{
       position:relative; padding:0; overflow:hidden; isolation:isolate;
       border-radius:var(--ha-card-border-radius,12px);
       background:var(--sac-temp-bg,#2a2a2a);
-      display:block; box-sizing:border-box; min-height:0; display:flex; align-items: center; justify-content: center;
+      display:block; box-sizing:border-box; min-height:0; display:flex; align-items: center; justify-content: center; height 100%;
     }
 
     /* Square stage defines height (no absolute here) */
-    .ratio{ position:relative; aspect-ratio: 1/1; margin:0; }
+    .ratio{ position:relative; height 100%; width: auto; max-width:100%;aspect-ratio: 1/1; margin:0; }
 
     /* Dot (+ halo when outside) — positioned in % of the whole card */
     .dot{
