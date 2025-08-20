@@ -110,7 +110,7 @@ class SimpleAirComfortCard extends LitElement {
     /* Dial — 45% like original */
     .graphic{
       position:absolute; top:50%; left:50%; transform:translate(-50%,-50%);
-      width:45%; height:45%; min-width:120px; min-height:120px;
+      width:40%; height:40%; min-width:120px; min-height:120px;
     }
 
     /* Axis labels: smaller & dim grey */
