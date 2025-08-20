@@ -37,7 +37,7 @@ class SimpleAirComfortCard extends LitElement {
   // ================================ Styles ================================
   static styles = css`
     /* Host should not force a height; HA grid drives width, .ratio drives height */
-    :host{ display:block; width:100%; box-sizing:border-box; }
+    :host{ display:inline-block; width:100%; box-sizing:border-box; }
 
     ha-card{
       position:relative; padding:0; overflow:hidden; isolation:isolate;
