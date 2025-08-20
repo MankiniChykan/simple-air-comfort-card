@@ -86,8 +86,8 @@ const x=globalThis,w=x.trustedTypes,A=w?w.createPolicy("lit-html",{createHTML:t=
       display: block;
       margin-top: 0.1rem;
     }
-    .tl{ left:8%;  top:25%;  transform:translate(0,-50%); text-align:left; }
-    .tr{ right:8%; top:25%;  transform:translate(0,-50%); text-align:right; }
+    .tl{ left:8%;  top:23%;  transform:translate(0,-50%); text-align:left; }
+    .tr{ right:8%; top:23%;  transform:translate(0,-50%); text-align:right; }
     .bl{ left:8%;  bottom:3%; transform:translate(0,0);   text-align:left; }
     .br{ right:8%; bottom:3%; transform:translate(0,0);   text-align:right; }
 
