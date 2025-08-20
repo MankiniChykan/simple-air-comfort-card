@@ -159,6 +159,17 @@ class SimpleAirComfortCard extends LitElement {
     };
   }
 
+  // Sections view sizing (HA calls this when laying out in Sections)
+  getGridOptions() {
+    return {
+      columns: 6,  // default width (Sections grid is 12 columns)
+      rows: 3,     // default height in rows
+      min_columns: 6,
+      min_rows: 3,
+      max_columns: 12,
+      max_rows: 8,
+    };
+  }
   // =============================== Render ===============================
   render() {
     if (!this.hass || !this._config) return html``;
