@@ -74,13 +74,12 @@ class SimpleAirComfortCard extends LitElement {
     .title{
       color:#c9c9c9; font-weight:300;
       font-size:clamp(10px,1.8vw,14px);
-      line-height:1.0; letter-spacing:.2px;
+      line-height:1.1; letter-spacing:.2px;
     }
     .subtitle{
       color:#fff; font-weight:600;
       font-size:clamp(13px,2.4vw,18px);
       text-shadow:0 1px 2px rgba(0,0,0,.35);
-      margin-top:0.5rem;
     }
 
     /* Corners */
