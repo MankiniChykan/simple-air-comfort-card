@@ -35,7 +35,7 @@ const x=globalThis,w=x.trustedTypes,A=w?w.createPolicy("lit-html",{createHTML:t=
 
     /* Dot (+ halo when outside) — positioned in % of the whole card */
     .dot{
-      position:absolute; width:15%; height:15%; border-radius:50%;
+      position:absolute; width:6%; height:6%; border-radius:50%;
       background:#fff; box-shadow:0 0 6px rgba(0,0,0,.45);
       transform:translate(-50%, 50%);
       transition:left .8s ease-in-out,bottom .8s ease-in-out; z-index:2;
