@@ -441,25 +441,32 @@ class SimpleAirComfortCardEditor extends LitElement {
   static properties = { hass:{type:Object}, _config:{state:true}, _schema:{state:true} };
   static styles = css`.wrap{ padding:8px 12px 16px; }`;
   connectedCallback(){ super.connectedCallback(); window.loadCardHelpers?.().catch(()=>{}); }
-  set hass(h){ this._hass=h; this.requestUpdate(); } get hass(){ return this._hass; }
+
+  // --- NEW: run auto-pick when hass arrives (once) ---
+  set hass(h){
+    this._hass = h;
+    this._autoFillDefaults();    // <— only fills if empty, only once
+    this.requestUpdate();
+  }
+  get hass(){ return this._hass; }
 
   setConfig(config){
     this._config = {
       name:'Area Name',
       temperature: undefined, humidity: undefined, windspeed: undefined,
-      decimals:1, default_wind_speed:0, temp_min:15, temp_max:35,
+      decimals:1, default_wind_speed:0.1, temp_min:15, temp_max:35,
       ...(config ?? {}),
     };
     this._schema = [
       { name:'name', selector:{ text:{} } },
 
-      // ✅ Only temperature sensors show up here
+      // Only temperature sensors in the picker
       { name:'temperature', required:true, selector:{ entity:{ domain:'sensor', device_class:'temperature' } } },
 
-      // (bonus) only humidity sensors
+      // Only humidity sensors
       { name:'humidity',    required:true, selector:{ entity:{ domain:'sensor', device_class:'humidity' } } },
 
-      // (optional) wind speed — many integrations set this device_class
+      // Optional wind speed
       { name:'windspeed', selector:{ entity:{ domain:'sensor', device_class:'wind_speed' } } },
 
       { name:'default_wind_speed', selector:{ number:{ min:0, max:50, step:0.1, mode:'box', unit_of_measurement:'m/s' } } },
@@ -481,6 +488,7 @@ class SimpleAirComfortCardEditor extends LitElement {
       </ha-form>
     </div>`;
   }
+
   _label = s => ({
     name:'Name', temperature:'Temperature entity', humidity:'Humidity entity', windspeed:'Wind speed entity (optional)',
     default_wind_speed:'Default wind speed (m/s)', decimals:'Decimals',
@@ -494,11 +502,52 @@ class SimpleAirComfortCardEditor extends LitElement {
     fireEvent(this, 'config-changed', { config: cfg });
   };
 
+  // ----------------- NEW: auto-pick logic (runs once) -----------------
+  _autoPicked = false;
+  _autoFillDefaults(){
+    if (this._autoPicked || !this.hass || !this._config) return;
+
+    const states = this.hass.states;
+
+    // helpers
+    const firstEntity = (pred) => {
+      for (const [id, st] of Object.entries(states)) { if (pred(id, st)) return id; }
+      return undefined;
+    };
+    const devClass = (st) => st?.attributes?.device_class;
+
+    // Only fill if user hasn't set them yet
+    if (!this._config.temperature) {
+      this._config.temperature = firstEntity((id, st) =>
+        id.startsWith('sensor.') && devClass(st) === 'temperature'
+      ) || this._config.temperature;
+    }
+
+    if (!this._config.humidity) {
+      this._config.humidity = firstEntity((id, st) =>
+        id.startsWith('sensor.') && devClass(st) === 'humidity'
+      ) || this._config.humidity;
+    }
+
+    if (!this._config.windspeed) {
+      this._config.windspeed = firstEntity((id, st) =>
+        id.startsWith('sensor.') && devClass(st) === 'wind_speed'
+      ) || this._config.windspeed;
+    }
+
+    this._autoPicked = true;
+
+    // If anything changed, notify HA so the editor shows the prefilled values
+    fireEvent(this, 'config-changed', { config: this._config });
+  }
 }
+
 if (!customElements.get('simple-air-comfort-card-editor')) {
   customElements.define('simple-air-comfort-card-editor', SimpleAirComfortCardEditor);
 }
 
+
+/* ----------------------------- Automatic Version on Build ----------------------------- */
 const SAC_CARD_VERSION = '__VERSION__'; // replaced at build by rollup
 
 window.customCards = window.customCards || [];
