@@ -40,7 +40,7 @@ class SimpleAirComfortCard extends LitElement {
     :host{ display:block; width:100%; box-sizing:border-box; }
 
     ha-card{
-      position:relative; padding:0; overflow:scroll; isolation:isolate;
+      position:relative; padding:0; overflow:hidden; isolation:isolate;
       border-radius:var(--ha-card-border-radius,12px);
       background:var(--sac-temp-bg,#2a2a2a);
       display:block; box-sizing:border-box; min-height:0;
