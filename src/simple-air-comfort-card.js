@@ -590,12 +590,6 @@ class SimpleAirComfortCardEditor extends LitElement {
       ) || this._config.humidity;
     }
 
-    if (!this._config.windspeed) {
-      this._config.windspeed = firstEntity((id, st) =>
-        id.startsWith('sensor.') && devClass(st) === 'wind_speed'
-      ) || this._config.windspeed;
-    }
-
     this._autoPicked = true;
 
     // If anything changed, notify HA so the editor shows the prefilled values
