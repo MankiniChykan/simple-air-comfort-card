@@ -452,9 +452,16 @@ class SimpleAirComfortCardEditor extends LitElement {
     };
     this._schema = [
       { name:'name', selector:{ text:{} } },
-      { name:'temperature', required:true, selector:{ entity:{ domain:'sensor' } } },
-      { name:'humidity',    required:true, selector:{ entity:{ domain:'sensor' } } },
-      { name:'windspeed', selector:{ entity:{ domain:'sensor' } } },
+
+      // ✅ Only temperature sensors show up here
+      { name:'temperature', required:true, selector:{ entity:{ domain:'sensor', device_class:'temperature' } } },
+
+      // (bonus) only humidity sensors
+      { name:'humidity',    required:true, selector:{ entity:{ domain:'sensor', device_class:'humidity' } } },
+
+      // (optional) wind speed — many integrations set this device_class
+      { name:'windspeed', selector:{ entity:{ domain:'sensor', device_class:'wind_speed' } } },
+
       { name:'default_wind_speed', selector:{ number:{ min:0, max:50, step:0.1, mode:'box', unit_of_measurement:'m/s' } } },
       { name:'decimals', selector:{ number:{ min:0, max:3, step:1, mode:'box' } } },
       { name:'temp_min', selector:{ number:{ min:-20, max:50, step:0.1, mode:'box', unit_of_measurement:'°C' } } },
