@@ -43,11 +43,11 @@ class SimpleAirComfortCard extends LitElement {
       position:relative; padding:0; overflow:hidden; isolation:isolate;
       border-radius:var(--ha-card-border-radius,12px);
       background:var(--sac-temp-bg,#2a2a2a);
-      display:block; box-sizing:border-box; min-height:0; aspect-ratio:1/1
+      display:block; box-sizing:border-box; min-height:0; display:flex; align-items: center; justify-content: center;
     }
 
     /* Square stage defines height (no absolute here) */
-    .ratio{ position:relative; width:100%; height:100%; margin:0; }
+    .ratio{ position:relative; aspect-ratio: 1/1; margin:0; }
 
     /* Dot (+ halo when outside) — positioned in % of the whole card */
     .dot{
