@@ -1,7 +1,7 @@
 import resolve from '@rollup/plugin-node-resolve';
 import commonjs from '@rollup/plugin-commonjs';
 import replace from '@rollup/plugin-replace';
-import { terser } from '@rollup/plugin-terser';   // ← named export
+import terser from '@rollup/plugin-terser';   // ← named export
 import copy from 'rollup-plugin-copy';
 import gzipPlugin from 'rollup-plugin-gzip';
 
