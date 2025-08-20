@@ -208,7 +208,7 @@ class SimpleAirComfortCard extends LitElement {
     // Dot (percent of the whole card; defaults to exact center if NaN)
     const { temp_min, temp_max } = this._config;
     const yPct = Number.isFinite(Tc)
-      ? this.#clamp(this.#scaleClamped(Tc, temp_min, temp_max, 0, 100) + 10, 0, 100)
+      ? this.#clamp(this.#scaleClamped(Tc, temp_min, temp_max, 0, 100) + 12, 0, 100)
       : 50;
     const xPct = Number.isFinite(RH) ? this.#clamp(RH + 0.5, 0, 100) : 50;
     const outside = (Number.isFinite(RH) && Number.isFinite(Tc))
