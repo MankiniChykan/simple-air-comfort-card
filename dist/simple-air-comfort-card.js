@@ -31,7 +31,7 @@ const x=globalThis,w=x.trustedTypes,A=w?w.createPolicy("lit-html",{createHTML:t=
     }
 
     /* Square stage defines height (no absolute here) */
-    .ratio{ position:relative; width:100%; aspect-ratio:1/1; margin:0; }
+    .ratio{ position:relative; width:100%; height:100%; margin:0; }
 
     /* Dot (+ halo when outside) — positioned in % of the whole card */
     .dot{
