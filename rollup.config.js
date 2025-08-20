@@ -1,7 +1,7 @@
 import resolve from '@rollup/plugin-node-resolve';
 import commonjs from '@rollup/plugin-commonjs';
 import replace from '@rollup/plugin-replace';
-import terser from '@rollup/plugin-terser';
+import { terser } from '@rollup/plugin-terser';   // ← named export
 import copy from 'rollup-plugin-copy';
 import gzipPlugin from 'rollup-plugin-gzip';
 
@@ -15,17 +15,20 @@ export default {
   plugins: [
     resolve({ browser: true }),
     commonjs(),
+
+    // Inject version + NODE_ENV
     replace({
       preventAssignment: true,
-      'process.env.NODE_ENV': JSON.stringify(process.env.NODE_ENV || 'production'),
+      values: {
+        __VERSION__: JSON.stringify(process.env.npm_package_version),
+        'process.env.NODE_ENV': JSON.stringify(process.env.NODE_ENV || 'production'),
+      },
     }),
 
-    // Copy static assets needed at runtime
+    // Copy static assets needed at runtime (do it early so gzip can see them)
     copy({
-      targets: [
-        { src: 'src/assets/sac_background_overlay.svg', dest: 'dist' },
-      ],
-      hook: 'buildStart', // ensure it exists before gzip runs
+      targets: [{ src: 'src/assets/sac_background_overlay.svg', dest: 'dist' }],
+      hook: 'buildStart',
       copyOnce: false,
       verbose: true,
     }),
@@ -37,7 +40,7 @@ export default {
     gzipPlugin({
       filter: /\.(js|svg)$/i,
       additionalFiles: ['dist/sac_background_overlay.svg'],
-      minSize: 0, // always gzip
+      minSize: 0,
       fileName: (name) => `${name}.gz`,
     }),
   ],

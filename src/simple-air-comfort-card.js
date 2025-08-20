@@ -445,7 +445,7 @@ class SimpleAirComfortCardEditor extends LitElement {
 
   setConfig(config){
     this._config = {
-      name:'Air Comfort',
+      name:'Area Name',
       temperature: undefined, humidity: undefined, windspeed: undefined,
       decimals:1, default_wind_speed:0, temp_min:15, temp_max:35,
       ...(config ?? {}),
@@ -486,5 +486,27 @@ class SimpleAirComfortCardEditor extends LitElement {
     this._config = cfg;
     fireEvent(this, 'config-changed', { config: cfg });
   };
+
 }
-customElements.define('simple-air-comfort-card-editor', SimpleAirComfortCardEditor);
+if (!customElements.get('simple-air-comfort-card-editor')) {
+  customElements.define('simple-air-comfort-card-editor', SimpleAirComfortCardEditor);
+}
+
+const SAC_CARD_VERSION = '__VERSION__'; // replaced at build by rollup
+
+window.customCards = window.customCards || [];
+window.customCards.push({
+  type: 'simple-air-comfort-card',
+  name: 'Simple Air Comfort Card',
+  description: 'Dew point + AT dial, comfort words, moving dot.',
+  preview: true,
+  documentationURL: 'https://github.com/MankiniChykan/simple-air-comfort-card'
+});
+
+SimpleAirComfortCard.prototype.getCardSize = function(){ return 1; };
+
+console.info(
+  `%c SIMPLE AIR COMFORT CARD %c v${SAC_CARD_VERSION} `,
+  'color:white;background:#2a2a2a;padding:2px 6px;border-radius:4px 0 0 4px;',
+  'color:#2a2a2a;background:#c9c9c9;padding:2px 6px;border-radius:0 4px 4px 0;'
+);
