@@ -94,7 +94,7 @@ const x=globalThis,w=x.trustedTypes,A=w?w.createPolicy("lit-html",{createHTML:t=
     /* Dial — 45% like original */
     .graphic{
       position:absolute; top:50%; left:50%; transform:translate(-50%,-50%);
-      width:40%; height:40%; min-width:120px; min-height:120px;
+      width:45%; height:45%; min-width:120px; min-height:120px;
     }
 
     /* Axis labels: smaller & dim grey */
@@ -106,8 +106,8 @@ const x=globalThis,w=x.trustedTypes,A=w?w.createPolicy("lit-html",{createHTML:t=
     }
     .axis-top    { top:-10px;  left:50%; transform:translate(-50%,-50%); }
     .axis-bottom { bottom:-10px;left:50%; transform:translate(-50%, 50%); }
-    .axis-left   { left:-18px; top:50%;  transform:translate(-50%,-50%) rotate(180deg); writing-mode:vertical-rl; }
-    .axis-right  { right:-18px;top:50%;  transform:translate( 50%,-50%); writing-mode:vertical-rl; }
+    .axis-left   { left:-10px; top:50%;  transform:translate(-50%,-50%) rotate(180deg); writing-mode:vertical-rl; }
+    .axis-right  { right:-10px;top:50%;  transform:translate( 50%,-50%); writing-mode:vertical-rl; }
 
     .outer-ring{
       position:absolute; inset:0; border-radius:50%; border:2.5px solid #fff;
