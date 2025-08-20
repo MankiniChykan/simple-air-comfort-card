@@ -1,6 +1,6 @@
 {
   "name": "simple-air-comfort-card",
-  "version": "1.0.140",
+  "version": "1.0.141",
   "type": "module",
   "description": "Dynamic Lovelace card for visualizing indoor comfort using temperature, humidity, and dew point.",
   "main": "dist/simple-air-comfort-card.js",
