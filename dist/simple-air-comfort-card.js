@@ -94,7 +94,7 @@ const x=globalThis,w=x.trustedTypes,A=w?w.createPolicy("lit-html",{createHTML:t=
     /* Dial — 45% like original */
     .graphic{
       position:absolute; top:50%; left:50%; transform:translate(-50%,-50%);
-      width:45%; height:45%; min-width:120px; min-height:120px;
+      width:45%; height:45%;
     }
 
     /* Axis labels: smaller & dim grey */
