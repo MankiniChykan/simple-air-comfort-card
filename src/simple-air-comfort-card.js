@@ -183,6 +183,9 @@ class SimpleAirComfortCard extends LitElement {
       t_boiling_max:Number.isFinite(num(config.t_boiling_max))? num(config.t_boiling_max):  60.0,
       // Geometry calibration
       ring_pct, inner_pct, center_pct, y_offset_pct,
+      // RH→X calibration (defaults: inner circle left=40%, right=60%)
+      rh_left_inner_pct:  Number.isFinite(num(config.rh_left_inner_pct))  ? num(config.rh_left_inner_pct)  : 40.0,
+      rh_right_inner_pct: Number.isFinite(num(config.rh_right_inner_pct)) ? num(config.rh_right_inner_pct) : 60.0,
     };
   }
 
@@ -202,7 +205,7 @@ class SimpleAirComfortCard extends LitElement {
             ${this.#face({ Tc: NaN, RH: NaN, dpC: NaN, atC: NaN, dewText: 'Unknown',
                            tempText: 'N/A', rhText: 'N/A', cardBg: this.#backgroundGradientForTempC(NaN),
                            ringGrad: this.#dewpointRingGradientFromText('Unknown'),
-                           innerGrad: this.#innerEyeGradient(NaN, NaN),
+                           innerGrad: this.#innerEyeGradient(NaN, NaN, this.#bandThresholds()),
                            xPct: 50, yPct: 50, outside: false,
                            outUnit: (tState?.attributes?.unit_of_measurement || '°C'), d: this._config.decimals,
                            dewOut: '—', atOut: '—', tempRaw: '—', rhRaw: '—' })}
@@ -230,14 +233,23 @@ class SimpleAirComfortCard extends LitElement {
     // Gradients & bg
     const cardBg    = this.#backgroundGradientForTempC(Tc);
     const ringGrad  = this.#dewpointRingGradientFromText(dewText);
-    const innerGrad = this.#innerEyeGradient(RH, Tc);
+    const B         = this.#bandThresholds();
+    const innerGrad = this.#innerEyeGradient(RH, Tc, B);
 
     // Dot vertical position via geometry-aware anchors + easing
     const yPctBase = this.#tempToYPctGeometryAware(Tc);
     const yPct = Number.isFinite(yPctBase) ? this.#clamp(yPctBase + (this._config.y_offset_pct || 0), 0, 100) : 50;
-    const xPct = Number.isFinite(RH) ? this.#clamp(RH + 0.5, 0, 100) : 50;
+    // Calibrated RH→X so inner-circle intersections hit user targets (0%→left edge, 100%→right edge stay fixed)
+    const xPctBase = this.#rhToXPctCalibrated(RH);
+    const xPct = Number.isFinite(xPctBase) ? this.#clamp(xPctBase, 0, 100) : 50;
+    // Use the same L/R thresholds as your inner-circle calibration for outside flag
+    const Lh = Number(this._config?.rh_left_inner_pct ?? 40);
+    const Rh = Number(this._config?.rh_right_inner_pct ?? 60);
+
+    // Temperature “comfort” edges come from the configured PERFECT band
+
     const outside = (Number.isFinite(RH) && Number.isFinite(Tc))
-      ? (RH < 40 || RH > 60 || Tc < 18 || Tc > 26.4)
+      ? (RH < Lh || RH > Rh || Tc < B.PERFECT.min || Tc > B.PERFECT.max)
       : true;
 
     // Output strings
@@ -366,8 +378,10 @@ class SimpleAirComfortCard extends LitElement {
   }
   #humidityTextFromMacro(RH){
     if (!Number.isFinite(RH)) return 'N/A';
-    if (RH < 40) return 'DRY';
-    if (RH <= 60) return 'COMFY';
+    const L = Number(this._config?.rh_left_inner_pct ?? 40);
+    const R = Number(this._config?.rh_right_inner_pct ?? 60);
+    if (RH < L) return 'DRY';
+    if (RH <= R) return 'COMFY';
     return 'HUMID';
   }
 
@@ -401,29 +415,32 @@ class SimpleAirComfortCard extends LitElement {
     })[text] || 'dimgray';
     return `radial-gradient(circle, ${base}, 55%, rgba(100,100,100,0.15), rgba(100,100,100,0.15))`;
   }
-  #innerEyeGradient(RH, Tc){
-    let humidityColor='black';
-    if (!Number.isFinite(RH)) humidityColor='dimgray';
-    else if (RH < 40 || RH > 60) humidityColor='hotpink';
-    let temperatureColor='dimgray';
-    if (Number.isFinite(Tc)){
-      if (Tc > 34.9) temperatureColor='rgba(255,69,0,0.8)';
-      else if (Tc > 26.5) temperatureColor='rgba(255,69,0,0.8)';
-      else if (Tc > 24.0) temperatureColor='dimgray';
-      else if (Tc > 19.0) temperatureColor='dimgray';
-      else if (Tc > 14.0) temperatureColor='rgba(0,102,255,0.8)';
-      else temperatureColor='rgba(0,102,255,0.8)';
+
+  #innerEyeGradient(RH, Tc, B){
+    // RH color: still tied to the user’s inner-circle thresholds
+    const Lh = Number(this._config?.rh_left_inner_pct ?? 40);
+    const Rh = Number(this._config?.rh_right_inner_pct ?? 60);
+
+    let humidityColor = 'black';
+    if (!Number.isFinite(RH)) humidityColor = 'dimgray';
+    else if (RH < Lh || RH > Rh) humidityColor = 'hotpink';
+
+    // Temperature color from configurable PERFECT band (comfortable window)
+    const lo = B.PERFECT.min;
+    const hi = B.PERFECT.max;
+    let temperatureColor = 'dimgray'; // inside PERFECT → dim gray
+    if (Number.isFinite(Tc)) {
+      if (Tc > hi)      temperatureColor = 'rgba(255,69,0,0.85)';  // above comfortable → red
+      else if (Tc < lo) temperatureColor = 'rgba(0,102,255,0.85)'; // below comfortable → blue
     }
     return `radial-gradient(circle, ${humidityColor} 0%, black, ${temperatureColor} 70%)`;
   }
 
   // =============================== Helpers ===============================
   #clamp(v,a,b){ return Math.min(b, Math.max(a,v)); }
-  #scaleClamped(v, inMin, inMax, outMin, outMax){
-    if (!Number.isFinite(v)) return (outMin+outMax)/2;
-    const t=(v - inMin)/(inMax - inMin);
-    return this.#clamp(outMin + t*(outMax - outMin), outMin, outMax);
-  }
+  // Linear map helper
+  #lerp(t, a, b){ return a + (b - a) * t; }
+  #invLerp(v, a, b){ return (v - a) / (b - a); }
   // Quantize to 0.1 °C (for band lookups only)
   #round1(v){ return Math.round(v * 10) / 10; }
   // Smoothstep easing (C1 continuous) for anchor-to-anchor interpolation
@@ -464,6 +481,9 @@ class SimpleAirComfortCard extends LitElement {
     const C      = Number(this._config?.center_pct ?? 50);    // centre of card
     const R_outer = ring / 2;                      // outer ring radius (card %)
     const R_inner = (innerR/100) * (ring/2);       // inner circle radius (card %)
+    // X anchors for inner circle intersections
+    const x_inner_left  = 50 - R_inner;
+    const x_inner_right = 50 + R_inner;
     const y_outer_bottom = C - R_outer;            // lower diameter of outer ring
     const y_outer_top    = C + R_outer;            // upper diameter of outer ring
     const y_inner_bottom = C - R_inner;            // lower diameter of inner circle
@@ -473,8 +493,40 @@ class SimpleAirComfortCard extends LitElement {
     const y_half_above_outer = (100 + y_outer_top)/2;   // halfway between top edge and outer-ring upper diameter
     return {
       y_outer_bottom, y_outer_top, y_inner_bottom, y_inner_top,
-      y_center, y_half_below_outer, y_half_above_outer
+      y_center, y_half_below_outer, y_half_above_outer,
+      x_inner_left, x_inner_right
     };
+  }
+  // === RH → X% (card) calibrated mapping ====================================
+  // Piecewise linear so that:
+  //   RH=0   → X=0
+  //   RH=L   → X=inner-left
+  //   RH=R   → X=inner-right
+  //   RH=100 → X=100
+  // with L/R configurable (defaults 40/60). Works with any ring/inner geometry.
+  #rhToXPctCalibrated(RH){
+    if (!Number.isFinite(RH)) return NaN;
+    const { x_inner_left: XL, x_inner_right: XR } = this.#geomAnchors();
+    const Lraw = Number(this._config?.rh_left_inner_pct  ?? 40);
+    const Rraw = Number(this._config?.rh_right_inner_pct ?? 60);
+    // sanitize L,R to [0,100] and ensure L < R
+    const L = this.#clamp(Lraw, 0, 100);
+    const R = this.#clamp(Math.max(Rraw, L + 0.1), 0, 100);
+    const v = this.#clamp(RH, 0, 100);
+    // guard degenerate edges (avoid division by zero when L==0 or R==100)
+    const EPS = 1e-6;
+    if (L <= EPS && v <= L) return 0;
+    if (R >= 100 - EPS && v >= R) return 100;
+    if (v <= L){
+      const t = this.#invLerp(v, 0, L);
+      return this.#lerp(t, 0, XL);
+    } else if (v >= R){
+      const t = this.#invLerp(v, R, 100);
+      return this.#lerp(t, XR, 100);
+    } else {
+      const t = this.#invLerp(v, L, R);
+      return this.#lerp(t, XL, XR);
+    }
   }
 
   // Temperature→Y% mapping aligned to your visual landmarks, GUI thresholds drive anchor temps
@@ -620,6 +672,9 @@ class SimpleAirComfortCardEditor extends LitElement {
       ring_pct: 45,
       inner_pct: 46.5,
       y_offset_pct: 0,
+      // RH→X calibration (defaults)
+      rh_left_inner_pct: 40.0,
+      rh_right_inner_pct: 60.0,
       ...(config ?? {}),
     };
     this._schema = [
@@ -657,6 +712,9 @@ class SimpleAirComfortCardEditor extends LitElement {
       { name:'t_hot_max',    selector:{ number:{ min:-60, max: 60, step:0.1, mode:'box', unit_of_measurement:'°C' } } },
       { name:'t_boiling_min',selector:{ number:{ min:-60, max: 80, step:0.1, mode:'box', unit_of_measurement:'°C' } } },
       { name:'t_boiling_max',selector:{ number:{ min:-60, max: 80, step:0.1, mode:'box', unit_of_measurement:'°C' } } },
+      // RH→X calibration (inner-circle intersections)
+      { name:'rh_left_inner_pct',  selector:{ number:{ min:0, max:100, step:0.1, mode:'box', unit_of_measurement:'%' } } },
+      { name:'rh_right_inner_pct', selector:{ number:{ min:0, max:100, step:0.1, mode:'box', unit_of_measurement:'%' } } },
       // Optional geometry calibration fields
       { name:'ring_pct',     selector:{ number:{ min:10,  max:90,  step:0.1,  mode:'box', unit_of_measurement:'%' } } },
       { name:'inner_pct',    selector:{ number:{ min:10,  max:100, step:0.1,  mode:'box', unit_of_measurement:'%' } } },
@@ -721,6 +779,8 @@ class SimpleAirComfortCardEditor extends LitElement {
     t_warm_min:'WARM min (°C)',     t_warm_max:'WARM max (°C)',
     t_hot_min:'HOT min (°C)',       t_hot_max:'HOT max (°C)',
     t_boiling_min:'BOILING min (°C)', t_boiling_max:'BOILING max (°C)',
+    rh_left_inner_pct:'Inner circle left RH (%)',
+    rh_right_inner_pct:'Inner circle right RH (%)',
     ring_pct:'Outer ring box size (% of card)',
     inner_pct:'Inner circle size (% of ring box)',
     y_offset_pct:'Vertical dot offset (%)',
@@ -730,7 +790,6 @@ class SimpleAirComfortCardEditor extends LitElement {
     const id = s.name;
     const st = (key) => this.hass?.states?.[this._config?.[key]];
     const unit = (key) => st(key)?.attributes?.unit_of_measurement ?? "";
-    const dclass = (key) => st(key)?.attributes?.device_class ?? "";
 
     switch (id) {
       case 'name':
@@ -759,6 +818,9 @@ class SimpleAirComfortCardEditor extends LitElement {
       case 't_hot_min':    case 't_hot_max':
       case 't_boiling_min':case 't_boiling_max':
         return 'Bands use 0.1 °C steps. Overlaps auto-fix: each next min ≥ previous max + 0.1.';
+      case 'rh_left_inner_pct':
+      case 'rh_right_inner_pct':
+        return 'Maps RH to the inner-circle intersections horizontally: left = this %, right = this %. 0% stays at the left edge; 100% stays at the right edge.';
       case 'ring_pct':
         return 'Diameter of the outer ring as a % of the card. Keep in sync with your CSS.';
       case 'inner_pct':
@@ -774,13 +836,13 @@ class SimpleAirComfortCardEditor extends LitElement {
   _onChange = (ev) => {
     ev.stopPropagation();
     const merged = { ...(this._config||{}), ...(ev.detail?.value||{}) };
-    const cfg = this._sanitizeBands(merged);
+    const cfg = this._sanitizeBandsAndCal(merged);
     this._config = cfg;
     fireEvent(this, 'config-changed', { config: cfg });
   };
 
   // Add this as a separate method on the class (NOT inside _onChange)
-  _sanitizeBands(cfg){
+  _sanitizeBandsAndCal(cfg){
     const r1 = v => Math.round((Number(v)||0)*10)/10;
     const step = 0.1;
     const keys = [
@@ -804,6 +866,13 @@ class SimpleAirComfortCardEditor extends LitElement {
         if (cfg[lo] < minAllowed) cfg[lo] = minAllowed;
         if (cfg[hi] < cfg[lo]) cfg[hi] = cfg[lo];
       }
+    }
+    // RH→X calibration sanitize: keep within [0,100] and ensure left < right
+    const clamp01 = v => Math.min(100, Math.max(0, r1(v)));
+    cfg.rh_left_inner_pct  = clamp01(cfg.rh_left_inner_pct  ?? 40);
+    cfg.rh_right_inner_pct = clamp01(cfg.rh_right_inner_pct ?? 60);
+    if (cfg.rh_right_inner_pct <= cfg.rh_left_inner_pct){
+      cfg.rh_right_inner_pct = clamp01(cfg.rh_left_inner_pct + 0.1);
     }
     return cfg;
   }
