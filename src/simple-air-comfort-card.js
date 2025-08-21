@@ -59,9 +59,16 @@ class SimpleAirComfortCard extends LitElement {
     .dot.outside::before{
       content:""; position:absolute; inset:-50%; border-radius:50%;
       background:radial-gradient(circle, rgba(255,0,0,.8) 20%, rgba(255,0,0,.3) 50%, rgba(255,0,0,.1) 70%, rgba(255,0,0,0) 100%);
-      animation:sac-blink 1s infinite alternate; z-index:-1;
+      animation:sac-heartbeat 1.15s cubic-bezier(.215,.61,.355,1) infinite; z-index:-1;
     }
-    @keyframes sac-blink{ 0%{opacity:1} 100%{opacity:.3} }
+    @keyframes sac-heartbeat{
+      0%   { transform:scale(1);   opacity:.5; }
+      15%  { transform:scale(1.18);opacity:1;  }
+      30%  { transform:scale(.98); opacity:.6; }
+      45%  { transform:scale(1.12);opacity:1;  }
+      70%  { transform:scale(1);   opacity:.55;}
+      100% { transform:scale(1);   opacity:.5; }
+    }
 
     /* Fill the square with the face */
     .canvas{ position:absolute; inset:0; padding:0px 0px 0px; }
