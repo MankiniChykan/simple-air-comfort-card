@@ -57,7 +57,7 @@ class SimpleAirComfortCard extends LitElement {
       transition:left .8s ease-in-out,bottom .8s ease-in-out; z-index:2;
     }
     .dot.outside::before{
-      content:""; position:absolute; inset:20%; border-radius:50%;
+      content:""; position:absolute; inset:-50%; border-radius:50%;
       background:radial-gradient(circle, rgba(255,0,0,.8) 20%, rgba(255,0,0,.3) 50%, rgba(255,0,0,.1) 70%, rgba(255,0,0,0) 100%);
       animation:sac-blink 1s infinite alternate; z-index:-1;
     }
