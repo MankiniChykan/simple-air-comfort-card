@@ -148,12 +148,6 @@ class SimpleAirComfortCard extends LitElement {
     const temp_min = Number.isFinite(num(config.temp_min)) ? num(config.temp_min) : 15;
     const temp_max = Number.isFinite(num(config.temp_max)) ? num(config.temp_max) : 35;
     if (temp_max <= temp_min) throw new Error('simple-air-comfort-card: temp_max must be > temp_min.');
-    // Geometry (derived from CSS) with safe defaults for your current styles
-    const ring_pct   = Number.isFinite(num(config.ring_pct))  ? num(config.ring_pct)  : 45;   // .graphic size (% of card)
-    const inner_pct  = Number.isFinite(num(config.inner_pct)) ? num(config.inner_pct) : 46.5; // .inner-circle size (% of .graphic)
-    const center_pct = 50; // vertical centre of card (fixed)
-    // Optional fine-tune for vertical placement (percent of card height)
-    const y_offset_pct = Number.isFinite(num(config.y_offset_pct)) ? num(config.y_offset_pct) : 0;
     this._config = {
       name: config.name ?? 'Air Comfort',
       temperature: config.temperature,
@@ -162,17 +156,6 @@ class SimpleAirComfortCard extends LitElement {
       decimals: Number.isFinite(num(config.decimals)) ? num(config.decimals) : 1,
       default_wind_speed: Number.isFinite(num(config.default_wind_speed)) ? num(config.default_wind_speed) : 0.0,
       temp_min, temp_max,
-      // Comfort-text & geometry thresholds (GUI-editable; defaults = your current spec)
-      t_frosty_max: Number.isFinite(num(config.t_frosty_max)) ? num(config.t_frosty_max) : 3.00,
-      t_cold_max:   Number.isFinite(num(config.t_cold_max))   ? num(config.t_cold_max)   : 4.99,
-      t_chilly_max: Number.isFinite(num(config.t_chilly_max)) ? num(config.t_chilly_max) : 8.99,
-      t_cool_max:   Number.isFinite(num(config.t_cool_max))   ? num(config.t_cool_max)   : 13.99,
-      t_mild_max:   Number.isFinite(num(config.t_mild_max))   ? num(config.t_mild_max)   : 18.99,
-      t_perf_max:   Number.isFinite(num(config.t_perf_max))   ? num(config.t_perf_max)   : 23.99,
-      t_warm_max:   Number.isFinite(num(config.t_warm_max))   ? num(config.t_warm_max)   : 27.99,
-      t_hot_max:    Number.isFinite(num(config.t_hot_max))    ? num(config.t_hot_max)    : 34.99,
-      // Geometry calibration
-      ring_pct, inner_pct, center_pct, y_offset_pct,
     };
   }
 
@@ -222,9 +205,11 @@ class SimpleAirComfortCard extends LitElement {
     const ringGrad  = this.#dewpointRingGradientFromText(dewText);
     const innerGrad = this.#innerEyeGradient(RH, Tc);
 
-    // Dot vertical position via geometry-aware anchors + easing
-    const yPctBase = this.#tempToYPctGeometryAware(Tc);
-    const yPct = Number.isFinite(yPctBase) ? this.#clamp(yPctBase + (this._config.y_offset_pct || 0), 0, 100) : 50;
+    // Dot (percent of the whole card; defaults to exact center if NaN)
+    const { temp_min, temp_max } = this._config;
+    const yPct = Number.isFinite(Tc)
+      ? this.#clamp(this.#scaleClamped(Tc, temp_min, temp_max, 0, 100) + 15, 0, 100)
+      : 50;
     const xPct = Number.isFinite(RH) ? this.#clamp(RH + 0.5, 0, 100) : 50;
     const outside = (Number.isFinite(RH) && Number.isFinite(Tc))
       ? (RH < 40 || RH > 60 || Tc < 18 || Tc > 26.4)
@@ -336,23 +321,14 @@ class SimpleAirComfortCard extends LitElement {
   }
   #temperatureTextFromMacro(Tc){
     if (!Number.isFinite(Tc)) return 'N/A';
-    const C = this._config || {};
-    const T_FROSTY_MAX = C.t_frosty_max ?? 3.00;
-    const T_COLD_MAX   = C.t_cold_max   ?? 4.99;
-    const T_CHILLY_MAX = C.t_chilly_max ?? 8.99;
-    const T_COOL_MAX   = C.t_cool_max   ?? 13.99;
-    const T_MILD_MAX   = C.t_mild_max   ?? 18.99;
-    const T_PERF_MAX   = C.t_perf_max   ?? 23.99;
-    const T_WARM_MAX   = C.t_warm_max   ?? 27.99;
-    const T_HOT_MAX    = C.t_hot_max    ?? 34.99;
-    if (Tc <  T_FROSTY_MAX) return 'FROSTY';
-    if (Tc <= T_COLD_MAX)   return 'COLD';
-    if (Tc <= T_CHILLY_MAX) return 'CHILLY';
-    if (Tc <= T_COOL_MAX)   return 'COOL';
-    if (Tc <= T_MILD_MAX)   return 'MILD';
-    if (Tc <= T_PERF_MAX)   return 'PERFECT';
-    if (Tc <= T_WARM_MAX)   return 'WARM';
-    if (Tc <= T_HOT_MAX)    return 'HOT';
+    if (Tc < 3) return 'FROSTY';
+    if (Tc <= 4.99) return 'COLD';
+    if (Tc <= 8.99) return 'CHILLY';
+    if (Tc <= 13.99) return 'COOL';
+    if (Tc <= 18.99) return 'MILD';
+    if (Tc <= 23.99) return 'PERFECT';
+    if (Tc <= 27.99) return 'WARM';
+    if (Tc <= 34.99) return 'HOT';
     return 'BOILING';
   }
   #humidityTextFromMacro(RH){
@@ -422,75 +398,6 @@ class SimpleAirComfortCard extends LitElement {
     if (!Number.isFinite(v)) return (outMin+outMax)/2;
     const t=(v - inMin)/(inMax - inMin);
     return this.#clamp(outMin + t*(outMax - outMin), outMin, outMax);
-  }
-  // Smoothstep easing (C1 continuous) for anchor-to-anchor interpolation
-  #smoothstep(x){ return x*x*(3 - 2*x); }
-
-  // Geometry anchors computed from CSS-like percentages
-  #geomAnchors(){
-    const ring   = Number(this._config?.ring_pct   ?? 45);    // % of card
-    const innerR = Number(this._config?.inner_pct  ?? 46.5);  // % of .graphic
-    const C      = Number(this._config?.center_pct ?? 50);    // centre of card
-    const R_outer = ring / 2;                      // outer ring radius (card %)
-    const R_inner = (innerR/100) * (ring/2);       // inner circle radius (card %)
-    const y_outer_bottom = C - R_outer;            // lower diameter of outer ring
-    const y_outer_top    = C + R_outer;            // upper diameter of outer ring
-    const y_inner_bottom = C - R_inner;            // lower diameter of inner circle
-    const y_inner_top    = C + R_inner;            // upper diameter of inner circle
-    const y_center       = C;
-    const y_half_below_outer = (0 + y_outer_bottom)/2;  // halfway between bottom edge and outer-ring lower diameter
-    const y_half_above_outer = (100 + y_outer_top)/2;   // halfway between top edge and outer-ring upper diameter
-    return {
-      y_outer_bottom, y_outer_top, y_inner_bottom, y_inner_top,
-      y_center, y_half_below_outer, y_half_above_outer
-    };
-  }
-
-  // Temperature→Y% mapping aligned to your visual landmarks, GUI thresholds drive anchor temps
-  #tempToYPctGeometryAware(Tc){
-    const a = this.#geomAnchors();
-    const C = this._config || {};
-    // Pull GUI-configured maxima for each band
-    const T_FROSTY_MAX = C.t_frosty_max ?? 3.00;
-    const T_COLD_MAX   = C.t_cold_max   ?? 4.99;
-    const T_CHILLY_MAX = C.t_chilly_max ?? 8.99;
-    const T_COOL_MAX   = C.t_cool_max   ?? 13.99;
-    const T_MILD_MAX   = C.t_mild_max   ?? 18.99;
-    const T_PERF_MAX   = C.t_perf_max   ?? 23.99;
-    const T_WARM_MAX   = C.t_warm_max   ?? 27.99;
-    const T_HOT_MAX    = C.t_hot_max    ?? 34.99;
-
-    // Choose representative temps for visual anchors (kept intuitive and monotonic)
-    const T_FROSTY_ANCH       = T_FROSTY_MAX;
-    const T_COOL_LOWER_ANCH   = T_CHILLY_MAX;               // boundary after CHILLY
-    const T_MILD_LOWER_ANCH   = T_COOL_MAX;                 // boundary after COOL
-    const T_PERF_CENTER_ANCH  = (T_MILD_MAX + T_PERF_MAX)/2;
-    const T_WARM_UPPER_ANCH   = T_PERF_MAX;                 // boundary after PERFECT
-    const T_HOT_UPPER_ANCH    = T_WARM_MAX;                 // boundary after WARM
-    const T_BOIL_ANCH         = Math.min(60, Math.max(T_HOT_MAX + 5, 40));
-
-    const P = [
-      { t: T_FROSTY_ANCH,     y: a.y_half_below_outer }, // FROSTY → halfway between bottom and outer-ring lower diameter
-      { t: T_COOL_LOWER_ANCH, y: a.y_outer_bottom     }, // COOL   → outer-ring lower diameter
-      { t: T_MILD_LOWER_ANCH, y: a.y_inner_bottom     }, // MILD   → inner-circle lower diameter
-      { t: T_PERF_CENTER_ANCH,y: a.y_center           }, // PERFECT→ centre
-      { t: T_WARM_UPPER_ANCH, y: a.y_inner_top        }, // WARM   → inner-circle upper diameter
-      { t: T_HOT_UPPER_ANCH,  y: a.y_outer_top        }, // HOT    → outer-ring upper diameter
-      { t: T_BOIL_ANCH,       y: a.y_half_above_outer }, // BOILING→ halfway between top and outer-ring upper diameter
-    ];
-    if (!Number.isFinite(Tc)) return a.y_center;
-    if (Tc <= P[0].t) return P[0].y;
-    if (Tc >= P[P.length-1].t) return P[P.length-1].y;
-    // Smoothstep across all intervals
-    for (let i = 0; i < P.length - 1; i++){
-      const a0 = P[i], a1 = P[i+1];
-      if (Tc >= a0.t && Tc <= a1.t){
-        const s = this.#clamp((Tc - a0.t) / (a1.t - a0.t), 0, 1);
-        const e = this.#smoothstep(s);
-        return a0.y + (a1.y - a0.y) * e;
-      }
-    }
-    return a.y_center;
   }
   #clampRH(rh){ return Number.isFinite(rh) ? Math.min(100, Math.max(0, rh)) : NaN; }
 
@@ -580,20 +487,6 @@ class SimpleAirComfortCardEditor extends LitElement {
       name:'Area Name',
       temperature: undefined, humidity: undefined, windspeed: undefined,
       decimals:1, default_wind_speed:0.1, temp_min:15, temp_max:35,
-      decimals:1, default_wind_speed:0.1, temp_min:15, temp_max:35,
-      // Defaults for GUI-editable thresholds (comfort text + geometry)
-      t_frosty_max: 3.00,
-      t_cold_max:   4.99,
-      t_chilly_max: 8.99,
-      t_cool_max:   13.99,
-      t_mild_max:   18.99,
-      t_perf_max:   23.99,
-      t_warm_max:   27.99,
-      t_hot_max:    34.99,
-      // Optional geometry calibration
-      ring_pct: 45,
-      inner_pct: 46.5,
-      y_offset_pct: 0,
       ...(config ?? {}),
     };
     this._schema = [
@@ -612,20 +505,6 @@ class SimpleAirComfortCardEditor extends LitElement {
       { name:'decimals', selector:{ number:{ min:0, max:3, step:1, mode:'box' } } },
       { name:'temp_min', selector:{ number:{ min:-20, max:50, step:0.1, mode:'box', unit_of_measurement:'°C' } } },
       { name:'temp_max', selector:{ number:{ min:-20, max:60, step:0.1, mode:'box', unit_of_measurement:'°C' } } },
-      // Comfort-text & geometry thresholds (°C)
-      { name:'t_frosty_max', selector:{ number:{ min:-40, max:10,  step:0.01, mode:'box', unit_of_measurement:'°C' } } },
-      { name:'t_cold_max',   selector:{ number:{ min:-40, max:15,  step:0.01, mode:'box', unit_of_measurement:'°C' } } },
-      { name:'t_chilly_max', selector:{ number:{ min:-40, max:20,  step:0.01, mode:'box', unit_of_measurement:'°C' } } },
-      { name:'t_cool_max',   selector:{ number:{ min:-40, max:25,  step:0.01, mode:'box', unit_of_measurement:'°C' } } },
-      { name:'t_mild_max',   selector:{ number:{ min:-40, max:30,  step:0.01, mode:'box', unit_of_measurement:'°C' } } },
-      { name:'t_perf_max',   selector:{ number:{ min:-40, max:35,  step:0.01, mode:'box', unit_of_measurement:'°C' } } },
-      { name:'t_warm_max',   selector:{ number:{ min:-40, max:40,  step:0.01, mode:'box', unit_of_measurement:'°C' } } },
-      { name:'t_hot_max',    selector:{ number:{ min:-40, max:60,  step:0.01, mode:'box', unit_of_measurement:'°C' } } },
-      // Optional geometry calibration fields
-      { name:'ring_pct',     selector:{ number:{ min:10,  max:90,  step:0.1,  mode:'box', unit_of_measurement:'%' } } },
-      { name:'inner_pct',    selector:{ number:{ min:10,  max:100, step:0.1,  mode:'box', unit_of_measurement:'%' } } },
-      { name:'y_offset_pct', selector:{ number:{ min:-30, max:30,  step:0.5,  mode:'box', unit_of_measurement:'%' } } },
-
     ];
   }
 
@@ -647,17 +526,6 @@ class SimpleAirComfortCardEditor extends LitElement {
     name:'Name', temperature:'Temperature entity', humidity:'Humidity entity', windspeed:'Wind speed entity (optional)',
     default_wind_speed:'Default wind speed (m/s)', decimals:'Decimals',
     temp_min:'Dot temp min (°C)', temp_max:'Dot temp max (°C)',
-    t_frosty_max:'FROSTY max (°C)',
-    t_cold_max:'COLD max (°C)',
-    t_chilly_max:'CHILLY max (°C)',
-    t_cool_max:'COOL max (°C)',
-    t_mild_max:'MILD max (°C)',
-    t_perf_max:'PERFECT max (°C)',
-    t_warm_max:'WARM max (°C)',
-    t_hot_max:'HOT max (°C)',
-    ring_pct:'Outer ring box size (% of card)',
-    inner_pct:'Inner circle size (% of ring box)',
-    y_offset_pct:'Vertical dot offset (%)',
   })[s.name] ?? s.name;
 
   _helper = (s) => {
@@ -683,21 +551,6 @@ class SimpleAirComfortCardEditor extends LitElement {
         return 'Lower bound of the dot’s vertical scale (affects Y mapping only).';
       case 'temp_max':
         return 'Upper bound of the dot’s vertical scale. Must be greater than min.';
-      case 't_frosty_max':
-      case 't_cold_max':
-      case 't_chilly_max':
-      case 't_cool_max':
-      case 't_mild_max':
-      case 't_perf_max':
-      case 't_warm_max':
-      case 't_hot_max':
-        return 'Boundary temperatures used for both comfort text and the dot’s vertical mapping.';
-      case 'ring_pct':
-        return 'Diameter of the outer ring as a % of the card. Keep in sync with your CSS.';
-      case 'inner_pct':
-        return 'Diameter of the inner circle as a % of the outer ring box. Keep in sync with your CSS.';
-      case 'y_offset_pct':
-        return 'Fine-tune the dot’s vertical position in % of card height (positive moves up).';
       default:
         return 'Tip: values update immediately; click Save when done.';
     }
