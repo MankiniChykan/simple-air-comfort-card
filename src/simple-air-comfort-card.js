@@ -471,8 +471,8 @@ class SimpleAirComfortCard extends LitElement {
   // Shared palette (themeable via CSS vars; falls back to current literals)
   #palette(){
     return {
-      hot:   'var(--sac-col-hot, rgba(255,69,0,1))',
-      cold:  'var(--sac-col-cold, rgba(0,102,255,1))',
+      hot:   'var(--sac-col-hot, rgba(255,69,0,0.85))',
+      cold:  'var(--sac-col-cold, rgba(0,102,255,0.85))',
       humid: 'var(--sac-col-humid-alert, hotpink)',
       inband:'var(--sac-col-inband, dimgray)',
     };
