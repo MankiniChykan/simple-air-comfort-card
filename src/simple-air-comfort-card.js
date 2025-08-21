@@ -253,10 +253,29 @@ class SimpleAirComfortCard extends LitElement {
     const isCold   = Number.isFinite(Tc) && Tc < B.PERFECT.min;
     const isLowRH  = Number.isFinite(RH) && RH < Lh;
     const isHighRH = Number.isFinite(RH) && RH > Rh;
-    const axisTopStyle    = isHot    ? `text-shadow:0 0 6px ${pal.hot}, 0 0 15px ${pal.hot}` : '';
-    const axisBottomStyle = isCold   ? `text-shadow:0 0 6px ${pal.cold}, 0 0 15px ${pal.cold}` : '';
-    const axisLeftStyle   = isLowRH  ? `text-shadow:0 0 6px ${pal.humid}, 0 0 15px ${pal.humid}` : '';
-    const axisRightStyle  = isHighRH ? `text-shadow:0 0 6px ${pal.humid}, 0 0 15px ${pal.humid}` : '';
+    const axisTopStyle    = isHot    ? `text-shadow:
+      0 0 2px ${pal.hot},
+      0 0 6px ${pal.hot},
+      0 0 12px ${pal.hot},
+      0 0 20px ${pal.hot}` : '';
+
+    const axisBottomStyle = isCold   ? `text-shadow:
+      0 0 2px ${pal.cold},
+      0 0 6px ${pal.cold},
+      0 0 12px ${pal.cold},
+      0 0 20px ${pal.cold}` : '';
+
+    const axisLeftStyle   = isLowRH  ? `text-shadow:
+      0 0 2px ${pal.humid},
+      0 0 6px ${pal.humid},
+      0 0 12px ${pal.humid},
+      0 0 20px ${pal.humid}` : '';
+
+    const axisRightStyle  = isHighRH ? `text-shadow:
+      0 0 2px ${pal.humid},
+      0 0 6px ${pal.humid},
+      0 0 12px ${pal.humid},
+      0 0 20px ${pal.humid}` : '';
  
 
     // Dot vertical position via geometry-aware anchors + easing
