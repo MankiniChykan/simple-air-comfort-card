@@ -1,4 +1,4 @@
-import { LitElement, html, css } from 'lit';
+import { LitElement, html, css, nothing } from 'lit';
 
 /**
  * Simple Air Comfort Card — src/simple-air-comfort-card.js
@@ -243,6 +243,10 @@ class SimpleAirComfortCard extends LitElement {
     const B         = this.#bandThresholds();
     const innerGrad = this.#innerEyeGradient(RH, Tc, B);
 
+    // Use the same L/R thresholds as your inner-circle calibration for outside flag
+    const Lh = Number(this._config?.rh_left_inner_pct ?? 40);
+    const Rh = Number(this._config?.rh_right_inner_pct ?? 60);
+
     // Axis color overrides (fallback to default CSS color when condition not met)
     const pal = this.#palette();
     const isHot    = Number.isFinite(Tc) && Tc > B.PERFECT.max;
@@ -260,9 +264,6 @@ class SimpleAirComfortCard extends LitElement {
     // Calibrated RH→X so inner-circle intersections hit user targets (0%→left edge, 100%→right edge stay fixed)
     const xPctBase = this.#rhToXPctCalibrated(RH);
     const xPct = Number.isFinite(xPctBase) ? this.#clamp(xPctBase, 0, 100) : 50;
-    // Use the same L/R thresholds as your inner-circle calibration for outside flag
-    const Lh = Number(this._config?.rh_left_inner_pct ?? 40);
-    const Rh = Number(this._config?.rh_right_inner_pct ?? 60);
 
     // Temperature “comfort” edges come from the configured PERFECT band
 
@@ -332,10 +333,10 @@ class SimpleAirComfortCard extends LitElement {
 
       <!-- Dial -->
       <div class="graphic" style="--sac-dewpoint-ring:${ringGrad}; --sac-inner-gradient:${innerGrad}">
-        <div class="axis axis-top"    style=${axisTopStyle}>Warm</div>
-        <div class="axis axis-bottom" style=${axisBottomStyle}>Cold</div>
-        <div class="axis axis-left"   style=${axisLeftStyle}>Dry</div>
-        <div class="axis axis-right"  style=${axisRightStyle}>Humid</div>
+        <div class="axis axis-top"    style=${axisTopStyle || nothing}>Warm</div>
+        <div class="axis axis-bottom" style=${axisBottomStyle || nothing}>Cold</div>
+        <div class="axis axis-left"   style=${axisLeftStyle || nothing}>Dry</div>
+        <div class="axis axis-right"  style=${axisRightStyle || nothing}>Humid</div>
 
         <div class="outer-ring"></div>
         <div class="inner-circle"></div>
