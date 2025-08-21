@@ -243,6 +243,17 @@ class SimpleAirComfortCard extends LitElement {
     const B         = this.#bandThresholds();
     const innerGrad = this.#innerEyeGradient(RH, Tc, B);
 
+    // Axis color overrides (fallback to default CSS color when condition not met)
+    const pal = this.#palette();
+    const isHot    = Number.isFinite(Tc) && Tc > B.PERFECT.max;
+    const isCold   = Number.isFinite(Tc) && Tc < B.PERFECT.min;
+    const isLowRH  = Number.isFinite(RH) && RH < Lh;
+    const isHighRH = Number.isFinite(RH) && RH > Rh;
+    const axisTopStyle    = isHot    ? `color:${pal.hot}`   : '';
+    const axisBottomStyle = isCold   ? `color:${pal.cold}`  : '';
+    const axisLeftStyle   = isLowRH  ? `color:${pal.humid}` : '';
+    const axisRightStyle  = isHighRH ? `color:${pal.humid}` : '';
+
     // Dot vertical position via geometry-aware anchors + easing
     const yPctBase = this.#tempToYPctGeometryAware(Tc);
     const yPct = Number.isFinite(yPctBase) ? this.#clamp(yPctBase + (this._config.y_offset_pct || 0), 0, 100) : 50;
@@ -275,7 +286,8 @@ class SimpleAirComfortCard extends LitElement {
             dewText, tempText, rhText,
             cardBg, ringGrad, innerGrad,
             xPct, yPct, outside,
-            outUnit, d, dewOut, atOut, tempRaw, rhRaw
+            outUnit, d, dewOut, atOut, tempRaw, rhRaw,
+            axisTopStyle, axisBottomStyle, axisLeftStyle, axisRightStyle
           })}
         </div>
       </div>
@@ -287,7 +299,8 @@ class SimpleAirComfortCard extends LitElement {
     dewText, tempText, rhText,
     ringGrad, innerGrad,
     xPct, yPct, outside,
-    dewOut, atOut, tempRaw, rhRaw
+    dewOut, atOut, tempRaw, rhRaw,
+    axisTopStyle = '', axisBottomStyle = '', axisLeftStyle = '', axisRightStyle = ''
   }) {
     return html`
       <div class="header">
@@ -319,10 +332,10 @@ class SimpleAirComfortCard extends LitElement {
 
       <!-- Dial -->
       <div class="graphic" style="--sac-dewpoint-ring:${ringGrad}; --sac-inner-gradient:${innerGrad}">
-        <div class="axis axis-top">Warm</div>
-        <div class="axis axis-bottom">Cold</div>
-        <div class="axis axis-left">Dry</div>
-        <div class="axis axis-right">Humid</div>
+        <div class="axis axis-top"    style=${axisTopStyle}>Warm</div>
+        <div class="axis axis-bottom" style=${axisBottomStyle}>Cold</div>
+        <div class="axis axis-left"   style=${axisLeftStyle}>Dry</div>
+        <div class="axis axis-right"  style=${axisRightStyle}>Humid</div>
 
         <div class="outer-ring"></div>
         <div class="inner-circle"></div>
@@ -424,21 +437,22 @@ class SimpleAirComfortCard extends LitElement {
   }
 
   #innerEyeGradient(RH, Tc, B){
+    const pal = this.#palette();
     // RH color: still tied to the user’s inner-circle thresholds
     const Lh = Number(this._config?.rh_left_inner_pct ?? 40);
     const Rh = Number(this._config?.rh_right_inner_pct ?? 60);
 
     let humidityColor = 'black';
-    if (!Number.isFinite(RH)) humidityColor = 'dimgray';
-    else if (RH < Lh || RH > Rh) humidityColor = 'hotpink';
+    if (!Number.isFinite(RH))       humidityColor = 'dimgray';
+    else if (RH < Lh || RH > Rh)    humidityColor = pal.humid;
 
     // Temperature color from configurable PERFECT band (comfortable window)
     const lo = B.PERFECT.min;
     const hi = B.PERFECT.max;
-    let temperatureColor = 'dimgray'; // inside PERFECT → dim gray
+    let temperatureColor = pal.inband; // inside PERFECT → dim gray
     if (Number.isFinite(Tc)) {
-      if (Tc > hi)      temperatureColor = 'rgba(255,69,0,0.85)';  // above comfortable → red
-      else if (Tc < lo) temperatureColor = 'rgba(0,102,255,0.85)'; // below comfortable → blue
+     if (Tc > hi)      temperatureColor = pal.hot;   // above comfortable → red
+      else if (Tc < lo) temperatureColor = pal.cold;  // below comfortable → blue
     }
     return `radial-gradient(circle, ${humidityColor} 0%, black, ${temperatureColor} 70%)`;
   }
@@ -452,6 +466,16 @@ class SimpleAirComfortCard extends LitElement {
   #round1(v){ return Math.round(v * 10) / 10; }
   // Smoothstep easing (C1 continuous) for anchor-to-anchor interpolation
   #smoothstep(x){ return x*x*(3 - 2*x); }
+
+  // Shared palette (themeable via CSS vars; falls back to current literals)
+  #palette(){
+    return {
+      hot:   'var(--sac-col-hot, rgba(255,69,0,0.85))',
+      cold:  'var(--sac-col-cold, rgba(0,102,255,0.85))',
+      humid: 'var(--sac-col-humid-alert, hotpink)',
+      inband:'var(--sac-col-inband, dimgray)',
+    };
+  }
 
   // Build sanitized bands (contiguous, non-overlapping, 0.1 steps)
   #bandThresholds(){
