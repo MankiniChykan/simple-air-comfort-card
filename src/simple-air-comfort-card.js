@@ -253,10 +253,10 @@ class SimpleAirComfortCard extends LitElement {
     const isCold   = Number.isFinite(Tc) && Tc < B.PERFECT.min;
     const isLowRH  = Number.isFinite(RH) && RH < Lh;
     const isHighRH = Number.isFinite(RH) && RH > Rh;
-    const axisTopStyle    = isHot    ? `text-shadow:0 0 6px ${pal.hot}, 0 0 10px ${pal.hot}` : '';
-    const axisBottomStyle = isCold   ? `text-shadow:0 0 6px ${pal.cold}, 0 0 10px ${pal.cold}` : '';
-    const axisLeftStyle   = isLowRH  ? `text-shadow:0 0 6px ${pal.humid}, 0 0 10px ${pal.humid}` : '';
-    const axisRightStyle  = isHighRH ? `text-shadow:0 0 6px ${pal.humid}, 0 0 10px ${pal.humid}` : '';
+    const axisTopStyle    = isHot    ? `text-shadow:0 0 6px ${pal.hot}, 0 0 15px ${pal.hot}` : '';
+    const axisBottomStyle = isCold   ? `text-shadow:0 0 6px ${pal.cold}, 0 0 15px ${pal.cold}` : '';
+    const axisLeftStyle   = isLowRH  ? `text-shadow:0 0 6px ${pal.humid}, 0 0 15px ${pal.humid}` : '';
+    const axisRightStyle  = isHighRH ? `text-shadow:0 0 6px ${pal.humid}, 0 0 15px ${pal.humid}` : '';
  
 
     // Dot vertical position via geometry-aware anchors + easing
@@ -472,8 +472,8 @@ class SimpleAirComfortCard extends LitElement {
   // Shared palette (themeable via CSS vars; falls back to current literals)
   #palette(){
     return {
-      hot:   'var(--sac-col-hot, rgba(255,69,0,0.85))',
-      cold:  'var(--sac-col-cold, rgba(0,102,255,0.85))',
+      hot:   'var(--sac-col-hot, rgba(255,69,0,0.95))',
+      cold:  'var(--sac-col-cold, rgba(0,102,255,0.95))',
       humid: 'var(--sac-col-humid-alert, hotpink)',
       inband:'var(--sac-col-inband, dimgray)',
     };
