@@ -253,10 +253,11 @@ class SimpleAirComfortCard extends LitElement {
     const isCold   = Number.isFinite(Tc) && Tc < B.PERFECT.min;
     const isLowRH  = Number.isFinite(RH) && RH < Lh;
     const isHighRH = Number.isFinite(RH) && RH > Rh;
-    const axisTopStyle    = isHot    ? `color:${pal.hot}`   : '';
-    const axisBottomStyle = isCold   ? `color:${pal.cold}`  : '';
-    const axisLeftStyle   = isLowRH  ? `color:${pal.humid}` : '';
-    const axisRightStyle  = isHighRH ? `color:${pal.humid}` : '';
+    const axisTopStyle    = isHot    ? `text-shadow:0 0 6px ${pal.hot}, 0 0 10px ${pal.hot}` : '';
+    const axisBottomStyle = isCold   ? `text-shadow:0 0 6px ${pal.cold}, 0 0 10px ${pal.cold}` : '';
+    const axisLeftStyle   = isLowRH  ? `text-shadow:0 0 6px ${pal.humid}, 0 0 10px ${pal.humid}` : '';
+    const axisRightStyle  = isHighRH ? `text-shadow:0 0 6px ${pal.humid}, 0 0 10px ${pal.humid}` : '';
+ 
 
     // Dot vertical position via geometry-aware anchors + easing
     const yPctBase = this.#tempToYPctGeometryAware(Tc);
