@@ -67,7 +67,7 @@ class SimpleAirComfortCard extends LitElement {
       30%  { transform:scale(.98); opacity:.6;  }
       45%  { transform:scale(1.12);opacity:1;   }  /* second thump */
       55%  { transform:scale(1);   opacity:0;   }  /* fade to clear */
-      100% { transform:scale(1);   opacity:0;   }  /* stay clear until next cycle 
+      100% { transform:scale(1);   opacity:0;   }  /* stay clear until next cycle */ 
     }
 
     /* Fill the square with the face */
