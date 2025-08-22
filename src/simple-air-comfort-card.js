@@ -70,7 +70,7 @@ class SimpleAirComfortCard extends LitElement {
       width:100%;
       max-width:100%;
       max-height:100%;
-      aspect-ratio: 1 / 1;
+      aspect-ratio:1 / 1;         /* replaces the ::before padding hack */
       margin:0;
       overflow:hidden;
       flex:0 0 auto;
@@ -1061,5 +1061,3 @@ SimpleAirComfortCard.prototype.getGridOptions = function () {
     max_rows: 6,
   };
 };
-
-
