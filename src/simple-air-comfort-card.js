@@ -1154,7 +1154,7 @@ _sanitizeBandsAndCal(cfg){
     cfg.rh_right_inner_pct = clamp01(cfg.rh_left_inner_pct + 0.1);
   }
 
-  // 5) Purge unused edges so they save as “blank” in YAML
+  // 5) Purge unused edges so they save ass “blank” in YAML
   delete cfg.t_frosty_min;
   delete cfg.t_boiling_max;
 
