@@ -186,10 +186,10 @@ class SimpleAirComfortCard extends LitElement {
       display: block;
       margin-top: 0rem;
     }
-    .tl{ left:0%;  top:0%;  transform:translate(10%,50%); text-align:left; }
-    .tr{ right:0%; top:0%;  transform:translate(90%,50%); text-align:right; }
-    .bl{ left:0%;  bottom:0%; transform:translate(10%,25%);   text-align:left; }
-    .br{ right:0%; bottom:0%; transform:translate(90%,25%);   text-align:right; }
+    .tl{ left:0%;  top:0%;  transform:translate(8%,23%); text-align:left; }
+    .tr{ right:0%; top:0%;  transform:translate(-8%,23%); text-align:right; }
+    .bl{ left:0%;  bottom:0%; transform:translate(8%,-3%);   text-align:left; }
+    .br{ right:0%; bottom:0%; transform:translate(-8%,-3%);   text-align:right; }
 
     /* The circular dial (outer ring + inner circle) sized at 45% of the stage */
     .graphic{
