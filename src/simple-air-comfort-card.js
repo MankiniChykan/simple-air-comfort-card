@@ -46,7 +46,7 @@ class SimpleAirComfortCard extends LitElement {
       /* stretch to grid cell and center contents */
       display:flex; align-items:center; justify-content:center;
       box-sizing:border-box; min-height:0;
-      /* prevent children from affecting outer sizing via fractional overflow */
+      /* prevent children from affecting outer sizing via fractional overflows */
       contain: layout paint size;
       /* no aspect-ratio here; the grid rows control height */
     }
