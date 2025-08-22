@@ -37,34 +37,42 @@ class SimpleAirComfortCard extends LitElement {
   // ================================ Styles ================================
   static styles = css`
     /* Host should not force a height; HA grid drives width, .ratio drives height */
-    :host{ display:inline-block; width:100%; box-sizing:border-box; }
-
-    ha-card{
-      position:relative; padding:0; overflow:hidden; isolation:isolate;
-      border-radius:var(--ha-card-border-radius,12px);
-      background:var(--sac-temp-bg,#2a2a2a);
-      /* stretch to grid cell and center contents */
-      display:flex; align-items:center; justify-content:center;
-      box-sizing:border-box; min-height:0; height:100%;
-      /* prevent children from affecting outer sizing via fractional overflows */
-      contain: layout paint;
-      /* no aspect-ratio here; the grid rows control height */
+    :host{
+      display:inline-block;
+      width:100%;
+      box-sizing:border-box;
+      min-height:0;               /* guard against flex overflow math */
     }
 
-      /* Inner square: bullet‑proof “padding-top:100%” square, centered by flex */
-      .ratio{
-        position:relative;
-        width:100%;
-        max-width:100%;
-        margin:0;
-        overflow:hidden;
-        flex: 0 0 auto;            /* don’t let flexbox collapse it */
-      }
-      .ratio::before{
-        content:"";
-        display:block;
-        padding-top:100%;          /* makes the box square from width */
-      }
+    ha-card{
+      position:relative;
+      padding:0;
+      overflow:hidden;
+      isolation:isolate;
+      border-radius:var(--ha-card-border-radius,12px);
+      background:var(--sac-temp-bg,#2a2a2a);
+      /* center the square */
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      box-sizing:border-box;
+      min-height:0;               /* important in grid/flex contexts */
+      /* no explicit height; let content drive it */
+      contain: layout paint;      /* safe */
+    }
+
+    /* Inner square: aspect-ratio enforces 1:1, centered by flex */
+    .ratio{
+      position:relative;
+      display:block;
+      width:100%;
+      max-width:100%;
+      max-height:100%;
+      aspect-ratio:1 / 1;         /* replaces the ::before padding hack */
+      margin:0;
+      overflow:hidden;
+      flex:0 0 auto;
+    }
 
     /* Dot (+ halo when outside) — positioned in % of the whole card */
     .dot{
@@ -1015,12 +1023,12 @@ SimpleAirComfortCard.prototype.getGridOptions = function () {
   return {
     // Default footprint (what you asked for):
     columns: 6,   // use multiples of 3 for nicer defaults
-    rows: 4,      // ~ 4 * 56px + gaps managed by HA
+    rows: "auto",      // ~ 4 * 56px + gaps managed by HA
 
     // Reasonable bounds so it still looks good when users resize:
     min_columns: 6,
     max_columns: 12,
-    min_rows: 4,
+    min_rows: 1,
     max_rows: 6,
   };
 };
