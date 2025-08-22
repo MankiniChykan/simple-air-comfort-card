@@ -85,13 +85,16 @@ class SimpleAirComfortCard extends LitElement {
       box-sizing:border-box;
       min-height:0;               /* avoid flex overflow weirdness in dashboards */
       --sac-scale: 1;             /* dynamic type scaling set by ResizeObserver */
+      /* ADD THIS RULE: This is the key change */
+      ha-card {
+        margin: 0 !important; /* Forces the removal of the external margin */
+      }
     }
 
     /* ha-card: our visual container (rounded, dark background) */
     ha-card{
       position:relative;
       padding:0 !important;
-      margin:0 !important;
       overflow:hidden;
       isolation:isolate;
       border-radius:var(--ha-card-border-radius,12px);
