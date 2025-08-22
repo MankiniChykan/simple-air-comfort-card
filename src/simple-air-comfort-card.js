@@ -1099,52 +1099,58 @@ class SimpleAirComfortCardEditor extends LitElement {
     }
   };
 
-  // Mirror user edits → sanitize → notify HA of config changes
-  _onChange = (ev) => {
-    ev.stopPropagation();
-    const merged = { ...(this._config||{}), ...(ev.detail?.value||{}) };
-    const cfg = this._sanitizeBandsAndCal(merged);
-    this._config = cfg;
-    fireEvent(this, 'config-changed', { config: cfg });
-  };
+// Clamp all band mins/maxes to 0.1 steps & enforce strict contiguity; fix RH L<R
+_sanitizeBandsAndCal(cfg){
+  const r1 = v => Math.round((Number(v)||0) * 10) / 10;
+  const step = 0.1;
 
-  // Clamp all band mins/maxes to 0.1 steps & enforce contiguity; fix RH L<R
-  _sanitizeBandsAndCal(cfg){
-    const r1 = v => Math.round((Number(v)||0)*10)/10;
-    const step = 0.1;
-    const keys = [
-      ['t_frosty_min','t_frosty_max'],
-      ['t_cold_min','t_cold_max'],
-      ['t_chilly_min','t_chilly_max'],
-      ['t_cool_min','t_cool_max'],
-      ['t_mild_min','t_mild_max'],
-      ['t_perf_min','t_perf_max'],
-      ['t_warm_min','t_warm_max'],
-      ['t_hot_min','t_hot_max'],
-      ['t_boiling_min','t_boiling_max'],
-    ];
-    // Normalize each pair to one decimal
-    for (const [lo,hi] of keys){ cfg[lo]=r1(cfg[lo]); cfg[hi]=r1(cfg[hi]); }
-    // Enforce min progression and max>=min
-    for (let i=0;i<keys.length;i++){
-      const [lo,hi] = keys[i];
-      if (cfg[hi] < cfg[lo]) cfg[hi] = cfg[lo];
-      if (i>0){
-        const [plo,phi] = keys[i-1];
-        const minAllowed = r1(cfg[phi] + step);
-        if (cfg[lo] < minAllowed) cfg[lo] = minAllowed;
-        if (cfg[hi] < cfg[lo]) cfg[hi] = cfg[lo];
-      }
-    }
-    // RH calibration: clamp 0..100 and ensure right > left
-    const clamp01 = v => Math.min(100, Math.max(0, r1(v)));
-    cfg.rh_left_inner_pct  = clamp01(cfg.rh_left_inner_pct  ?? 40);
-    cfg.rh_right_inner_pct = clamp01(cfg.rh_right_inner_pct ?? 60);
-    if (cfg.rh_right_inner_pct <= cfg.rh_left_inner_pct){
-      cfg.rh_right_inner_pct = clamp01(cfg.rh_left_inner_pct + 0.1);
-    }
-    return cfg;
+  // Order matters: each min will be derived from the previous max
+  const keys = [
+    ['t_frosty_min','t_frosty_max'],   // frosty_min is unused later, but we round it here harmlessly
+    ['t_cold_min','t_cold_max'],
+    ['t_chilly_min','t_chilly_max'],
+    ['t_cool_min','t_cool_max'],
+    ['t_mild_min','t_mild_max'],
+    ['t_perf_min','t_perf_max'],
+    ['t_warm_min','t_warm_max'],
+    ['t_hot_min','t_hot_max'],
+    ['t_boiling_min','t_boiling_max'], // boiling_max is unused later, but we round it here harmlessly
+  ];
+
+  // 1) Normalize to one decimal
+  for (const [lo, hi] of keys){
+    cfg[lo] = r1(cfg[lo]);
+    cfg[hi] = r1(cfg[hi]);
   }
+
+  // 2) Ensure max >= min for each band (pre-pass so we have sane prev highs)
+  for (const [lo, hi] of keys){
+    if (cfg[hi] < cfg[lo]) cfg[hi] = cfg[lo];
+  }
+
+  // 3) Enforce strict contiguity: each next min == previous max + step
+  for (let i = 1; i < keys.length; i++){
+    const [prevLo, prevHi] = keys[i-1];
+    const [lo, hi] = keys[i];
+    const contiguousMin = r1((cfg[prevHi] ?? 0) + step);
+    cfg[lo] = contiguousMin;
+    if (cfg[hi] < cfg[lo]) cfg[hi] = cfg[lo]; // keep max >= min
+  }
+
+  // 4) RH calibration: clamp 0..100 and ensure right > left
+  const clamp01 = v => Math.min(100, Math.max(0, r1(v)));
+  cfg.rh_left_inner_pct  = clamp01(cfg.rh_left_inner_pct  ?? 40);
+  cfg.rh_right_inner_pct = clamp01(cfg.rh_right_inner_pct ?? 60);
+  if (cfg.rh_right_inner_pct <= cfg.rh_left_inner_pct){
+    cfg.rh_right_inner_pct = clamp01(cfg.rh_left_inner_pct + 0.1);
+  }
+
+  // 5) Purge the truly unused edges from saved config
+  delete cfg.t_frosty_min;
+  delete cfg.t_boiling_max;
+
+  return cfg;
+}
 
   // One-time auto-pick of temp/humidity if user hasn’t selected any
   _autoPicked = false;
