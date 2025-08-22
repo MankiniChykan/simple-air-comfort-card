@@ -184,7 +184,7 @@ class SimpleAirComfortCard extends LitElement {
       font-size: calc(var(--sac-scale,1) * 22px);
       letter-spacing:.2px;
       display: block;
-      margin-top: 0.1rem;
+      margin-top: 0rem;
     }
     .tl{ left:8%;  top:23%;  transform:translate(0,-50%); text-align:left; }
     .tr{ right:8%; top:23%;  transform:translate(0,-50%); text-align:right; }
