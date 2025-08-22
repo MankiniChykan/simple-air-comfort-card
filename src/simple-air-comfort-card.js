@@ -134,7 +134,7 @@ class SimpleAirComfortCard extends LitElement {
     /* Dial — 45% like original */
     .graphic{
       position:absolute; top:50%; left:50%; transform:translate(-50%,-50%);
-      width:45%; height:45%;
+      width:42%; height:42%;
     }
 
     /* Axis labels: smaller & dim grey */
@@ -173,7 +173,7 @@ class SimpleAirComfortCard extends LitElement {
     const temp_max = Number.isFinite(num(config.temp_max)) ? num(config.temp_max) : 35;
     if (temp_max <= temp_min) throw new Error('simple-air-comfort-card: temp_max must be > temp_min.');
     // Geometry (derived from CSS) with safe defaults for your current styles
-    const ring_pct   = Number.isFinite(num(config.ring_pct))  ? num(config.ring_pct)  : 45;   // .graphic size (% of card)
+    const ring_pct   = Number.isFinite(num(config.ring_pct))  ? num(config.ring_pct)  : 42;   // .graphic size (% of card)
     const inner_pct  = Number.isFinite(num(config.inner_pct)) ? num(config.inner_pct) : 46.5; // .inner-circle size (% of .graphic)
     const center_pct = 50; // vertical centre of card (fixed)
     // Optional fine-tune for vertical placement (percent of card height)
@@ -1019,8 +1019,8 @@ SimpleAirComfortCard.prototype.getGridOptions = function () {
 
     // Reasonable bounds so it still looks good when users resize:
     min_columns: 6,
-    max_columns: 6,
-    min_rows: 3,
-    max_rows: 3,
+    max_columns: 12,
+    min_rows: 4,
+    max_rows: 6,
   };
 };
