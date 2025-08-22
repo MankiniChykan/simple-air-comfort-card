@@ -112,8 +112,7 @@ class SimpleAirComfortCard extends LitElement {
       line-height:1.1; letter-spacing:.2px;
     }
     .subtitle{
-      color:#fff; font-weight:600;
-      font-size:clamp(13px,2.4vw,18px);
+      color:#fff; font-weight:400;
       font-size: calc(var(--sac-scale,1) * 22px);
       text-shadow:0 1px 2px rgba(0,0,0,.35);
     }
@@ -132,8 +131,8 @@ class SimpleAirComfortCard extends LitElement {
       display: block;
     }
     .corner .comfort{
-      font-weight:500;
-      font-size: calc(var(--sac-scale,1) * 19px);
+      font-weight:400;
+      font-size: calc(var(--sac-scale,1) * 22px);
       letter-spacing:.2px;
       display: block;
       margin-top: 0.1rem;
