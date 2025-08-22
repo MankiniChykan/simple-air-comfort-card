@@ -61,8 +61,8 @@ class SimpleAirComfortCard extends LitElement {
       min-height:0;               /* important in grid/flex contexts */
       /* no explicit height; let content drive it */
       contain: layout paint;      /* safe */
-     /* Remove any chance of baseline-induced gaps */
-     line-height:0;
+      /* Remove any chance of baseline-induced gaps */
+      line-height:0;
     }
 
     /* Inner square: aspect-ratio enforces 1:1, centered by flex */
