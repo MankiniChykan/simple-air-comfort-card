@@ -108,13 +108,13 @@ class SimpleAirComfortCard extends LitElement {
     .title{
       color:#c9c9c9; font-weight:300;
       /* scales from card, not viewport */
-      font-size: calc(var(--sac-scale,1) * 12px);
+      font-size: calc(var(--sac-scale,1) * 14px);
       line-height:1.1; letter-spacing:.2px;
     }
     .subtitle{
       color:#fff; font-weight:600;
       font-size:clamp(13px,2.4vw,18px);
-      font-size: calc(var(--sac-scale,1) * 18px);
+      font-size: calc(var(--sac-scale,1) * 20px);
       text-shadow:0 1px 2px rgba(0,0,0,.35);
     }
 
@@ -122,18 +122,18 @@ class SimpleAirComfortCard extends LitElement {
     .corner{ position:absolute; color:#fff; text-shadow:0 1px 2px rgba(0,0,0,.35); }
     .corner .label{
       font-weight:300; opacity:.75; letter-spacing:.1px;
-      font-size: calc(var(--sac-scale,1) * 12px);
+      font-size: calc(var(--sac-scale,1) * 14px);
       display:block;
     }
     .corner .metric{
       font-weight:500;
-      font-size: calc(var(--sac-scale,1) * 16px);
+      font-size: calc(var(--sac-scale,1) * 18px);
       line-height:1.05;
       display: block;
     }
     .corner .comfort{
       font-weight:500;
-      font-size: calc(var(--sac-scale,1) * 15px);
+      font-size: calc(var(--sac-scale,1) * 17px);
       letter-spacing:.2px;
       display: block;
       margin-top: 0.1rem;
@@ -153,7 +153,7 @@ class SimpleAirComfortCard extends LitElement {
     .axis{
       position:absolute; color:rgba(200,200,200,.8);
       font-weight:300; text-shadow:0 1px 2px rgba(0,0,0,.25);
-      font-size: calc(var(--sac-scale,1) * 12px);
+      font-size: calc(var(--sac-scale,1) * 14px);
       pointer-events:none;
     }
     .axis-top    { top:-10px;  left:50%; transform:translate(-50%,-50%); }
