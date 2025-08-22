@@ -1063,9 +1063,24 @@ class SimpleAirComfortCardEditor extends LitElement {
   // Helper/tooltips for each field (shows under the input)
   _helper = (s) => {
     const id = s.name;
-    const st = (key) => this.hass?.states?.[this._config?.[key]];
+    const st   = (key) => this.hass?.states?.[this._config?.[key]];
     const unit = (key) => st(key)?.attributes?.unit_of_measurement ?? "";
 
+    // Which min follows which max
+    const prevOf = {
+      t_cold_min:   't_frosty_max',
+      t_chilly_min: 't_cold_max',
+      t_cool_min:   't_chilly_max',
+      t_mild_min:   't_cool_max',
+      t_perf_min:   't_mild_max',
+      t_warm_min:   't_perf_max',
+      t_hot_min:    't_warm_max',
+    };
+
+    // Pretty band name
+    const nice = (k) => (k?.match(/^t_(.+)_(min|max)$/)?.[1] || '').toUpperCase();
+
+    // Non-band helpers (unchanged from your version)
     switch (id) {
       case 'name':
         return 'Shown as the small grey title at the top of the card.';
@@ -1079,24 +1094,43 @@ class SimpleAirComfortCardEditor extends LitElement {
         return 'Indoor fallback for Apparent Temperature when no wind sensor is set. Typical indoors: 0.0–0.2 m/s.';
       case 'decimals':
         return 'How many decimal places to show for temperatures and humidity.';
-      case 't_frosty_min': case 't_frosty_max':
-      case 't_cold_min':   case 't_cold_max':
-      case 't_chilly_min': case 't_chilly_max':
-      case 't_cool_min':   case 't_cool_max':
-      case 't_mild_min':   case 't_mild_max':
-      case 't_perf_min':   case 't_perf_max':
-      case 't_warm_min':   case 't_warm_max':
-      case 't_hot_min':    case 't_hot_max':
-      case 't_boiling_min':case 't_boiling_max':
-        return 'Bands use 0.1 °C steps. Overlaps auto-fix: each next min ≥ previous max + 0.1.';
       case 'rh_left_inner_pct':
       case 'rh_right_inner_pct':
         return 'Maps RH to the inner-circle intersections horizontally: left = this %, right = this %. 0% stays at the left edge; 100% stays at the right edge.';
       case 'y_offset_pct':
         return 'Fine-tune the dot’s vertical position in % of card height (positive moves up).';
-      default:
-        return 'Tip: values update immediately; click Save when done.';
     }
+
+    // Special band edges
+    if (id === 't_frosty_min')
+      return 'Unused lower edge (ignored on save). Contiguity starts from FROSTY max.';
+    if (id === 't_boiling_max')
+      return 'Unused upper edge (ignored on save).';
+
+    // Computed/locked mins: show driver and current resolved values
+    if (id in prevOf) {
+      const p = prevOf[id];
+      const pVal = this._config?.[p];
+      const cur  = this._config?.[id];
+      return `Computed • locked: ${nice(id)} min = ${nice(p)} max + 0.1 °C.` +
+        (Number.isFinite(pVal) && Number.isFinite(cur) ? ` Now: ${pVal} → ${cur} °C.` : '');
+    }
+
+    // Editable controls: all *_max except BOILING max, plus t_boiling_min
+    if ([
+      't_frosty_max','t_cold_max','t_chilly_max','t_cool_max',
+      't_mild_max','t_perf_max','t_warm_max','t_hot_max','t_boiling_min'
+    ].includes(id)) {
+      return 'Editable: 0.1 °C steps. Moving this shifts the next min to (this max + 0.1).';
+    }
+
+    // Generic band help (fallback)
+    if (/^t_.*_(min|max)$/.test(id)) {
+      return 'Bands use 0.1 °C steps. Each next min follows the previous max + 0.1.';
+    }
+
+    // Final fallback
+    return 'Tip: values update immediately; click Save when done.';
   };
 
     // Mirror user edits → ignore mins (except t_boiling_min) → sanitize → notify HA
