@@ -949,8 +949,6 @@ class SimpleAirComfortCardEditor extends LitElement {
       t_boiling_min: 35.0, t_boiling_max:60.0,
 
       // Optional geometry calibration
-      ring_pct: 45,
-      inner_pct: 46.5,
       y_offset_pct: 0,
 
       // RH→X calibration (defaults)
@@ -1000,8 +998,6 @@ class SimpleAirComfortCardEditor extends LitElement {
       { name:'rh_right_inner_pct', selector:{ number:{ min:0, max:100, step:0.1, mode:'box', unit_of_measurement:'%' } } },
 
       // Optional geometry calibration fields
-      { name:'ring_pct',     selector:{ number:{ min:10,  max:90,  step:0.1,  mode:'box', unit_of_measurement:'%' } } },
-      { name:'inner_pct',    selector:{ number:{ min:10,  max:100, step:0.1,  mode:'box', unit_of_measurement:'%' } } },
       { name:'y_offset_pct', selector:{ number:{ min:-30, max:30,  step:0.5,  mode:'box', unit_of_measurement:'%' } } },
     ];
   }
@@ -1110,10 +1106,6 @@ class SimpleAirComfortCardEditor extends LitElement {
       case 'rh_left_inner_pct':
       case 'rh_right_inner_pct':
         return 'Maps RH to the inner-circle intersections horizontally: left = this %, right = this %. 0% stays at the left edge; 100% stays at the right edge.';
-      case 'ring_pct':
-        return 'Diameter of the outer ring as a % of the card. Keep in sync with your CSS.';
-      case 'inner_pct':
-        return 'Diameter of the inner circle as a % of the outer ring box. Keep in sync with your CSS.';
       case 'y_offset_pct':
         return 'Fine-tune the dot’s vertical position in % of card height (positive moves up).';
       default:
