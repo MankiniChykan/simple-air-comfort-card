@@ -90,7 +90,8 @@ class SimpleAirComfortCard extends LitElement {
     /* ha-card: our visual container (rounded, dark background) */
     ha-card{
       position:relative;
-      padding:0;
+      padding:0 !important;
+      margin:0 !important;
       overflow:hidden;
       isolation:isolate;
       border-radius:var(--ha-card-border-radius,12px);
