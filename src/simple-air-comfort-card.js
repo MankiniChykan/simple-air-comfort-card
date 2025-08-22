@@ -59,6 +59,7 @@ class SimpleAirComfortCard extends LitElement {
         max-height:100%;
         max-width:100%;
         margin:0;
+        overflow:hidden;
       }
 
     /* Dot (+ halo when outside) — positioned in % of the whole card */
