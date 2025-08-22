@@ -1099,43 +1099,62 @@ class SimpleAirComfortCardEditor extends LitElement {
     }
   };
 
-  // Clamp all band mins/maxes to 0.1 steps & enforce contiguity; fix RH L<R
+  // Clamp all band mins/maxes to 0.1 steps; maxes drive the next mins (no gaps)
   _sanitizeBandsAndCal(cfg){
     const r1   = v => Math.round((Number(v) ?? 0) * 10) / 10;
     const step = 0.1;
 
-    // Ordered bands (first uses only *_max, last uses only *_min)
-    const keys = [
-      ['t_frosty_min','t_frosty_max'], // frosty_min is ignored/purged later
-      ['t_cold_min','t_cold_max'],
-      ['t_chilly_min','t_chilly_max'],
-      ['t_cool_min','t_cool_max'],
-      ['t_mild_min','t_mild_max'],
-      ['t_perf_min','t_perf_max'],
-      ['t_warm_min','t_warm_max'],
-      ['t_hot_min','t_hot_max'],
-      ['t_boiling_min','t_boiling_max'], // boiling_max is ignored/purged later
+    // Only these are user-editable: all *_max plus final t_boiling_min
+    // (We don’t render any *_min controls; they’re computed here.)
+    const order = [
+      { min: 't_frosty_min', max: 't_frosty_max' }, // min unused
+      { min: 't_cold_min',   max: 't_cold_max'   },
+      { min: 't_chilly_min', max: 't_chilly_max' },
+      { min: 't_cool_min',   max: 't_cool_max'   },
+      { min: 't_mild_min',   max: 't_mild_max'   },
+      { min: 't_perf_min',   max: 't_perf_max'   },
+      { min: 't_warm_min',   max: 't_warm_max'   },
+      { min: 't_hot_min',    max: 't_hot_max'    },
+      { min: 't_boiling_min',max: 't_boiling_max'} // max unused
     ];
 
-    // Normalize existing numbers to one decimal
-    for (const [lo, hi] of keys){
-      if (lo in cfg) cfg[lo] = r1(cfg[lo]);
-      if (hi in cfg) cfg[hi] = r1(cfg[hi]);
+    // Normalize user-editable numbers we care about
+    if ('t_frosty_max'  in cfg) cfg.t_frosty_max  = r1(cfg.t_frosty_max);
+    if ('t_cold_max'    in cfg) cfg.t_cold_max    = r1(cfg.t_cold_max);
+    if ('t_chilly_max'  in cfg) cfg.t_chilly_max  = r1(cfg.t_chilly_max);
+    if ('t_cool_max'    in cfg) cfg.t_cool_max    = r1(cfg.t_cool_max);
+    if ('t_mild_max'    in cfg) cfg.t_mild_max    = r1(cfg.t_mild_max);
+    if ('t_perf_max'    in cfg) cfg.t_perf_max    = r1(cfg.t_perf_max);
+    if ('t_warm_max'    in cfg) cfg.t_warm_max    = r1(cfg.t_warm_max);
+    if ('t_hot_max'     in cfg) cfg.t_hot_max     = r1(cfg.t_hot_max);
+    if ('t_boiling_min' in cfg) cfg.t_boiling_min = r1(cfg.t_boiling_min);
+
+    // 1) Forward pass: set each next min = previous max + 0.1 (no gaps)
+    for (let i = 1; i < order.length; i++){
+      const prevMaxKey = order[i-1].max;
+      const curMinKey  = order[i].min;
+      const prevMax    = r1(cfg[prevMaxKey]);
+      cfg[curMinKey]   = r1(prevMax + step);
     }
 
-    // Make every next *_min follow the previous *_max + 0.1 (no gaps)
-    for (let i = 1; i < keys.length; i++){
-      const [, prevMaxKey] = keys[i - 1];
-      const [curMinKey, curMaxKey] = keys[i];
-
-      const prevMax = r1(cfg[prevMaxKey]);
-      const curMin  = r1(prevMax + step);   // FOLLOW rule
-      cfg[curMinKey] = curMin;
-
-      // Ensure current max is not below its min
+    // 2) Ensure each max >= its min (so no overlap inversions)
+    for (let i = 0; i < order.length - 1; i++){
+      const { min: curMinKey, max: curMaxKey } = order[i];
+      const curMin = r1(cfg[curMinKey]);
       if (!Number.isFinite(cfg[curMaxKey]) || cfg[curMaxKey] < curMin){
         cfg[curMaxKey] = curMin;
+      } else {
+        cfg[curMaxKey] = r1(cfg[curMaxKey]);
       }
+    }
+
+    // 3) Final guard: make sure BOILING min is ≥ HOT max + 0.1
+    const hotMax      = r1(cfg.t_hot_max);
+    const minAllowed  = r1(hotMax + step);
+    if (!Number.isFinite(cfg.t_boiling_min) || cfg.t_boiling_min < minAllowed){
+      cfg.t_boiling_min = minAllowed;
+    } else {
+      cfg.t_boiling_min = r1(cfg.t_boiling_min);
     }
 
     // RH calibration: clamp 0..100 and ensure right > left by 0.1
@@ -1146,9 +1165,9 @@ class SimpleAirComfortCardEditor extends LitElement {
       cfg.rh_right_inner_pct = clamp01(cfg.rh_left_inner_pct + 0.1);
     }
 
-    // Purge unused outer edges from saved config (as requested)
-    delete cfg.t_frosty_min;
-    delete cfg.t_boiling_max;
+    // Purge unused outer edges from saved config
+    delete cfg.t_frosty_min;  // not used
+    delete cfg.t_boiling_max; // not used
 
     return cfg;
   }
