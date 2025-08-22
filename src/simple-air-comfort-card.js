@@ -1018,8 +1018,6 @@ SimpleAirComfortCard.prototype.getGridOptions = function () {
     rows: 4,      // ~ 4 * 56px + gaps managed by HA
 
     // Reasonable bounds so it still looks good when users resize:
-    columns: 6,
-    rows: 3,    
     min_columns: 6,
     max_columns: 6,
     min_rows: 3,
