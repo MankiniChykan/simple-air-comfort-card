@@ -45,7 +45,7 @@ class SimpleAirComfortCard extends LitElement {
       background:var(--sac-temp-bg,#2a2a2a);
       /* stretch to grid cell and center contents */
       display:flex; align-items:center; justify-content:center;
-      box-sizing:border-box; min-height:0;
+      box-sizing:border-box; min-height:0; height:100%;
       /* prevent children from affecting outer sizing via fractional overflows */
       contain: layout paint;
       /* no aspect-ratio here; the grid rows control height */
@@ -1007,7 +1007,7 @@ console.info(
 // The height of your card (masonry view only). 1 ~= 50px.
 SimpleAirComfortCard.prototype.getCardSize = function () {
   // Roughly align with 4 rows in sections (just a hint for masonry)
-  return 4;
+  return 3;
 };
 
 // The rules for Sections view sizing (12-column grid)
@@ -1018,9 +1018,11 @@ SimpleAirComfortCard.prototype.getGridOptions = function () {
     rows: 4,      // ~ 4 * 56px + gaps managed by HA
 
     // Reasonable bounds so it still looks good when users resize:
+    columns: 6,
+    rows: 3,    
     min_columns: 6,
-    max_columns: 12,
-    min_rows: 4,
-    max_rows: 6,
+    max_columns: 6,
+    min_rows: 3,
+    max_rows: 3,
   };
 };
