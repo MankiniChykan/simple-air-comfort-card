@@ -1081,10 +1081,6 @@ class SimpleAirComfortCardEditor extends LitElement {
         return 'Indoor fallback for Apparent Temperature when no wind sensor is set. Typical indoors: 0.0–0.2 m/s.';
       case 'decimals':
         return 'How many decimal places to show for temperatures and humidity.';
-      case 'temp_min':
-        return 'Lower bound of the dot’s vertical scale (affects Y mapping only).';
-      case 'temp_max':
-        return 'Upper bound of the dot’s vertical scale. Must be greater than min.';
       case 't_frosty_min': case 't_frosty_max':
       case 't_cold_min':   case 't_cold_max':
       case 't_chilly_min': case 't_chilly_max':
