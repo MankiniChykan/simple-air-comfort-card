@@ -1041,24 +1041,41 @@ class SimpleAirComfortCardEditor extends LitElement {
   }
 
   // Human labels for fields in the editor
-  _label = s => ({
-    name:'Name', temperature:'Temperature entity', humidity:'Humidity entity', windspeed:'Wind speed entity (optional)',
-    default_wind_speed:'Default wind speed (m/s)', decimals:'Decimals',
-    t_frosty_min:'FROSTY min (°C)', t_frosty_max:'FROSTY max (°C)',
-    t_cold_min:'COLD min (°C)',     t_cold_max:'COLD max (°C)',
-    t_chilly_min:'CHILLY min (°C)', t_chilly_max:'CHILLY max (°C)',
-    t_cool_min:'COOL min (°C)',     t_cool_max:'COOL max (°C)',
-    t_mild_min:'MILD min (°C)',     t_mild_max:'MILD max (°C)',
-    t_perf_min:'PERFECT min (°C)',  t_perf_max:'PERFECT max (°C)',
-    t_warm_min:'WARM min (°C)',     t_warm_max:'WARM max (°C)',
-    t_hot_min:'HOT min (°C)',       t_hot_max:'HOT max (°C)',
-    t_boiling_min:'BOILING min (°C)', t_boiling_max:'BOILING max (°C)',
-    rh_left_inner_pct:'Inner circle left RH (%)',
-    rh_right_inner_pct:'Inner circle right RH (%)',
-    ring_pct:'Outer ring box size (% of card)',
-    inner_pct:'Inner circle size (% of ring box)',
-    y_offset_pct:'Vertical dot offset (%)',
-  })[s.name] ?? s.name;
+  _label = (s) => {
+    const id = s.name;
+
+    // Base labels (your originals)
+    const base = ({
+      name:'Name', temperature:'Temperature entity', humidity:'Humidity entity', windspeed:'Wind speed entity (optional)',
+      default_wind_speed:'Default wind speed (m/s)', decimals:'Decimals',
+      t_frosty_min:'FROSTY min (°C)', t_frosty_max:'FROSTY max (°C)',
+      t_cold_min:'COLD min (°C)',     t_cold_max:'COLD max (°C)',
+      t_chilly_min:'CHILLY min (°C)', t_chilly_max:'CHILLY max (°C)',
+      t_cool_min:'COOL min (°C)',     t_cool_max:'COOL max (°C)',
+      t_mild_min:'MILD min (°C)',     t_mild_max:'MILD max (°C)',
+      t_perf_min:'PERFECT min (°C)',  t_perf_max:'PERFECT max (°C)',
+      t_warm_min:'WARM min (°C)',     t_warm_max:'WARM max (°C)',
+      t_hot_min:'HOT min (°C)',       t_hot_max:'HOT max (°C)',
+      t_boiling_min:'BOILING min (°C)', t_boiling_max:'BOILING max (°C)',
+      rh_left_inner_pct:'Inner circle left RH (%)',
+      rh_right_inner_pct:'Inner circle right RH (%)',
+      ring_pct:'Outer ring box size (% of card)',
+      inner_pct:'Inner circle size (% of ring box)',
+      y_offset_pct:'Vertical dot offset (%)',
+    })[id];
+
+    if (!base) return id; // fallback
+
+    // Unused outer edges
+    if (id === 't_frosty_min')  return `${base} (unused)`;
+    if (id === 't_boiling_max') return `${base} (unused)`;
+
+    // Computed/locked mins (everything ending in _min except final boiling_min)
+    if (/_min$/.test(id) && id !== 't_boiling_min') return `${base} (computed)`;
+
+    // Editable fields remain unchanged
+    return base;
+  };
 
   // Helper/tooltips for each field (shows under the input)
   _helper = (s) => {
