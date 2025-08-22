@@ -963,8 +963,6 @@ class SimpleAirComfortCardEditor extends LitElement {
       // Number boxes
       { name:'default_wind_speed', selector:{ number:{ min:0, max:50, step:0.1, mode:'box', unit_of_measurement:'m/s' } } },
       { name:'decimals', selector:{ number:{ min:0, max:3, step:1, mode:'box' } } },
-      { name:'temp_min', selector:{ number:{ min:-20, max:50, step:0.1, mode:'box', unit_of_measurement:'°C' } } },
-      { name:'temp_max', selector:{ number:{ min:-20, max:60, step:0.1, mode:'box', unit_of_measurement:'°C' } } },
 
       // Comfort bands — mins & maxes (°C), 0.1 steps
       { name:'t_frosty_min', selector:{ number:{ min:-60, max: 20, step:0.1, mode:'box', unit_of_measurement:'°C' } } },
