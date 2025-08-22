@@ -1129,8 +1129,7 @@ class SimpleAirComfortCardEditor extends LitElement {
       const p = prevOf[id];
       const pVal = this._config?.[p];
       const cur  = this._config?.[id];
-      return `Computed • locked: ${nice(id)} min = ${nice(p)} max + 0.1 °C.` +
-        (Number.isFinite(pVal) && Number.isFinite(cur) ? ` Now: ${pVal} → ${cur} °C.` : '');
+      return `Locked ${nice(id)} min = ${nice(p)} max +0.1 °C`;
     }
 
     // Editable controls: all *_max except BOILING max, plus t_boiling_min
@@ -1138,7 +1137,7 @@ class SimpleAirComfortCardEditor extends LitElement {
       't_frosty_max','t_cold_max','t_chilly_max','t_cool_max',
       't_mild_max','t_perf_max','t_warm_max','t_hot_max','t_boiling_min'
     ].includes(id)) {
-      return 'Editable: 0.1 °C steps. Moving this shifts the next min to (this max + 0.1).';
+      return 'Moving this shifts the next min';
     }
 
     // Generic band help (fallback)
