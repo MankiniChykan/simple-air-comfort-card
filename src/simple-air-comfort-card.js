@@ -1120,7 +1120,7 @@ class SimpleAirComfortCardEditor extends LitElement {
 
     // Special band edges
     if (id === 't_frosty_min')
-      return 'Unused lower edge (ignored on save). Contiguity starts from FROSTY max.';
+      return 'Unused lower edge (ignored on save).';
     if (id === 't_boiling_max')
       return 'Unused upper edge (ignored on save).';
 
@@ -1129,7 +1129,7 @@ class SimpleAirComfortCardEditor extends LitElement {
       const p = prevOf[id];
       const pVal = this._config?.[p];
       const cur  = this._config?.[id];
-      return `Locked ${nice(id)} min = ${nice(p)} max +0.1 °C`;
+      return `Locked = ${nice(p)} max +0.1 °C`;
     }
 
     // Editable controls: all *_max except BOILING max, plus t_boiling_min
@@ -1137,7 +1137,7 @@ class SimpleAirComfortCardEditor extends LitElement {
       't_frosty_max','t_cold_max','t_chilly_max','t_cool_max',
       't_mild_max','t_perf_max','t_warm_max','t_hot_max','t_boiling_min'
     ].includes(id)) {
-      return 'Moving this shifts the next min';
+      return 'Moving this shifts the next Min';
     }
 
     // Generic band help (fallback)
