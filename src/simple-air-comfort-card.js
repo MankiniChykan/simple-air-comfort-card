@@ -1150,19 +1150,22 @@ class SimpleAirComfortCardEditor extends LitElement {
     return 'Tip: values update immediately; click Save when done.';
   };
 
-    // Mirror user edits → ignore mins (except t_boiling_min) → sanitize → notify HA
+  // Mirror user edits → ignore mins (except t_boiling_min) → sanitize → notify HA
   _onChange = (ev) => {
     ev.stopPropagation();
 
     // 1) Only take fields from this form event
     const delta = { ...(ev.detail?.value || {}) };
 
-    // Ignore edits to *_min (we compute them), except the final t_boiling_min
+    // Ignore computed mins (except final boiling_min) and unused edges
     for (const k of Object.keys(delta)) {
-      if (/^t_.*_min$/.test(k) && k !== 't_boiling_min') {
+      if ((/^t_.*_min$/.test(k) && k !== 't_boiling_min') || k === 't_frosty_min' || k === 't_boiling_max') {
         delete delta[k];
       }
     }
+
+    // If no effective change, skip churn
+    if (Object.keys(delta).length === 0) return;
 
     // 2) Merge with current config, then sanitize to keep bands contiguous
     const merged = { ...(this._config || {}), ...delta };
