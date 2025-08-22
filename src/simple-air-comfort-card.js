@@ -43,11 +43,14 @@ class SimpleAirComfortCard extends LitElement {
       position:relative; padding:0; overflow:hidden; isolation:isolate;
       border-radius:var(--ha-card-border-radius,12px);
       background:var(--sac-temp-bg,#2a2a2a);
-      display:block; box-sizing:border-box; min-height:0; aspect-ratio:1/1
+      /* stretch to grid cell and center contents */
+      display:flex; align-items:center; justify-content:center;
+      box-sizing:border-box; min-height:0;
+      /* no aspect-ratio here; the grid rows control height */
     }
 
-    /* Square stage defines height (no absolute here) */
-    .ratio{ position:relative; width:100%; height:100%; margin:0; }
+    /* Inner square is dictated by card width; centered by the flex parent */
+    .ratio{ position:relative; width:100%; aspect-ratio:1/1; margin:0; }
 
     /* Dot (+ halo when outside) — positioned in % of the whole card */
     .dot{
@@ -980,10 +983,30 @@ window.customCards.push({
   documentationURL: 'https://github.com/MankiniChykan/simple-air-comfort-card'
 });
 
-SimpleAirComfortCard.prototype.getCardSize = function(){ return 1; };
-
 console.info(
   `%c SIMPLE AIR COMFORT CARD %c v${SAC_CARD_VERSION} `,
   'color:white;background:#2a2a2a;padding:2px 6px;border-radius:4px 0 0 4px;',
   'color:#2a2a2a;background:#c9c9c9;padding:2px 6px;border-radius:0 4px 4px 0;'
 );
+
+/* ----------------------------- Card Size ----------------------------- */
+// The height of your card (masonry view only). 1 ~= 50px.
+SimpleAirComfortCard.prototype.getCardSize = function () {
+  // Roughly align with 4 rows in sections (just a hint for masonry)
+  return 4;
+};
+
+// The rules for Sections view sizing (12-column grid)
+SimpleAirComfortCard.prototype.getGridOptions = function () {
+  return {
+    // Default footprint (what you asked for):
+    columns: 6,   // use multiples of 3 for nicer defaults
+    rows: 4,      // ~ 4 * 56px + gaps managed by HA
+
+    // Reasonable bounds so it still looks good when users resize:
+    min_columns: 3,
+    max_columns: 12,
+    min_rows: 3,
+    max_rows: 6,
+  };
+};
