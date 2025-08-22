@@ -1099,67 +1099,59 @@ class SimpleAirComfortCardEditor extends LitElement {
     }
   };
 
-// Clamp all band mins/maxes to 0.1 steps & enforce contiguity (no gaps).
-_sanitizeBandsAndCal(cfg){
-  const r1   = v => Math.round((Number(v)||0)*10)/10;
-  const step = 0.1;
+  // Clamp all band mins/maxes to 0.1 steps & enforce contiguity; fix RH L<R
+  _sanitizeBandsAndCal(cfg){
+    const r1   = v => Math.round((Number(v) ?? 0) * 10) / 10;
+    const step = 0.1;
 
-  // Authoritative order of bands (left → right = cold → hot)
-  const order = [
-    ['t_frosty_min','t_frosty_max'],
-    ['t_cold_min','t_cold_max'],
-    ['t_chilly_min','t_chilly_max'],
-    ['t_cool_min','t_cool_max'],
-    ['t_mild_min','t_mild_max'],
-    ['t_perf_min','t_perf_max'],
-    ['t_warm_min','t_warm_max'],
-    ['t_hot_min','t_hot_max'],
-    ['t_boiling_min','t_boiling_max'],
-  ];
+    // Ordered bands (first uses only *_max, last uses only *_min)
+    const keys = [
+      ['t_frosty_min','t_frosty_max'], // frosty_min is ignored/purged later
+      ['t_cold_min','t_cold_max'],
+      ['t_chilly_min','t_chilly_max'],
+      ['t_cool_min','t_cool_max'],
+      ['t_mild_min','t_mild_max'],
+      ['t_perf_min','t_perf_max'],
+      ['t_warm_min','t_warm_max'],
+      ['t_hot_min','t_hot_max'],
+      ['t_boiling_min','t_boiling_max'], // boiling_max is ignored/purged later
+    ];
 
-  // 1) Normalize everything to one decimal
-  for (const [lo,hi] of order){
-    if (lo in cfg) cfg[lo] = r1(cfg[lo]);
-    if (hi in cfg) cfg[hi] = r1(cfg[hi]);
+    // Normalize existing numbers to one decimal
+    for (const [lo, hi] of keys){
+      if (lo in cfg) cfg[lo] = r1(cfg[lo]);
+      if (hi in cfg) cfg[hi] = r1(cfg[hi]);
+    }
+
+    // Make every next *_min follow the previous *_max + 0.1 (no gaps)
+    for (let i = 1; i < keys.length; i++){
+      const [, prevMaxKey] = keys[i - 1];
+      const [curMinKey, curMaxKey] = keys[i];
+
+      const prevMax = r1(cfg[prevMaxKey]);
+      const curMin  = r1(prevMax + step);   // FOLLOW rule
+      cfg[curMinKey] = curMin;
+
+      // Ensure current max is not below its min
+      if (!Number.isFinite(cfg[curMaxKey]) || cfg[curMaxKey] < curMin){
+        cfg[curMaxKey] = curMin;
+      }
+    }
+
+    // RH calibration: clamp 0..100 and ensure right > left by 0.1
+    const clamp01 = v => Math.min(100, Math.max(0, r1(v)));
+    cfg.rh_left_inner_pct  = clamp01(cfg.rh_left_inner_pct  ?? 40);
+    cfg.rh_right_inner_pct = clamp01(cfg.rh_right_inner_pct ?? 60);
+    if (cfg.rh_right_inner_pct <= cfg.rh_left_inner_pct){
+      cfg.rh_right_inner_pct = clamp01(cfg.rh_left_inner_pct + 0.1);
+    }
+
+    // Purge unused outer edges from saved config (as requested)
+    delete cfg.t_frosty_min;
+    delete cfg.t_boiling_max;
+
+    return cfg;
   }
-
-  // 2) Make each min/max pair internally sane (max >= min)
-  for (const [lo,hi] of order){
-    if (cfg[hi] < cfg[lo]) cfg[hi] = cfg[lo];
-  }
-
-  // 3) ENFORCE CONTIGUITY (no gaps) by making each next min follow the previous max
-  //    Maxes are the "handles"; mins are derived.
-  for (let i = 1; i < order.length; i++){
-    const [prevLo, prevHi] = order[i-1];
-    const [curLo,  curHi ] = order[i];
-
-    // cur.min must be exactly prev.max + step (or higher if user set it above)
-    const minAllowed = r1((cfg[prevHi] ?? cfg[prevLo]) + step);
-    cfg[curLo] = Math.max(minAllowed, cfg[curLo] ?? minAllowed);
-    // keep pair sane
-    if (cfg[curHi] < cfg[curLo]) cfg[curHi] = cfg[curLo];
-  }
-
-  // 4) Optional: pin the unused outer edges (safe defaults) then purge them from saved config
-  //    (We keep them internally during sanitize to avoid NaNs, but don't persist.)
-  if (!Number.isFinite(cfg.t_frosty_min)) cfg.t_frosty_min = -60.0;
-  if (!Number.isFinite(cfg.t_boiling_max)) cfg.t_boiling_max = cfg.t_boiling_min ?? 60.0;
-
-  // RH calibration: clamp 0..100 and ensure right > left
-  const clamp01 = v => Math.min(100, Math.max(0, r1(v)));
-  cfg.rh_left_inner_pct  = clamp01(cfg.rh_left_inner_pct  ?? 40);
-  cfg.rh_right_inner_pct = clamp01(cfg.rh_right_inner_pct ?? 60);
-  if (cfg.rh_right_inner_pct <= cfg.rh_left_inner_pct){
-    cfg.rh_right_inner_pct = clamp01(cfg.rh_left_inner_pct + 0.1);
-  }
-
-  // 5) Purge unused edges so they save ass “blank” in YAML
-  delete cfg.t_frosty_min;
-  delete cfg.t_boiling_max;
-
-  return cfg;
-}
 
   // One-time auto-pick of temp/humidity if user hasn’t selected any
   _autoPicked = false;
