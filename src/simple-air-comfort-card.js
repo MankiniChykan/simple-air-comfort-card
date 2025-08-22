@@ -63,7 +63,7 @@ class SimpleAirComfortCard extends LitElement {
       .ratio::before{
         content:"";
         display:block;
-        padding-top:90%;          /* makes the box square from width */
+        padding-top:100%;          /* makes the box square from width */
       }
 
     /* Dot (+ halo when outside) — positioned in % of the whole card */
