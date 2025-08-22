@@ -188,8 +188,8 @@ class SimpleAirComfortCard extends LitElement {
     }
     .tl{ left:8%;  top:23%;  transform:translate(0,-50%); text-align:left; }
     .tr{ right:8%; top:23%;  transform:translate(0,-50%); text-align:right; }
-    .bl{ left:8%;  bottom:3%; transform:translate(0,0);   text-align:left; }
-    .br{ right:8%; bottom:3%; transform:translate(0,0);   text-align:right; }
+    .bl{ left:8%;  bottom:0%; transform:translate(0,0);   text-align:left; }
+    .br{ right:8%; bottom:0%; transform:translate(0,0);   text-align:right; }
 
     /* The circular dial (outer ring + inner circle) sized at 45% of the stage */
     .graphic{
