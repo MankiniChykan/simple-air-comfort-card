@@ -61,6 +61,8 @@ class SimpleAirComfortCard extends LitElement {
       min-height:0;               /* important in grid/flex contexts */
       /* no explicit height; let content drive it */
       contain: layout paint;      /* safe */
+     /* Remove any chance of baseline-induced gaps */
+     line-height:0;
     }
 
     /* Inner square: aspect-ratio enforces 1:1, centered by flex */
@@ -70,7 +72,10 @@ class SimpleAirComfortCard extends LitElement {
       width:100%;
       max-width:100%;
       max-height:100%;
-      aspect-ratio:1 / 1;         /* replaces the ::before padding hack */
+      /* Prefer explicit height set by ResizeObserver (prevents subpixel gaps) */
+      height: var(--sac-card-h, auto);
+      /* Keep aspect-ratio as a fallback when the observer hasn't run yet */
+      aspect-ratio: 1 / 1;
       margin:0;
       overflow:hidden;
       flex:0 0 auto;
@@ -189,6 +194,8 @@ class SimpleAirComfortCard extends LitElement {
           // Pure card-relative scale. No viewport involvement.
           const scale = w / BASE;
           this.style.setProperty('--sac-scale', String(scale));
+          // Pixel-lock the square height to avoid subpixel masonry row expansion
+          this.style.setProperty('--sac-card-h', `${Math.round(w)}px`);
         }
       });
       this._ro.observe(target);
