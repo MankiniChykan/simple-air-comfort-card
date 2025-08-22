@@ -7,7 +7,7 @@ import { LitElement, html, css, nothing } from 'lit';
  * ---------------------------------
  * - Renders a square dial showing a "comfort dot" positioned by:
  *    X = Relative Humidity (%) clamped 0..100, stretched across the card width
- *    Y = Temperature mapped between temp_min..temp_max to 0..100% of height
+ *    Y = Temperature mapped by comfort bands (FROSTY→BOILING) to dial landmarks
  * - Shows text labels (dew point comfort, temperature band, humidity band)
  * - Colors the background & rings based on comfort text (dew point & temp)
  * - Uses a ResizeObserver to scale typography with the card’s rendered width
@@ -274,11 +274,6 @@ class SimpleAirComfortCard extends LitElement {
     // Small number parser that returns NaN for missing/blank
     const num = v => (v === undefined || v === null || v === '' ? NaN : Number(v));
 
-    // Vertical scale for the dot (temperature range → 0..100%)
-    const temp_min = Number.isFinite(num(config.temp_min)) ? num(config.temp_min) : 15;
-    const temp_max = Number.isFinite(num(config.temp_max)) ? num(config.temp_max) : 35;
-    if (temp_max <= temp_min) throw new Error('simple-air-comfort-card: temp_max must be > temp_min.');
-
     // Geometry (percentages that must match the CSS layout)
     const ring_pct   = Number.isFinite(num(config.ring_pct))  ? num(config.ring_pct)  : 45;   // dial box size (% of card)
     const inner_pct  = Number.isFinite(num(config.inner_pct)) ? num(config.inner_pct) : 46.5; // inner circle size (% of dial)
@@ -293,7 +288,6 @@ class SimpleAirComfortCard extends LitElement {
       windspeed: config.windspeed,
       decimals: Number.isFinite(num(config.decimals)) ? num(config.decimals) : 1,
       default_wind_speed: Number.isFinite(num(config.default_wind_speed)) ? num(config.default_wind_speed) : 0.0,
-      temp_min, temp_max,
 
       // Comfort bands: contiguous ranges for label lookup; the editor enforces 0.1 °C steps
       t_frosty_min: Number.isFinite(num(config.t_frosty_min)) ? num(config.t_frosty_min) : -40.0,
@@ -898,8 +892,7 @@ class SimpleAirComfortCard extends LitElement {
       windspeed,
       decimals: 1,
       default_wind_speed: 0.1,
-      temp_min: 15,
-      temp_max: 35,
+      // Y mapping uses bands, not temp_min/temp_max
     };
   }
 }
@@ -935,7 +928,7 @@ class SimpleAirComfortCardEditor extends LitElement {
     this._config = {
       name:'Area Name',
       temperature: undefined, humidity: undefined, windspeed: undefined,
-      decimals:1, default_wind_speed:0.1, temp_min:15, temp_max:35,
+      decimals:1, default_wind_speed:0.1,
 
       // Comfort bands — mins & maxes (°C), 0.1 steps
       t_frosty_min: -40.0, t_frosty_max:  2.9,
@@ -1053,7 +1046,6 @@ class SimpleAirComfortCardEditor extends LitElement {
   _label = s => ({
     name:'Name', temperature:'Temperature entity', humidity:'Humidity entity', windspeed:'Wind speed entity (optional)',
     default_wind_speed:'Default wind speed (m/s)', decimals:'Decimals',
-    temp_min:'Dot temp min (°C)', temp_max:'Dot temp max (°C)',
     t_frosty_min:'FROSTY min (°C)', t_frosty_max:'FROSTY max (°C)',
     t_cold_min:'COLD min (°C)',     t_cold_max:'COLD max (°C)',
     t_chilly_min:'CHILLY min (°C)', t_chilly_max:'CHILLY max (°C)',
