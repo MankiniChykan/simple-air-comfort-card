@@ -2,8 +2,7 @@ import { LitElement, html, css, nothing } from 'lit';
 
 /**
  * Simple Air Comfort Card — src/simple-air-comfort-card.js
- * - Square card that scales cleanly in Sections.
- * - Visuals aligned to the original: small grey room title, large white dew-point comfort,
+ * NOTE: text now scales with card size via --sac-scale, updated by ResizeObserver.
  *   less-bold corner headings, dimmer/smaller axis labels, dial at 45% of the stage.
  * - Physics: Arden Buck + Australian BoM AT. Indoor-friendly default WS = 0.
  * - Dot logic:
@@ -32,6 +31,7 @@ class SimpleAirComfortCard extends LitElement {
   constructor() {
     super();
     this._config = undefined;
+    this._ro = null; // ResizeObserver
   }
 
   // ================================ Styles ================================
@@ -42,6 +42,8 @@ class SimpleAirComfortCard extends LitElement {
       width:100%;
       box-sizing:border-box;
       min-height:0;               /* guard against flex overflow math */
+      /* Base type scale; updated dynamically by ResizeObserver */
+      --sac-scale: 1;
     }
 
     ha-card{
@@ -105,12 +107,14 @@ class SimpleAirComfortCard extends LitElement {
     }
     .title{
       color:#c9c9c9; font-weight:300;
-      font-size:clamp(10px,1.8vw,14px);
+      /* scales from card, not viewport */
+      font-size: calc(var(--sac-scale,1) * 12px);
       line-height:1.1; letter-spacing:.2px;
     }
     .subtitle{
       color:#fff; font-weight:600;
       font-size:clamp(13px,2.4vw,18px);
+      font-size: calc(var(--sac-scale,1) * 18px);
       text-shadow:0 1px 2px rgba(0,0,0,.35);
     }
 
@@ -118,18 +122,18 @@ class SimpleAirComfortCard extends LitElement {
     .corner{ position:absolute; color:#fff; text-shadow:0 1px 2px rgba(0,0,0,.35); }
     .corner .label{
       font-weight:300; opacity:.75; letter-spacing:.1px;
-      font-size:clamp(9px,1.6vw,12px);
+      font-size: calc(var(--sac-scale,1) * 12px);
       display:block;
     }
     .corner .metric{
       font-weight:500;
-      font-size:clamp(12px,2.2vw,16px);
+      font-size: calc(var(--sac-scale,1) * 16px);
       line-height:1.05;
       display: block;
     }
     .corner .comfort{
       font-weight:500;
-      font-size:clamp(11px,2vw,15px);
+      font-size: calc(var(--sac-scale,1) * 15px);
       letter-spacing:.2px;
       display: block;
       margin-top: 0.1rem;
@@ -149,7 +153,7 @@ class SimpleAirComfortCard extends LitElement {
     .axis{
       position:absolute; color:rgba(200,200,200,.8);
       font-weight:300; text-shadow:0 1px 2px rgba(0,0,0,.25);
-      font-size:clamp(9px,1.7vw,12px);
+      font-size: calc(var(--sac-scale,1) * 12px);
       pointer-events:none;
     }
     .axis-top    { top:-10px;  left:50%; transform:translate(-50%,-50%); }
@@ -170,6 +174,32 @@ class SimpleAirComfortCard extends LitElement {
     }
 
   `;
+
+    // ============================ Lifecycle ================================
+  connectedCallback(){
+    super.connectedCallback();
+    // Observe the inner square so the scale follows the real rendered size.
+    this.updateComplete.then(() => {
+      const target = this.renderRoot?.querySelector('.ratio') || this;
+      if (!target) return;
+      const BASE = 300; // px width that equals --sac-scale:1
+      const clamp = (v, a, b) => Math.min(b, Math.max(a, v));
+      this._ro = new ResizeObserver(entries => {
+        for (const e of entries){
+          const w = (e.contentBoxSize?.[0]?.inlineSize) ?? e.contentRect?.width ?? target.clientWidth ?? BASE;
+          // Pure card-relative scale. No viewport involvement.
+          const scale = w / BASE;
+          this.style.setProperty('--sac-scale', String(scale));
+        }
+      });
+      this._ro.observe(target);
+    });
+  }
+  disconnectedCallback(){
+    try { this._ro?.disconnect(); } catch(e) {}
+    this._ro = null;
+    super.disconnectedCallback();
+  }
 
   // ============================== Configs ==============================
   setConfig(config) {
@@ -1032,3 +1062,5 @@ SimpleAirComfortCard.prototype.getGridOptions = function () {
     max_rows: 6,
   };
 };
+
+
