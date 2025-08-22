@@ -47,19 +47,23 @@ class SimpleAirComfortCard extends LitElement {
       display:flex; align-items:center; justify-content:center;
       box-sizing:border-box; min-height:0;
       /* prevent children from affecting outer sizing via fractional overflows */
-      contain: layout paint size;
+      contain: layout paint;
       /* no aspect-ratio here; the grid rows control height */
     }
 
-      /* Inner square: width-driven, but never taller than the card */
+      /* Inner square: bullet‑proof “padding-top:100%” square, centered by flex */
       .ratio{
         position:relative;
         width:100%;
-        aspect-ratio:1/1;
-        max-height:100%;
         max-width:100%;
         margin:0;
         overflow:hidden;
+        flex: 0 0 auto;            /* don’t let flexbox collapse it */
+      }
+      .ratio::before{
+        content:"";
+        display:block;
+        padding-top:100%;          /* makes the box square from width */
       }
 
     /* Dot (+ halo when outside) — positioned in % of the whole card */
