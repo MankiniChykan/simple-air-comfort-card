@@ -399,13 +399,13 @@ class SimpleAirComfortCard extends LitElement {
     const isHighRH = Number.isFinite(RH) && RH > Rh;
 
     const axisTopStyle    = isHot ? `color:white; text-shadow:
-      0 0 2px white, 0 0 6px ${pal.hot}, 0 0 12px ${pal.hot}, 0 0 20px ${pal.hot}` : '';
+      0 0 4px white, 0 0 12px ${pal.hot}, 0 0 24px ${pal.hot}, 0 0 40px ${pal.hot}` : '';
     const axisBottomStyle = isCold ? `color:white; text-shadow:
-      0 0 2px white, 0 0 6px ${pal.cold}, 0 0 12px ${pal.cold}, 0 0 20px ${pal.cold}` : '';
+      0 0 4px white, 0 0 12px ${pal.cold}, 0 0 24px ${pal.cold}, 0 0 40px ${pal.cold}` : '';
     const axisLeftStyle   = isLowRH ? `color:white; text-shadow:
-      0 0 2px white, 0 0 6px ${pal.humid}, 0 0 12px ${pal.humid}, 0 0 20px ${pal.humid}` : '';
+      0 0 4px white, 0 0 12px ${pal.humid}, 0 0 24px ${pal.humid}, 0 0 40px ${pal.humid}` : '';
     const axisRightStyle  = isHighRH ? `color:white; text-shadow:
-      0 0 2px white, 0 0 6px ${pal.humid}, 0 0 12px ${pal.humid}, 0 0 20px ${pal.humid}` : '';
+      0 0 4px white, 0 0 12px ${pal.humid}, 0 0 24px ${pal.humid}, 0 0 40px ${pal.humid}` : '';
 
     /* ---------------------------
      * Dot position (percentages)
@@ -1335,9 +1335,9 @@ SimpleAirComfortCard.prototype.getGridOptions = function () {
   return {
     columns: 6,       // default width (use multiples of 3 for tidy grid)
     rows: "auto",     // height adjusts to content
-    min_columns: 6,   // don’t let it shrink too small
+    min_columns: 3,   // don’t let it shrink too small
     max_columns: 12,  // can span full width
-    min_rows: 1,
-    max_rows: 6,
+    min_rows: 2,
+    max_rows: 8,
   };
 };
