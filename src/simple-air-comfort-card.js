@@ -1332,17 +1332,18 @@ console.info(
 // Masonry layout height hint — compute from rendered width so the
 // square card gets enough vertical space (≈50px per row in Masonry)
 SimpleAirComfortCard.prototype.getCardSize = function () {
-return 4;
+ return 3;
 };
 
 
 // Sections layout footprint — lock to a square 6×6 so it never overlaps
 // (columns are over the 12-col grid; keeping rows equal preserves square look)
 SimpleAirComfortCard.prototype.getGridOptions = function () {
-return {
-columns: 6,
-rows: "auto",
-min_columns: 6,
-max_columns: 6,
-};
+ return {
+  columns: 6,
+  rows: "auto",
+  min_columns: 6,
+  max_columns: 6,
+  min_rows:1,
+  max_rows:6,
 };
