@@ -324,8 +324,9 @@ class SimpleAirComfortCard extends LitElement {
 
     // If required entities are missing, show neutral face (no ha-card wrapper)
     if (!tState || !rhState) {
-      // Optional: neutral background
+      // neutral background + centered fallback position
       this.style.setProperty('--sac-temp-bg', '#2a2a2a');
+      const { y_center } = this.#geomAnchors();
       return html`
         <div class="ratio" role="img" aria-label="Air comfort dial">
           <div class="canvas">
@@ -335,7 +336,8 @@ class SimpleAirComfortCard extends LitElement {
               rhText: 'N/A',
               ringGrad: this.#dewpointRingGradientFromText('Unknown'),
               innerGrad: this.#innerEyeGradient(NaN, NaN, this.#bandThresholds()),
-              xPct: 50, yPct: 50, outside: false,
+              // Default dot pos at geometric center; flash red to signal unavailable
+              xPct: 50, yPct: y_center, outside: true,
               dewOut: '—', atOut: '—', tempRaw: '—', rhRaw: '—',
               axisTopStyle: '', axisBottomStyle: '', axisLeftStyle: '', axisRightStyle: '',
             })}
@@ -778,22 +780,58 @@ class SimpleAirComfortCard extends LitElement {
   /* -------------------------------------------
    * Temperature → Y% mapping (smoothed)
    * -------------------------------------------
-   * Uses key band edges tied to the dial geometry. Between each pair of
-   * anchors, we apply smoothstep() for a natural motion of the dot.
+   * Locked anchors per spec:
+   *   PERFECT max → inner top
+   *   WARM    max → outer top
+   *   HOT     max → halfway between outer top and top endpoint
+   *   BOILING max → top endpoint (100%)
+   *   PERFECT min → inner bottom
+   *   MILD    min → outer bottom
+   *   COOL min, CHILLY min, COLD min, FROSTY max → evenly spaced
+   *     from outer bottom down to FROSTY min (bottom endpoint, 0%).
+   * Between each adjacent pair we smoothstep for natural motion.
    */
   #tempToYPctGeometryAware(Tc){
     const a = this.#geomAnchors();
     const B = this.#bandThresholds();
 
-    // Build anchors (t = temp, y = target %)
+    // Vertical endpoints
+    const y_bottom = 0;
+    const y_top    = 100;
+
+    // Fixed anchors from geometry
+    const y_outer_bottom = a.y_outer_bottom;
+    const y_inner_bottom = a.y_inner_bottom;
+    const y_inner_top    = a.y_inner_top;
+    const y_outer_top    = a.y_outer_top;
+
+    // HOT max sits midway from outer-top to top endpoint
+    const y_hot_half = (y_outer_top + y_top) / 2;
+
+    // Even ladder between outer-bottom and bottom endpoint for:
+    // COOL min, CHILLY min, COLD min, FROSTY max (include endpoints in spacing)
+    const gaps = 5; // 6 points: bottom .. outer-bottom → 5 equal gaps
+    const step = (y_outer_bottom - y_bottom) / gaps;
+    const y_frosty_min = y_bottom + step * 0; // endpoint
+    const y_frosty_max = y_bottom + step * 1;
+    const y_cold_min   = y_bottom + step * 2;
+    const y_chilly_min = y_bottom + step * 3;
+    const y_cool_min   = y_bottom + step * 4;
+    const y_mild_min   = y_bottom + step * 5; // == y_outer_bottom
+
+    // Ordered anchors (temperature asc → Y% asc)
     const P = [
-      { t: B.FROSTY.max,                      y: a.y_half_below_outer }, // very cold → low but not 0%
-      { t: B.COOL.min,                        y: a.y_outer_bottom     }, // cool lower diameter
-      { t: B.PERFECT.min,                     y: a.y_inner_bottom     }, // perfect bottom
-      { t: (B.PERFECT.min + B.PERFECT.max)/2, y: a.y_center           }, // perfect center
-      { t: B.PERFECT.max,                     y: a.y_inner_top        }, // perfect top
-      { t: B.HOT.max,                         y: a.y_outer_top        }, // hot upper diameter
-      { t: Math.min(B.BOILING.max, B.BOILING.min + 5), y: a.y_half_above_outer }, // very hot → high but not 100%
+      { t: B.FROSTY.min, y: y_frosty_min }, // bottom endpoint
+      { t: B.FROSTY.max, y: y_frosty_max },
+      { t: B.COLD.min,   y: y_cold_min   },
+      { t: B.CHILLY.min, y: y_chilly_min },
+      { t: B.COOL.min,   y: y_cool_min   },
+      { t: B.MILD.min,   y: y_mild_min   }, // locked outer-bottom
+      { t: B.PERFECT.min, y: y_inner_bottom }, // locked inner-bottom
+      { t: B.PERFECT.max, y: y_inner_top    }, // locked inner-top
+      { t: B.WARM.max,    y: y_outer_top    }, // locked outer-top
+      { t: B.HOT.max,     y: y_hot_half     }, // midway to top endpoint
+      { t: B.BOILING.max, y: y_top          }, // top endpoint
     ];
 
     if (!Number.isFinite(Tc)) return a.y_center;
