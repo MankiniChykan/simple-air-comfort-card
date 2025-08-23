@@ -1335,9 +1335,9 @@ SimpleAirComfortCard.prototype.getGridOptions = function () {
   return {
     columns: 3,       // default width (use multiples of 3 for tidy grid)
     rows: "auto",     // height adjusts to content
-    min_columns: 3,   // don’t let it shrink too small
-    max_columns: 12,  // can span full width
-    min_rows: 1,
-    max_rows: 8,
+    min_columns: 6,   // don’t let it shrink too small
+    max_columns: 6,  // can span full width
+    min_rows: 4,
+    max_rows: 4,
   };
 };
