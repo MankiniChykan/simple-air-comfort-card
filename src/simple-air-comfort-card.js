@@ -80,7 +80,7 @@ class SimpleAirComfortCard extends LitElement {
   static styles = css`
     /* HOST: keep layout flexible; height comes from content (the 1:1 stage) */
     :host {
-        display: inline-block;
+        display: block;
         width: 100%;
         box-sizing: border-box;
         min-height: 0;
@@ -437,8 +437,9 @@ class SimpleAirComfortCard extends LitElement {
     const tempRaw = this.#formatNumber(this.#fromCelsius(Tc,  outUnit), d) + ` ${outUnit}`;
     const rhRaw   = Number.isFinite(RH) ? this.#round(RH, d).toFixed(d) + ' %' : '—';
 
-    // Render the face
-    return html`<ha-card style="--sac-temp-bg:${cardBg}">
+    // Render Face Host now owns the background; no <ha-card> wrapper
+    this.style.setProperty('--sac-temp-bg', cardBg);
+    return html`
       <div class="ratio" role="img" aria-label="Air comfort dial">
         <div class="canvas">
           ${this.#face({
@@ -456,7 +457,7 @@ class SimpleAirComfortCard extends LitElement {
           })}
         </div>
       </div>
-    </ha-card>`;
+    `;
   }
 
   /**
