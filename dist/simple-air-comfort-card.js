@@ -33,6 +33,7 @@ const v=globalThis,w=v.trustedTypes,C=w?w.createPolicy("lit-html",{createHTML:t=
         isolation: isolate;
         border-radius: var(--ha-card-border-radius, 12px);
         background: var(--sac-temp-bg, #2a2a2a);
+        display: flex;
         align-items: center;
         justify-content: center;
         contain: layout paint;
