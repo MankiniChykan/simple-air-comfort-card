@@ -1336,7 +1336,7 @@ SimpleAirComfortCard.prototype.getGridOptions = function () {
     columns: 6,       // default width (use multiples of 3 for tidy grid)
     rows: "auto",     // height adjusts to content
     min_columns: 4,   // don’t let it shrink too small
-    max_columns: 4,  // can span full width
+    max_columns: 12,  // can span full width
     min_rows: 1,
     max_rows: 1,
   };
