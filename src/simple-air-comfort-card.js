@@ -986,20 +986,8 @@ class SimpleAirComfortCardEditor extends LitElement {
       ...(config ?? {}),
     };
 
-    // ha-form schema (misc only; temperature row defined separately below)
-    this._schema = [
-      { name:'name', selector:{ text:{} } },
-
-      // Entity pickers (restrict to correct device_class)
-      { name:'temperature', required:true, selector:{ entity:{ domain:'sensor', device_class:'temperature' } } },
-      { name:'humidity',    required:true, selector:{ entity:{ domain:'sensor', device_class:'humidity' } } },
-      { name:'windspeed', selector:{ entity:{ domain:'sensor', device_class:'wind_speed' } } },
-
-      // Number boxes
-      { name:'default_wind_speed', selector:{ number:{ min:0, max:50, step:0.1, mode:'box', unit_of_measurement:'m/s' } } },
-      { name:'decimals', selector:{ number:{ min:0, max:3, step:1, mode:'box' } } },
-
-    // NEW: Single temperature row, ordered Boiling→Frosty (top→bottom in GUI)
+    // --- NEW: define the two schemas separately ---
+    // Single temperature row, ordered Boiling→Frosty (top→bottom in GUI)
     this._schemaTempsRow = [
       { name:'t_boiling_max', selector:{ number:{ min:-60, max:80, step:0.1, mode:'box', unit_of_measurement:'°C' } } },
       { name:'t_hot_max',     selector:{ number:{ min:-60, max:60, step:0.1, mode:'box', unit_of_measurement:'°C' } } },
@@ -1013,47 +1001,48 @@ class SimpleAirComfortCardEditor extends LitElement {
       { name:'t_frosty_min',  selector:{ number:{ min:-60, max:20, step:0.1, mode:'box', unit_of_measurement:'°C' } } },
     ];
 
-      // RH→X calibration (inner-circle intersections)
+    // Misc (non-temperature) settings shown separately in the editor
+    this._schemaMisc = [
+      { name:'name', selector:{ text:{} } },
+      { name:'temperature', required:true, selector:{ entity:{ domain:'sensor', device_class:'temperature' } } },
+      { name:'humidity',    required:true, selector:{ entity:{ domain:'sensor', device_class:'humidity' } } },
+      { name:'windspeed', selector:{ entity:{ domain:'sensor', device_class:'wind_speed' } } },
+      { name:'default_wind_speed', selector:{ number:{ min:0, max:50, step:0.1, mode:'box', unit_of_measurement:'m/s' } } },
+      { name:'decimals', selector:{ number:{ min:0, max:3, step:1, mode:'box' } } },
       { name:'rh_left_inner_pct',  selector:{ number:{ min:0, max:100, step:0.1, mode:'box', unit_of_measurement:'%' } } },
       { name:'rh_right_inner_pct', selector:{ number:{ min:0, max:100, step:0.1, mode:'box', unit_of_measurement:'%' } } },
-
-      // Optional geometry calibration fields
-      { name:'y_offset_pct', selector:{ number:{ min:-30, max:30,  step:0.5,  mode:'box', unit_of_measurement:'%' } } },
+      { name:'y_offset_pct', selector:{ number:{ min:-30, max:30, step:0.5, mode:'box', unit_of_measurement:'%' } } },
     ];
   }
 
-  // Render two-column form: misc settings + separate columns for band mins/maxes
+
+  // Render misc form + single-row temperatures with midpoint display
   render(){
     if (!this.hass || !this._config) return html``;
-
-    // Misc section only; temps row is rendered separately
-    const miscSchema = this._schema;
-
     return html`<div class="wrap">
+      <!-- Miscellaneous settings -->
       <ha-form
         .hass=${this.hass}
         .data=${this._config}
-        .schema=${miscSchema}
+        .schema=${this._schemaMisc}
         .computeLabel=${this._label}
         .computeHelper=${this._helper}
-        @value-changed=${this._onChange}>
         @value-changed=${this._onMiscChange}>
       </ha-form>
 
+      <!-- Temperature anchors (single row: Boiling → Frosty) -->
+      <div class="col-title" style="margin-top:12px">Temperature anchors (°C)</div>
+      <ha-form
+        .hass=${this.hass}
+        .data=${this._config}
+        .schema=${this._schemaTempsRow}
+        .computeLabel=${this._labelTemp}
+        @value-changed=${this._onTempsChange}>
+      </ha-form>
 
-      <div class="col-title" style="margin-top:10px;">Temperature anchors (single row)</div>
-      <div class="temps-bar">
-        <ha-form
-          .hass=${this.hass}
-          .data=${this._config}
-          .schema=${this._schemaTempsRow}
-          .computeLabel=${this._labelTemp}
-          .computeHelper=${this._helperTemp}
-          @value-changed=${this._onTempsChange}>
-        </ha-form>
-      </div>
-      <div class="center-readonly">
-        Center (PERFECT mid): <b>${this._centerTemp()}</b>
+      <!-- Exact PERFECT midpoint (read-only) -->
+      <div class="col-title" style="margin-top:8px;opacity:.8">
+        Center (exact midpoint between PERFECT min & max): ${this._centerTemp()}
       </div>
     </div>`;
   }
