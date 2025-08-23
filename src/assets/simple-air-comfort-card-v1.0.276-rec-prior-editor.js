@@ -937,6 +937,16 @@ class SimpleAirComfortCardEditor extends LitElement {
     .columns{ display:grid; grid-template-columns:1fr 1fr; gap:12px; align-items:start; }
     .col-title{ font-size:.9em; opacity:.8; margin:8px 0 4px; }
     @media (max-width:560px){ .columns{ grid-template-columns:1fr; } }
+    /* Single-row temperature bar */
+    .temps-bar{ margin-top:12px; }
+    .temps-bar ha-form{
+      display:grid;
+      grid-template-columns:repeat(10, minmax(90px,1fr));
+      gap:8px;
+    }
+    @media (max-width:980px){ .temps-bar ha-form{ grid-template-columns:repeat(5, minmax(90px,1fr)); } }
+    @media (max-width:560px){ .temps-bar ha-form{ grid-template-columns:repeat(2, minmax(120px,1fr)); } }
+    .center-readonly{ margin-top:6px; font-size:.95em; opacity:.8; }
   `;
   connectedCallback(){ super.connectedCallback(); window.loadCardHelpers?.().catch(()=>{}); }
 
@@ -976,7 +986,7 @@ class SimpleAirComfortCardEditor extends LitElement {
       ...(config ?? {}),
     };
 
-    // ha-form schema drives the auto-rendered editor controls
+    // ha-form schema (misc only; temperature row defined separately below)
     this._schema = [
       { name:'name', selector:{ text:{} } },
 
@@ -989,25 +999,19 @@ class SimpleAirComfortCardEditor extends LitElement {
       { name:'default_wind_speed', selector:{ number:{ min:0, max:50, step:0.1, mode:'box', unit_of_measurement:'m/s' } } },
       { name:'decimals', selector:{ number:{ min:0, max:3, step:1, mode:'box' } } },
 
-      // Comfort bands — mins & maxes (°C), 0.1 steps
-      { name:'t_frosty_min', selector:{ number:{ min:-60, max: 20, step:0.1, mode:'box', unit_of_measurement:'°C' } } },
-      { name:'t_frosty_max', selector:{ number:{ min:-60, max: 20, step:0.1, mode:'box', unit_of_measurement:'°C' } } },
-      { name:'t_cold_min',   selector:{ number:{ min:-60, max: 25, step:0.1, mode:'box', unit_of_measurement:'°C' } } },
-      { name:'t_cold_max',   selector:{ number:{ min:-60, max: 25, step:0.1, mode:'box', unit_of_measurement:'°C' } } },
-      { name:'t_chilly_min', selector:{ number:{ min:-60, max: 30, step:0.1, mode:'box', unit_of_measurement:'°C' } } },
-      { name:'t_chilly_max', selector:{ number:{ min:-60, max: 30, step:0.1, mode:'box', unit_of_measurement:'°C' } } },
-      { name:'t_cool_min',   selector:{ number:{ min:-60, max: 35, step:0.1, mode:'box', unit_of_measurement:'°C' } } },
-      { name:'t_cool_max',   selector:{ number:{ min:-60, max: 35, step:0.1, mode:'box', unit_of_measurement:'°C' } } },
-      { name:'t_mild_min',   selector:{ number:{ min:-60, max: 40, step:0.1, mode:'box', unit_of_measurement:'°C' } } },
-      { name:'t_mild_max',   selector:{ number:{ min:-60, max: 40, step:0.1, mode:'box', unit_of_measurement:'°C' } } },
-      { name:'t_perf_min',   selector:{ number:{ min:-60, max: 45, step:0.1, mode:'box', unit_of_measurement:'°C' } } },
-      { name:'t_perf_max',   selector:{ number:{ min:-60, max: 45, step:0.1, mode:'box', unit_of_measurement:'°C' } } },
-      { name:'t_warm_min',   selector:{ number:{ min:-60, max: 50, step:0.1, mode:'box', unit_of_measurement:'°C' } } },
-      { name:'t_warm_max',   selector:{ number:{ min:-60, max: 50, step:0.1, mode:'box', unit_of_measurement:'°C' } } },
-      { name:'t_hot_min',    selector:{ number:{ min:-60, max: 60, step:0.1, mode:'box', unit_of_measurement:'°C' } } },
-      { name:'t_hot_max',    selector:{ number:{ min:-60, max: 60, step:0.1, mode:'box', unit_of_measurement:'°C' } } },
-      { name:'t_boiling_min',selector:{ number:{ min:-60, max: 80, step:0.1, mode:'box', unit_of_measurement:'°C' } } },
-      { name:'t_boiling_max',selector:{ number:{ min:-60, max: 80, step:0.1, mode:'box', unit_of_measurement:'°C' } } },
+    // NEW: Single temperature row, ordered Boiling→Frosty (top→bottom in GUI)
+    this._schemaTempsRow = [
+      { name:'t_boiling_max', selector:{ number:{ min:-60, max:80, step:0.1, mode:'box', unit_of_measurement:'°C' } } },
+      { name:'t_hot_max',     selector:{ number:{ min:-60, max:60, step:0.1, mode:'box', unit_of_measurement:'°C' } } },
+      { name:'t_warm_max',    selector:{ number:{ min:-60, max:50, step:0.1, mode:'box', unit_of_measurement:'°C' } } },
+      { name:'t_perf_max',    selector:{ number:{ min:-60, max:45, step:0.1, mode:'box', unit_of_measurement:'°C' } } },
+      { name:'t_perf_min',    selector:{ number:{ min:-60, max:45, step:0.1, mode:'box', unit_of_measurement:'°C' } } },
+      { name:'t_mild_min',    selector:{ number:{ min:-60, max:40, step:0.1, mode:'box', unit_of_measurement:'°C' } } },
+      { name:'t_cool_min',    selector:{ number:{ min:-60, max:35, step:0.1, mode:'box', unit_of_measurement:'°C' } } },
+      { name:'t_chilly_min',  selector:{ number:{ min:-60, max:30, step:0.1, mode:'box', unit_of_measurement:'°C' } } },
+      { name:'t_cold_min',    selector:{ number:{ min:-60, max:25, step:0.1, mode:'box', unit_of_measurement:'°C' } } },
+      { name:'t_frosty_min',  selector:{ number:{ min:-60, max:20, step:0.1, mode:'box', unit_of_measurement:'°C' } } },
+    ];
 
       // RH→X calibration (inner-circle intersections)
       { name:'rh_left_inner_pct',  selector:{ number:{ min:0, max:100, step:0.1, mode:'box', unit_of_measurement:'%' } } },
@@ -1022,11 +1026,8 @@ class SimpleAirComfortCardEditor extends LitElement {
   render(){
     if (!this.hass || !this._config) return html``;
 
-    // Helper to separate "band" controls from miscellaneous settings
-    const isBand = (n) => typeof n === 'string' && n.startsWith('t_') && (n.endsWith('_min') || n.endsWith('_max'));
-    const miscSchema = this._schema.filter(s => !isBand(s.name));
-    const minSchema  = this._schema.filter(s => /^t_.*_min$/.test(s.name));
-    const maxSchema  = this._schema.filter(s => /^t_.*_max$/.test(s.name));
+    // Misc section only; temps row is rendered separately
+    const miscSchema = this._schema;
 
     return html`<div class="wrap">
       <ha-form
@@ -1036,71 +1037,57 @@ class SimpleAirComfortCardEditor extends LitElement {
         .computeLabel=${this._label}
         .computeHelper=${this._helper}
         @value-changed=${this._onChange}>
+        @value-changed=${this._onMiscChange}>
       </ha-form>
 
-      <div class="columns">
-        <div>
-          <div class="col-title">Band mins (°C)</div>
-          <ha-form
-            .hass=${this.hass}
-            .data=${this._config}
-            .schema=${minSchema}
-            .computeLabel=${this._label}
-            .computeHelper=${this._helper}
-            @value-changed=${this._onChange}>
-          </ha-form>
-        </div>
-        <div>
-          <div class="col-title">Band maxes (°C)</div>
-          <ha-form
-            .hass=${this.hass}
-            .data=${this._config}
-            .schema=${maxSchema}
-            .computeLabel=${this._label}
-            .computeHelper=${this._helper}
-            @value-changed=${this._onChange}>
-          </ha-form>
-        </div>
+
+      <div class="col-title" style="margin-top:10px;">Temperature anchors (single row)</div>
+      <div class="temps-bar">
+        <ha-form
+          .hass=${this.hass}
+          .data=${this._config}
+          .schema=${this._schemaTempsRow}
+          .computeLabel=${this._labelTemp}
+          .computeHelper=${this._helperTemp}
+          @value-changed=${this._onTempsChange}>
+        </ha-form>
+      </div>
+      <div class="center-readonly">
+        Center (PERFECT mid): <b>${this._centerTemp()}</b>
       </div>
     </div>`;
   }
 
-  // Human labels for fields in the editor
+
+  // Human labels for misc (non-temperature) fields in the editor
   _label = (s) => {
     const id = s.name;
-
-    // Base labels (your originals)
     const base = ({
       name:'Name', temperature:'Temperature entity', humidity:'Humidity entity', windspeed:'Wind speed entity (optional)',
       default_wind_speed:'Default wind speed (m/s)', decimals:'Decimals',
-      t_frosty_min:'FROSTY min (°C)', t_frosty_max:'FROSTY max (°C)',
-      t_cold_min:'COLD min (°C)',     t_cold_max:'COLD max (°C)',
-      t_chilly_min:'CHILLY min (°C)', t_chilly_max:'CHILLY max (°C)',
-      t_cool_min:'COOL min (°C)',     t_cool_max:'COOL max (°C)',
-      t_mild_min:'MILD min (°C)',     t_mild_max:'MILD max (°C)',
-      t_perf_min:'PERFECT min (°C)',  t_perf_max:'PERFECT max (°C)',
-      t_warm_min:'WARM min (°C)',     t_warm_max:'WARM max (°C)',
-      t_hot_min:'HOT min (°C)',       t_hot_max:'HOT max (°C)',
-      t_boiling_min:'BOILING min (°C)', t_boiling_max:'BOILING max (°C)',
       rh_left_inner_pct:'Inner circle left RH (%)',
       rh_right_inner_pct:'Inner circle right RH (%)',
       ring_pct:'Outer ring box size (% of card)',
       inner_pct:'Inner circle size (% of ring box)',
       y_offset_pct:'Vertical dot offset (%)',
     })[id];
-
-    if (!base) return id; // fallback
-
-    // Unused outer edges
-    if (id === 't_frosty_min')  return `${base} (unused)`;
-    if (id === 't_boiling_max') return `${base} (unused)`;
-
-    // Computed/locked mins (everything ending in _min except final boiling_min)
-    if (/_min$/.test(id) && id !== 't_boiling_min') return `${base} (computed)`;
-
-    // Editable fields remain unchanged
-    return base;
+    return base ?? id;
   };
+
+  // Human labels for the single-row temperature anchors (Boiling→Frosty)
+  _labelTemp = (s) => ({
+    t_boiling_max:'BOILING max (°C)',
+    t_hot_max:'HOT max (°C)',
+    t_warm_max:'WARM max (°C)',
+    t_perf_max:'PERFECT max (°C)',
+    t_perf_min:'PERFECT min (°C)',
+    t_mild_min:'MILD min (°C)',
+    t_cool_min:'COOL min (°C)',
+    t_chilly_min:'CHILLY min (°C)',
+    t_cold_min:'COLD min (°C)',
+    t_frosty_min:'FROSTY min (°C)',
+  }[s.name] ?? s.name);
+  
 
   // Helper/tooltips for each field (shows under the input)
   _helper = (s) => {
@@ -1174,93 +1161,103 @@ class SimpleAirComfortCardEditor extends LitElement {
     return 'Tip: values update immediately; click Save when done.';
   };
 
-  // Mirror user edits → ignore mins (except t_boiling_min) → sanitize → notify HA
-  _onChange = (ev) => {
+  // Mirror user edits → ignore min or max → sanitize → notify HA
+  // --- New: exact PERFECT midpoint for display (no rounding of value itself) ---
+  _centerTemp(){
+    const a = this._config || {};
+    const lo = Number(a.t_perf_min);
+    const hi = Number(a.t_perf_max);
+    if (!Number.isFinite(lo) || !Number.isFinite(hi)) return '—';
+    return `${((lo + hi) / 2).toFixed(2)} °C`;
+  }
+
+  // --- New: misc handler (entities/decimals/RH/offsets) ---
+  _onMiscChange = (ev) => {
     ev.stopPropagation();
-
-    // 1) Only take fields from this form event
     const delta = { ...(ev.detail?.value || {}) };
-
-    // Ignore computed mins (except final boiling_min) and unused edges
-    for (const k of Object.keys(delta)) {
-      if ((/^t_.*_min$/.test(k) && k !== 't_boiling_min') || k === 't_frosty_min' || k === 't_boiling_max') {
-        delete delta[k];
-      }
-    }
-
-    // If no effective change, skip churn
-    if (Object.keys(delta).length === 0) return;
-
-    // 2) Merge with current config, then sanitize to keep bands contiguous
+    if (!Object.keys(delta).length) return;
     const merged = { ...(this._config || {}), ...delta };
-    const cfg = this._sanitizeBandsAndCal(merged);
+    this._config = merged;
+    fireEvent(this, 'config-changed', { config: merged });
+  };
 
+  // --- New: single-row temperature handler (hot→cold), with bi-directional drag ---
+  _onTempsChange = (ev) => {
+    ev.stopPropagation();
+    const delta = { ...(ev.detail?.value || {}) };
+    if (!Object.keys(delta).length) return;
+    const cfg = this._applyTempsRowBiDirectional({ ...(this._config || {}), ...delta });
     this._config = cfg;
     fireEvent(this, 'config-changed', { config: cfg });
   };
 
-  // Clamp all band mins/maxes to 0.1 steps; maxes drive the next mins (no gaps)
-  _sanitizeBandsAndCal(cfg){
-    const r1   = v => Math.round((Number(v) ?? 0) * 10) / 10;
+  // Keep bands contiguous using GUI order: Boiling max → … → Frosty min
+  _applyTempsRowBiDirectional(cfgIn){
+    const r1 = v => Math.round((Number(v) ?? 0) * 10) / 10;
     const step = 0.1;
+    const P = {
+      boiling_max: r1(cfgIn.t_boiling_max ?? 60.0),
+      hot_max:     r1(cfgIn.t_hot_max     ?? 34.9),
+      warm_max:    r1(cfgIn.t_warm_max    ?? 27.9),
+      perf_max:    r1(cfgIn.t_perf_max    ?? 23.9),
+      perf_min:    r1(cfgIn.t_perf_min    ?? 19.0),
+      mild_min:    r1(cfgIn.t_mild_min    ?? 14.0),
+      cool_min:    r1(cfgIn.t_cool_min    ??  9.0),
+      chilly_min:  r1(cfgIn.t_chilly_min  ??  5.0),
+      cold_min:    r1(cfgIn.t_cold_min    ??  3.0),
+      frosty_min:  r1(cfgIn.t_frosty_min  ?? -40.0),
+    };
 
-    // Work on a copy so we don't trip over our own writes mid-pass
-    const out = { ...cfg };
+    // GUI chain (descending temperature)
+    const chain = ['boiling_max','hot_max','warm_max','perf_max','perf_min','mild_min','cool_min','chilly_min','cold_min','frosty_min'];
 
-    // Normalize user-editable maxes + the one editable min
-    const maxKeys = [
-      't_frosty_max','t_cold_max','t_chilly_max','t_cool_max',
-      't_mild_max','t_perf_max','t_warm_max','t_hot_max'
-    ];
-    for (const k of maxKeys) if (k in out) out[k] = r1(out[k]);
-    if ('t_boiling_min' in out) out.t_boiling_min = r1(out.t_boiling_min);
-
-    // 1) Forward: mins follow previous max (+0.1)
-    out.t_cold_min    = r1(out.t_frosty_max + step);
-    out.t_chilly_min  = r1(out.t_cold_max   + step);
-    out.t_cool_min    = r1(out.t_chilly_max + step);
-    out.t_mild_min    = r1(out.t_cool_max   + step);
-    out.t_perf_min    = r1(out.t_mild_max   + step);
-    out.t_warm_min    = r1(out.t_perf_max   + step);
-    out.t_hot_min     = r1(out.t_warm_max   + step);
-
-    // 2) Guard: each max ≥ its own min (so no inverted ranges)
-    const pairs = [
-      ['t_frosty_min','t_frosty_max'], // frosty_min is display-only/ignored
-      ['t_cold_min','t_cold_max'],
-      ['t_chilly_min','t_chilly_max'],
-      ['t_cool_min','t_cool_max'],
-      ['t_mild_min','t_mild_max'],
-      ['t_perf_min','t_perf_max'],
-      ['t_warm_min','t_warm_max'],
-      ['t_hot_min','t_hot_max'],
-    ];
-    for (const [lo, hi] of pairs){
-      const loV = r1(out[lo]);
-      if (!Number.isFinite(out[hi]) || out[hi] < loV) out[hi] = loV;
-      else out[hi] = r1(out[hi]);
+    // Forward: enforce strictly descending by ≥0.1
+    for (let i = 1; i < chain.length; i++){
+      const prev = chain[i-1], cur = chain[i];
+      const limit = r1(P[prev] - step);
+      if (P[cur] > limit) P[cur] = limit;
+    }
+    // Backward: ensure previous is ≤ next - 0.1
+    for (let i = chain.length - 2; i >= 0; i--){
+      const cur = chain[i], next = chain[i+1];
+      const limit = r1(P[next] + step);
+      if (P[cur] < limit) P[cur] = limit;
     }
 
-    // 3) Final band: make sure boiling_min follows hot_max (+0.1)
-    const minAllowed = r1(out.t_hot_max + step);
-    if (!Number.isFinite(out.t_boiling_min) || out.t_boiling_min < minAllowed){
-      out.t_boiling_min = minAllowed;
-    } else out.t_boiling_min = r1(out.t_boiling_min);
+    const out = { ...cfgIn };
 
-    // RH calibration (unchanged)
+    // Write back the ten GUI fields
+    out.t_boiling_max = P.boiling_max;
+    out.t_hot_max     = P.hot_max;
+    out.t_warm_max    = P.warm_max;
+    out.t_perf_max    = P.perf_max;
+    out.t_perf_min    = P.perf_min;
+    out.t_mild_min    = P.mild_min;
+    out.t_cool_min    = P.cool_min;
+    out.t_chilly_min  = P.chilly_min;
+    out.t_cold_min    = P.cold_min;
+    out.t_frosty_min  = P.frosty_min;
+
+    // Derive the in-between neighbors to keep full band set contiguous
+    out.t_frosty_max  = r1(P.cold_min   - step);
+    out.t_cold_max    = r1(P.chilly_min - step);
+    out.t_chilly_max  = r1(P.cool_min   - step);
+    out.t_cool_max    = r1(P.mild_min   - step);
+    out.t_mild_max    = r1(P.perf_min   - step);
+    out.t_warm_min    = r1(P.perf_max   + step);
+    out.t_hot_min     = r1(P.warm_max   + step);
+    out.t_boiling_min = r1(P.hot_max    + step);
+
+    // RH calibration passthrough (unchanged)
     const clamp01 = v => Math.min(100, Math.max(0, r1(v)));
     out.rh_left_inner_pct  = clamp01(out.rh_left_inner_pct  ?? 40);
     out.rh_right_inner_pct = clamp01(out.rh_right_inner_pct ?? 60);
     if (out.rh_right_inner_pct <= out.rh_left_inner_pct){
       out.rh_right_inner_pct = clamp01(out.rh_left_inner_pct + 0.1);
     }
-
-    // Purge unused outer edges from saved config (safe even if still shown)
-    delete out.t_frosty_min;
-    delete out.t_boiling_max;
-
     return out;
   }
+
 
   // One-time auto-pick of temp/humidity if user hasn’t selected any
   _autoPicked = false;
