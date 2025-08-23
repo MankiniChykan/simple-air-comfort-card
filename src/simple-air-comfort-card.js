@@ -80,7 +80,7 @@ class SimpleAirComfortCard extends LitElement {
   static styles = css`
     /* HOST: keep layout flexible; height comes from content (the 1:1 stage) */
     :host {
-        display: block;
+        display: flex;
         width: 100%;
         box-sizing: border-box;
         min-height: 0;
