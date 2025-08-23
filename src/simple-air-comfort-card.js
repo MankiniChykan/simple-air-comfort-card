@@ -82,7 +82,6 @@ class SimpleAirComfortCard extends LitElement {
     :host {
         display: block;
         width: 100%;
-        height:100%;
         box-sizing: border-box;
         min-height: 0;
         --sac-scale: 1;
@@ -92,9 +91,8 @@ class SimpleAirComfortCard extends LitElement {
         isolation: isolate;
         border-radius: var(--ha-card-border-radius, 12px);
         background: var(--sac-temp-bg, #2a2a2a);
-        align-items: center;
-        justify-content: center;
         contain: layout paint;
+
     }
 
     /* 1:1 square stage using aspect-ratio (replaces padding-top hacks) */
@@ -102,25 +100,24 @@ class SimpleAirComfortCard extends LitElement {
       position:relative;
       display:block;
       width:100%;
-      height: 100%;
       max-width:100%;
       max-height:100%;
-      overflow:hidden;
+      aspect-ratio:1 / 1;
       margin:0;
+      overflow:hidden;
       flex:0 0 auto;
     }
 
     /* Moving dot:
-     * Layering model (lowest → highest):
-     *   rings (outer-ring/inner-circle) → dot → axis text → header/corner text
-     * This keeps the dot behind any text, but in front of the dial graphics.
+     * - Absolutely positioned in percent (left/bottom)
+     * - 6% of stage size (looks good for typical cards)
      */
     .dot{
       position:absolute; width:6%; height:6%; border-radius:50%;
       background:#fff; box-shadow:0 0 6px rgba(0,0,0,.45);
       transform:translate(-50%, 50%); /* align dot center to coordinate */
       transition:left .8s ease-in-out,bottom .8s ease-in-out; /* smooth moves */
-      z-index:2; /* above rings, below all text */
+      z-index:2;
     }
 
     /* When comfort is outside, show a pulsing halo */
@@ -146,7 +143,6 @@ class SimpleAirComfortCard extends LitElement {
     .header{
       position:absolute; top:10%; left:50%; transform:translate(-50%,-50%);
       width:100%; text-align:center; pointer-events:none;
-      z-index:6; /* above dot */
     }
     .title{
       color:#c9c9c9; font-weight:300;
@@ -160,7 +156,7 @@ class SimpleAirComfortCard extends LitElement {
     }
 
     /* Corner stats: TL dew point, TR apparent temp, BL raw temp, BR RH */
-    .corner{ position:absolute; color:#fff; text-shadow:0 1px 2px rgba(0,0,0,.35); z-index:6; /* above dot */ }
+    .corner{ position:absolute; color:#fff; text-shadow:0 1px 2px rgba(0,0,0,.35); }
     .corner .label{
       font-weight:300; opacity:.75; letter-spacing:.1px;
       font-size: calc(var(--sac-scale,1) * 16px);
@@ -196,7 +192,6 @@ class SimpleAirComfortCard extends LitElement {
       font-weight:300; text-shadow:0 1px 2px rgba(0,0,0,.25);
       font-size: calc(var(--sac-scale,1) * 16px);
       pointer-events:none;
-      z-index:5; /* axes text above dot, below header/corner text */
     }
     .axis-top    { top:-10px;  left:50%; transform:translate(-50%,-50%); }
     .axis-bottom { bottom:-10px;left:50%; transform:translate(-50%, 50%); }
@@ -208,7 +203,6 @@ class SimpleAirComfortCard extends LitElement {
       position:absolute; inset:0; border-radius:50%; border:2.5px solid #fff;
       background:var(--sac-dewpoint-ring,radial-gradient(circle,dimgray,55%,rgba(100,100,100,.15),rgba(100,100,100,.15)));
       box-shadow:0 0 6px 3px rgba(0,0,0,.18), 0 0 18px 6px rgba(0,0,0,.22);
-      z-index:1; /* below dot */
     }
 
     /* Inner "eye": gradient that tints toward hot/cold/humid based on data */
@@ -217,7 +211,6 @@ class SimpleAirComfortCard extends LitElement {
       width:46.5%; height:46.5%; border-radius:50%;
       background:var(--sac-inner-gradient,radial-gradient(circle,black 0%,black 60%));
       box-shadow:inset 0 0 12px rgba(0,0,0,.6);
-      z-index:1;
     }
   `;
 
@@ -401,13 +394,13 @@ class SimpleAirComfortCard extends LitElement {
     const isHighRH = Number.isFinite(RH) && RH > Rh;
 
     const axisTopStyle    = isHot ? `color:white; text-shadow:
-      0 0 4px white, 0 0 12px ${pal.hot}, 0 0 24px ${pal.hot}, 0 0 40px ${pal.hot}` : '';
+      0 0 2px white, 0 0 6px ${pal.hot}, 0 0 12px ${pal.hot}, 0 0 20px ${pal.hot}` : '';
     const axisBottomStyle = isCold ? `color:white; text-shadow:
-      0 0 4px white, 0 0 12px ${pal.cold}, 0 0 24px ${pal.cold}, 0 0 40px ${pal.cold}` : '';
+      0 0 2px white, 0 0 6px ${pal.cold}, 0 0 12px ${pal.cold}, 0 0 20px ${pal.cold}` : '';
     const axisLeftStyle   = isLowRH ? `color:white; text-shadow:
-      0 0 4px white, 0 0 12px ${pal.humid}, 0 0 24px ${pal.humid}, 0 0 40px ${pal.humid}` : '';
+      0 0 2px white, 0 0 6px ${pal.humid}, 0 0 12px ${pal.humid}, 0 0 20px ${pal.humid}` : '';
     const axisRightStyle  = isHighRH ? `color:white; text-shadow:
-      0 0 4px white, 0 0 12px ${pal.humid}, 0 0 24px ${pal.humid}, 0 0 40px ${pal.humid}` : '';
+      0 0 2px white, 0 0 6px ${pal.humid}, 0 0 12px ${pal.humid}, 0 0 20px ${pal.humid}` : '';
 
     /* ---------------------------
      * Dot position (percentages)
@@ -1328,21 +1321,18 @@ console.info(
  * getCardSize() helps Masonry layout estimate height;
  * getGridOptions() guides the 12-column Sections layout’s default footprint.
  */
-// Masonry layout height hint — compute from rendered width so the
-// square card gets enough vertical space (≈50px per row in Masonry)
 SimpleAirComfortCard.prototype.getCardSize = function () {
-  return 4;
- };
+  // ~3 rows (1 row ≈ 50px in classic Masonry layout)
+  return 3;
+};
 
-// Sections layout footprint — lock to a square 6×6 so it never overlaps
-// (columns are over the 12-col grid; keeping rows equal preserves square look)
 SimpleAirComfortCard.prototype.getGridOptions = function () {
- return {
-   columns: 6,
-   rows: "auto",
-   min_columns: 6,
-   max_columns: 12,
-   min_rows:1,
-   max_rows:8,
+  return {
+    columns: 6,       // default width (use multiples of 3 for tidy grid)
+    rows: "auto",     // height adjusts to content
+    min_columns: 6,   // don’t let it shrink too small
+    max_columns: 12,  // can span full width
+    min_rows: 1,
+    max_rows: 6,
   };
 };
