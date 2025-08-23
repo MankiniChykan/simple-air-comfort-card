@@ -87,6 +87,7 @@ class SimpleAirComfortCard extends LitElement {
         --sac-scale: 1;
         position: relative;
         padding: var(--card-content-padding, 0px);
+        margin:1px;
         overflow: hidden;
         isolation: isolate;
         border-radius: var(--ha-card-border-radius, 12px);
@@ -105,7 +106,6 @@ class SimpleAirComfortCard extends LitElement {
       max-width:100%;
       max-height:100%;
       aspect-ratio:1 / 1;
-      margin:0;
       overflow:hidden;
       flex:0 0 auto;
     }
@@ -1342,7 +1342,7 @@ SimpleAirComfortCard.prototype.getGridOptions = function () {
   columns: 6,
   rows: "auto",
   min_columns: 6,
-  max_columns: 6,
+  max_columns: 12,
   min_rows:1,
   max_rows:6,
  };
