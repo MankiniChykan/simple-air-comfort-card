@@ -79,35 +79,23 @@ class SimpleAirComfortCard extends LitElement {
    */
   static styles = css`
     /* HOST: keep layout flexible; height comes from content (the 1:1 stage) */
-    :host{
-      display:inline-block;
-      width:100%;
-      box-sizing:border-box;
-      min-height:0;               /* avoid flex overflow weirdness in dashboards */
-      --sac-scale: 1;             /* dynamic type scaling set by ResizeObserver */
-      /* ADD THIS RULE: This is the key change */
-      ha-card {
-        margin: 0 !important; /* Forces the removal of the external margin */
-      }
-    }
+    :host {
+        display: inline-block;
+        width: 100%;
+        box-sizing: border-box;
+        min-height: 0;
+        --sac-scale: 1;
+        position: relative;
+        padding: var(--card-content-padding, 16px);
+        overflow: hidden;
+        isolation: isolate;
+        border-radius: var(--ha-card-border-radius, 12px);
+        background: var(--sac-temp-bg, #2a2a2a);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        contain: layout paint;
 
-    /* ha-card: our visual container (rounded, dark background) */
-    ha-card{
-      position:relative;
-      padding:0 !important;
-      overflow:hidden;
-      isolation:isolate;
-      border-radius:var(--ha-card-border-radius,12px);
-      background:var(--sac-temp-bg,#2a2a2a);
-
-      /* Center the 1:1 square inside the card */
-      display:flex;
-      align-items:center;
-      justify-content:center;
-
-      box-sizing:border-box;
-      min-height:0;              /* helps in grid/flex layouts */
-      contain: layout paint;     /* let browser optimize layout/paint within */
     }
 
     /* 1:1 square stage using aspect-ratio (replaces padding-top hacks) */
@@ -337,29 +325,26 @@ class SimpleAirComfortCard extends LitElement {
     const rhState = this.hass.states[this._config.humidity];
     const wsState = this._config.windspeed ? this.hass.states[this._config.windspeed] : undefined;
 
-    // If required entities are missing, render a centered "unknown" face
+    // If required entities are missing, show neutral face (no ha-card wrapper)
     if (!tState || !rhState) {
-      return html`<ha-card>
+      // Optional: neutral background
+      this.style.setProperty('--sac-temp-bg', '#2a2a2a');
+      return html`
         <div class="ratio" role="img" aria-label="Air comfort dial">
           <div class="canvas">
             ${this.#face({
-              // Texts
               dewText: 'Unknown',
               tempText: 'N/A',
               rhText: 'N/A',
-              // Visuals
               ringGrad: this.#dewpointRingGradientFromText('Unknown'),
               innerGrad: this.#innerEyeGradient(NaN, NaN, this.#bandThresholds()),
-              // Geometry
               xPct: 50, yPct: 50, outside: false,
-              // Corner numbers
               dewOut: '—', atOut: '—', tempRaw: '—', rhRaw: '—',
-              // Axes (no special glow)
               axisTopStyle: '', axisBottomStyle: '', axisLeftStyle: '', axisRightStyle: '',
             })}
           </div>
         </div>
-      </ha-card>`;
+      `;
     }
 
     /* ---------------------------
