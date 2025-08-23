@@ -1347,3 +1347,4 @@ SimpleAirComfortCard.prototype.getGridOptions = function () {
   min_rows:1,
   max_rows:6,
  };
+};
