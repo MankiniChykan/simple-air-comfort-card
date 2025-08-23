@@ -105,7 +105,6 @@ class SimpleAirComfortCard extends LitElement {
       height: 100%;
       max-width:100%;
       max-height:100%;
-      aspect-ratio:auto;
       overflow:hidden;
       margin:0;
       flex:0 0 auto;
