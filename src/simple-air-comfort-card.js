@@ -91,8 +91,6 @@ class SimpleAirComfortCard extends LitElement {
         isolation: isolate;
         border-radius: var(--ha-card-border-radius, 12px);
         background: var(--sac-temp-bg, #2a2a2a);
-        align-items: center;
-        justify-content: center;
         contain: layout paint;
 
     }
