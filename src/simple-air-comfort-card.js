@@ -80,14 +80,14 @@ class SimpleAirComfortCard extends LitElement {
   static styles = css`
     /* HOST: keep layout flexible; height comes from content (the 1:1 stage) */
     :host {
-        display: block;
+        display: flex;
         width: 100%;
         box-sizing: border-box;
         min-height: 0;
         --sac-scale: 1;
         position: relative;
-        padding: var(--card-content-padding, 0px);
-        margin:1px;
+        padding: var(--card-content-padding, 16px);
+        margin:0px;
         overflow: hidden;
         isolation: isolate;
         border-radius: var(--ha-card-border-radius, 12px);
@@ -106,6 +106,7 @@ class SimpleAirComfortCard extends LitElement {
       max-height:100%;
       aspect-ratio:1 / 1;
       overflow:hidden;
+      margin:0px;
       flex:0 0 auto;
     }
 
