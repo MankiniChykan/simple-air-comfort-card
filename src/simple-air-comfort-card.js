@@ -87,7 +87,6 @@ class SimpleAirComfortCard extends LitElement {
         --sac-scale: 1;
         position: relative;
         padding: var(--card-content-padding, 0px);
-        margin: 0;
         overflow: hidden;
         isolation: isolate;
         border-radius: var(--ha-card-border-radius, 12px);
@@ -104,7 +103,7 @@ class SimpleAirComfortCard extends LitElement {
       width:100%;
       max-width:100%;
       max-height:100%;
-      aspect-ratio:1 / 1;
+      aspect-ratio:auto;
       overflow:hidden;
       margin:0;
       flex:0 0 auto;
@@ -1331,7 +1330,7 @@ console.info(
 // Masonry layout height hint — compute from rendered width so the
 // square card gets enough vertical space (≈50px per row in Masonry)
 SimpleAirComfortCard.prototype.getCardSize = function () {
-  return 3;
+  return 4;
  };
 
 // Sections layout footprint — lock to a square 6×6 so it never overlaps
@@ -1339,10 +1338,10 @@ SimpleAirComfortCard.prototype.getCardSize = function () {
 SimpleAirComfortCard.prototype.getGridOptions = function () {
  return {
    columns: 6,
-   rows: "auto",
+   rows: 4
    min_columns: 6,
-   max_columns: 12,
-   min_rows:1,
-   max_rows:6,
+   max_columns: 6,
+   min_rows:4,
+   max_rows:4,
   };
 };
