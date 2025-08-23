@@ -1329,11 +1329,7 @@ console.info(
 // Masonry layout height hint — compute from rendered width so the
 // square card gets enough vertical space (≈50px per row in Masonry)
 SimpleAirComfortCard.prototype.getCardSize = function () {
-const ROW_PX = 50;
-const el = this.shadowRoot?.querySelector('.ratio');
-const w = el?.clientWidth || this.offsetWidth || 300; // safe fallback
-const h = w; // square stage → height ~= width
-return Math.max(4, Math.ceil(h / ROW_PX));
+return 4;
 };
 
 
