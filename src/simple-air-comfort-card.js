@@ -1326,18 +1326,26 @@ console.info(
  * getCardSize() helps Masonry layout estimate height;
  * getGridOptions() guides the 12-column Sections layout’s default footprint.
  */
+// Masonry layout height hint — compute from rendered width so the
+// square card gets enough vertical space (≈50px per row in Masonry)
 SimpleAirComfortCard.prototype.getCardSize = function () {
-  // ~3 rows (1 row ≈ 50px in classic Masonry layout)
-  return 3;
+const ROW_PX = 50;
+const el = this.shadowRoot?.querySelector('.ratio');
+const w = el?.clientWidth || this.offsetWidth || 300; // safe fallback
+const h = w; // square stage → height ~= width
+return Math.max(4, Math.ceil(h / ROW_PX));
 };
 
+
+// Sections layout footprint — lock to a square 6×6 so it never overlaps
+// (columns are over the 12-col grid; keeping rows equal preserves square look)
 SimpleAirComfortCard.prototype.getGridOptions = function () {
-  return {
-    columns: 6,       // default width (use multiples of 3 for tidy grid)
-    rows: "auto",     // height adjusts to content
-    min_columns: 6,   // don’t let it shrink too small
-    max_columns: 6,  // can span full width
-    min_rows: 4,
-    max_rows: 4,
-  };
+return {
+columns: 6,
+rows: 6,
+min_columns: 6,
+max_columns: 6,
+min_rows: 6,
+max_rows: 6,
+};
 };
