@@ -688,6 +688,10 @@ class SimpleAirComfortCard extends LitElement {
       HOT:    {min:r1(C.t_hot_min    ??  28.0), max:r1(C.t_hot_max    ?? 34.9)},
       BOILING:{min:r1(C.t_boiling_min??  35.0), max:r1(C.t_boiling_max?? 60.0)},
     };
+    // UI + mapping invariants:
+    // - Locked anchors: FROSTY.min, MILD.min, PERFECT.min, PERFECT.max, WARM.max, BOILING.max
+    // - Even spacing inside FROSTY.min..MILD.min for: COLD.min, CHILLY.min, COOL.min
+    // - HOT.max scales evenly in WARM.max..BOILING.max (helps smooth the top segment)
     const order = ["FROSTY","COLD","CHILLY","COOL","MILD","PERFECT","WARM","HOT","BOILING"];
     // Ensure each min >= previous max + 0.1, and max >= min
     for (let i=0;i<order.length;i++){
@@ -778,18 +782,25 @@ class SimpleAirComfortCard extends LitElement {
   }
 
   /* -------------------------------------------
-   * Temperature → Y% mapping (smoothed)
-   * -------------------------------------------
-   * Locked anchors per spec:
-   *   PERFECT max → inner top
-   *   WARM    max → outer top
-   *   HOT     max → halfway between outer top and top endpoint
-   *   BOILING max → top endpoint (100%)
-   *   PERFECT min → inner bottom
-   *   MILD    min → outer bottom
-   *   COOL min, CHILLY min, COLD min, FROSTY max → evenly spaced
-   *     from outer bottom down to FROSTY min (bottom endpoint, 0%).
-   * Between each adjacent pair we smoothstep for natural motion.
+   * Temperature → Y% mapping (locked anchors + smooth segments)
+   * ORDER (and UI order) — top → bottom:
+   *   BOILING.max → top (100%)              [LOCKED]
+   *   HOT.max     → scales between          [EVEN between WARM.max..BOILING.max]
+   *   WARM.max    → outer-top               [LOCKED]
+   *   PERFECT.max → inner-top               [LOCKED]
+   *   PERFECT.min → inner-bottom            [LOCKED]
+   *   MILD.min    → outer-bottom            [LOCKED]
+   *   COOL.min    →                         [EVEN between FROSTY.min..MILD.min]
+   *   CHILLY.min  →                         [EVEN between FROSTY.min..MILD.min]
+   *   COLD.min    →                         [EVEN between FROSTY.min..MILD.min]
+   *   FROSTY.min  → bottom (0%)             [LOCKED]
+   *
+   * Segment rules:
+   * - FROSTY.min → MILD.min         : bottom → outer-bottom       (SMOOTH)
+   * - MILD.min   → PERFECT.min      : outer-bottom → inner-bottom (LINEAR)
+   * - PERFECT.min→ PERFECT.max      : inner-bottom → inner-top    (LINEAR)
+   * - PERFECT.max→ WARM.max         : inner-top → outer-top       (LINEAR)
+   * - WARM.max   → BOILING.max      : outer-top → top             (SMOOTH)
    */
   #tempToYPctGeometryAware(Tc){
     const a = this.#geomAnchors();
@@ -805,46 +816,53 @@ class SimpleAirComfortCard extends LitElement {
     const y_inner_top    = a.y_inner_top;
     const y_outer_top    = a.y_outer_top;
 
-    // HOT max sits midway from outer-top to top endpoint
-    const y_hot_half = (y_outer_top + y_top) / 2;
+    // --- Even spacing for the low ladder (FROSTY.min..MILD.min) ---
+    // We place COLD.min, CHILLY.min, COOL.min evenly in this span.
+    const ladderPoints = 5; // FROSTY.min .. MILD.min (inclusive) ⇒ 5 steps
+    const ladderStep = (y_outer_bottom - y_bottom) / ladderPoints;
+    const y_frosty_min = y_bottom + ladderStep * 0; // 0% bottom
+    const y_cold_min   = y_bottom + ladderStep * 2;
+    const y_chilly_min = y_bottom + ladderStep * 3;
+    const y_cool_min   = y_bottom + ladderStep * 4;
+    const y_mild_min   = y_bottom + ladderStep * 5; // == y_outer_bottom
 
-    // Even ladder between outer-bottom and bottom endpoint for:
-    // COOL min, CHILLY min, COLD min, FROSTY max (include endpoints in spacing)
-    const gaps = 5; // 6 points: bottom .. outer-bottom → 5 equal gaps
-    const step = (y_outer_bottom - y_bottom) / gaps;
-    const y_frosty_min = y_bottom + step * 0; // endpoint
-    const y_frosty_max = y_bottom + step * 1;
-    const y_cold_min   = y_bottom + step * 2;
-    const y_chilly_min = y_bottom + step * 3;
-    const y_cool_min   = y_bottom + step * 4;
-    const y_mild_min   = y_bottom + step * 5; // == y_outer_bottom
-
-    // Ordered anchors (temperature asc → Y% asc)
+    // Ordered anchors (temperature asc → Y% asc). Matches UI order.
     const P = [
-      { t: B.FROSTY.min, y: y_frosty_min }, // bottom endpoint
-      { t: B.FROSTY.max, y: y_frosty_max },
-      { t: B.COLD.min,   y: y_cold_min   },
-      { t: B.CHILLY.min, y: y_chilly_min },
-      { t: B.COOL.min,   y: y_cool_min   },
-      { t: B.MILD.min,   y: y_mild_min   }, // locked outer-bottom
-      { t: B.PERFECT.min, y: y_inner_bottom }, // locked inner-bottom
-      { t: B.PERFECT.max, y: y_inner_top    }, // locked inner-top
-      { t: B.WARM.max,    y: y_outer_top    }, // locked outer-top
-      { t: B.HOT.max,     y: y_hot_half     }, // midway to top endpoint
-      { t: B.BOILING.max, y: y_top          }, // top endpoint
+      { t: B.FROSTY.min,  y: y_frosty_min    }, // bottom (0%)  [LOCKED]
+      { t: B.COLD.min,    y: y_cold_min      }, // even ladder  [EVEN]
+      { t: B.CHILLY.min,  y: y_chilly_min    }, // even ladder  [EVEN]
+      { t: B.COOL.min,    y: y_cool_min      }, // even ladder  [EVEN]
+      { t: B.MILD.min,    y: y_mild_min      }, // outer-bottom [LOCKED]
+      { t: B.PERFECT.min, y: y_inner_bottom  }, // inner-bottom [LOCKED]
+      { t: B.PERFECT.max, y: y_inner_top     }, // inner-top    [LOCKED]
+      { t: B.WARM.max,    y: y_outer_top     }, // outer-top    [LOCKED]
+      { t: B.HOT.max,     y: (y_outer_top + y_top)/2 }, // even within WARM..BOIL window (visual helper)
+      { t: B.BOILING.max, y: y_top           }, // top (100%)   [LOCKED]
     ];
 
     if (!Number.isFinite(Tc)) return a.y_center;
     if (Tc <= P[0].t) return P[0].y;
     if (Tc >= P[P.length-1].t) return P[P.length-1].y;
 
-    // Smoothstep interpolation between the surrounding anchors
+    // Smoothstep interpolation between the surrounding anchors.
+    // This automatically yields:
+    //  - smooth FROSTY.min→MILD.min
+    //  - linear inner segments (MILD.min→MILD.max, PERFECT.min→PERFECT.max, PERFECT.max→WARM.max)
+    //  - smooth WARM.max→BOILING.max
     for (let i = 0; i < P.length - 1; i++){
       const a0 = P[i], a1 = P[i+1];
       if (Tc >= a0.t && Tc <= a1.t){
         const s = this.#clamp((Tc - a0.t) / (a1.t - a0.t), 0, 1);
-        const e = this.#smoothstep(s);
-        return a0.y + (a1.y - a0.y) * e;
+
+        // Linear for the three inner spans:
+        // [MILD.min→PERFECT.min], [PERFECT.min→PERFECT.max], [PERFECT.max→WARM.max]
+        const isLinear =
+          (a0.t === B.MILD.min    && a1.t === B.PERFECT.min) ||
+          (a0.t === B.PERFECT.min && a1.t === B.PERFECT.max) ||
+          (a0.t === B.PERFECT.max && a1.t === B.WARM.max);
+
+        const u = isLinear ? s : this.#smoothstep(s);
+        return a0.y + (a1.y - a0.y) * u;
       }
     }
     return a.y_center; // safe fallback
@@ -986,13 +1004,15 @@ class SimpleAirComfortCardEditor extends LitElement {
       ...(config ?? {}),
     };
 
-    // --- NEW: define the two schemas separately ---
-    // Single temperature row, ordered Boiling→Frosty (top→bottom in GUI)
-    this._schemaTempsRow = [
+    // Editor shows ONLY these fields in this exact order:
+    // BOILING.max, HOT.max, WARM.max, PERFECT.max, (midpoint text), PERFECT.min, MILD.min, COOL.min, CHILLY.min, COLD.min, FROSTY.min
+    this._schemaTempsTop = [
       { name:'t_boiling_max', selector:{ number:{ min:-60, max:80, step:0.1, mode:'box', unit_of_measurement:'°C' } } },
       { name:'t_hot_max',     selector:{ number:{ min:-60, max:60, step:0.1, mode:'box', unit_of_measurement:'°C' } } },
       { name:'t_warm_max',    selector:{ number:{ min:-60, max:50, step:0.1, mode:'box', unit_of_measurement:'°C' } } },
       { name:'t_perf_max',    selector:{ number:{ min:-60, max:45, step:0.1, mode:'box', unit_of_measurement:'°C' } } },
+    ];
+    this._schemaTempsBottom = [
       { name:'t_perf_min',    selector:{ number:{ min:-60, max:45, step:0.1, mode:'box', unit_of_measurement:'°C' } } },
       { name:'t_mild_min',    selector:{ number:{ min:-60, max:40, step:0.1, mode:'box', unit_of_measurement:'°C' } } },
       { name:'t_cool_min',    selector:{ number:{ min:-60, max:35, step:0.1, mode:'box', unit_of_measurement:'°C' } } },
@@ -1030,20 +1050,28 @@ class SimpleAirComfortCardEditor extends LitElement {
         @value-changed=${this._onMiscChange}>
       </ha-form>
 
-      <!-- Temperature anchors (single row: Boiling → Frosty) -->
+      <!-- Temperature anchors (°C) — shown in required order -->
       <div class="col-title" style="margin-top:12px">Temperature anchors (°C)</div>
+      <!-- Top block: BOILING.max, HOT.max, WARM.max, PERFECT.max -->
       <ha-form
         .hass=${this.hass}
         .data=${this._config}
-        .schema=${this._schemaTempsRow}
+        .schema=${this._schemaTempsTop}
         .computeLabel=${this._labelTemp}
         @value-changed=${this._onTempsChange}>
       </ha-form>
-
-      <!-- Exact PERFECT midpoint (read-only) -->
-      <div class="col-title" style="margin-top:8px;opacity:.8">
+      <!-- Calculated midpoint text placed HERE -->
+      <div class="col-title" style="margin:8px 0;opacity:.8">
         Center (exact midpoint between PERFECT min & max): ${this._centerTemp()}
       </div>
+      <!-- Bottom block: PERFECT.min, MILD.min, COOL.min, CHILLY.min, COLD.min, FROSTY.min -->
+      <ha-form
+        .hass=${this.hass}
+        .data=${this._config}
+        .schema=${this._schemaTempsBottom}
+        .computeLabel=${this._labelTemp}
+        @value-changed=${this._onTempsChange}>
+      </ha-form>
     </div>`;
   }
 
@@ -1063,18 +1091,18 @@ class SimpleAirComfortCardEditor extends LitElement {
     return base ?? id;
   };
 
-  // Human labels for the single-row temperature anchors (Boiling→Frosty)
+  // Human labels for the exposed temperature anchors (exact order)
   _labelTemp = (s) => ({
-    t_boiling_max:'BOILING max (°C)',
-    t_hot_max:'HOT max (°C)',
-    t_warm_max:'WARM max (°C)',
-    t_perf_max:'PERFECT max (°C)',
-    t_perf_min:'PERFECT min (°C)',
-    t_mild_min:'MILD min (°C)',
-    t_cool_min:'COOL min (°C)',
-    t_chilly_min:'CHILLY min (°C)',
-    t_cold_min:'COLD min (°C)',
-    t_frosty_min:'FROSTY min (°C)',
+    t_boiling_max:'BOILING max → top (100%)',
+    t_hot_max:'HOT max (even WARM.max→BOILING.max)',
+    t_warm_max:'WARM max → outer-top',
+    t_perf_max:'PERFECT max → inner-top',
+    t_perf_min:'PERFECT min → inner-bottom',
+    t_mild_min:'MILD min → outer-bottom',
+    t_cool_min:'COOL min (even FROSTY.min→MILD.min)',
+    t_chilly_min:'CHILLY min (even FROSTY.min→MILD.min)',
+    t_cold_min:'COLD min (even FROSTY.min→MILD.min)',
+    t_frosty_min:'FROSTY min → bottom (0%)',
   }[s.name] ?? s.name);
   
 
@@ -1133,12 +1161,13 @@ class SimpleAirComfortCardEditor extends LitElement {
       return `Locked = ${nice(p)} max +0.1 °C`;
     }
 
-    // Editable controls: all *_max except BOILING max, plus t_boiling_min
-    if ([
-      't_frosty_max','t_cold_max','t_chilly_max','t_cool_max',
-      't_mild_max','t_perf_max','t_warm_max','t_hot_max','t_boiling_min'
-    ].includes(id)) {
-      return 'Moving this shifts the next Min';
+    // Drag rules in UI (only exposed fields):
+    // *.min drags the adjacent *.max; *.max drags the adjacent *.min
+    if (['t_boiling_max','t_hot_max','t_warm_max','t_perf_max'].includes(id)) {
+      return 'This *.max will pull the next *.min as needed to keep 0.1 °C gaps.';
+    }
+    if (['t_perf_min','t_mild_min','t_cool_min','t_chilly_min','t_cold_min','t_frosty_min'].includes(id)) {
+      return 'This *.min will push the previous *.max as needed to keep 0.1 °C gaps.';
     }
 
     // Generic band help (fallback)
