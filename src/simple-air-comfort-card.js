@@ -1197,12 +1197,11 @@ class SimpleAirComfortCardEditor extends LitElement {
     fireEvent(this, 'config-changed', { config: merged });
   };
 
-  // --- New: single-field edit handler (no cascading) ---
+  // Only clamp the actually edited handles; no chain ripples
   _onTempsChange = (ev) => {
     ev.stopPropagation();
-    const next = { ...(this._config || {}), ...(ev.detail?.value || {}) };
-
-    // Only clamp what actually changed to avoid rippling unrelated anchors.
+    const delta = { ...(ev.detail?.value || {}) };
+    if (!Object.keys(delta).length) return;
     const changed = Object.keys(delta);
     const cfg = this._applyTempsRowBiDirectional({ ...(this._config || {}), ...delta }, changed);
     this._config = cfg;
