@@ -1110,40 +1110,25 @@ class SimpleAirComfortCardEditor extends LitElement {
 
   // Human labels for the exposed temperature anchors (exact order)
   _labelTemp = (s) => ({
-    t_boiling_max:'BOILING max → top (100%)',
-    t_hot_max:'HOT max (even WARM.max→BOILING.max)',
-    t_warm_max:'WARM max → outer-top',
-    t_perf_max:'PERFECT max → inner-top',
-    t_perf_min:'PERFECT min → inner-bottom',
-    t_mild_min:'MILD min → outer-bottom',
-    t_cool_min:'COOL min (even FROSTY.min→MILD.min)',
-    t_chilly_min:'CHILLY min (even FROSTY.min→MILD.min)',
-    t_cold_min:'COLD min (even FROSTY.min→MILD.min)',
-    t_frosty_min:'FROSTY min → bottom (0%)',
+    t_boiling_max:'BOILING.max → top (100%)',
+    t_hot_max:'HOT.max (drags BOILING.min)',
+    t_warm_max:'WARM.max → outer-top (drags HOT.min)',
+    t_perf_max:'PERFECT.max → inner-top (drags WARM.min)',
+    t_perf_min:'PERFECT.min → inner-bottom (drags MILD.max)',
+    t_mild_min:'MILD.min → outer-bottom (drags COOL.max)',
+    t_cool_min:'COOL.min (drags CHILLY.max)',
+    t_chilly_min:'CHILLY.min (drags COLD.max)',
+    t_cold_min:'COLD.min (drags FROSTY.max)',
+    t_frosty_min:'FROSTY.min → bottom (0%)',
   }[s.name] ?? s.name);
   
 
   // Helper/tooltips for each field (shows under the input)
   _helper = (s) => {
-    const id = s.name;
     const st   = (key) => this.hass?.states?.[this._config?.[key]];
     const unit = (key) => st(key)?.attributes?.unit_of_measurement ?? "";
 
-    // Which min follows which max
-    const prevOf = {
-      t_cold_min:   't_frosty_max',
-      t_chilly_min: 't_cold_max',
-      t_cool_min:   't_chilly_max',
-      t_mild_min:   't_cool_max',
-      t_perf_min:   't_mild_max',
-      t_warm_min:   't_perf_max',
-      t_hot_min:    't_warm_max',
-    };
-
-    // Pretty band name
-    const nice = (k) => (k?.match(/^t_(.+)_(min|max)$/)?.[1] || '').toUpperCase();
-
-    // Non-band helpers (unchanged from your version)
+    // Non-band helpers
     switch (id) {
       case 'name':
         return 'Shown as the small grey title at the top of the card.';
@@ -1164,35 +1149,30 @@ class SimpleAirComfortCardEditor extends LitElement {
         return 'Fine-tune the dot’s vertical position in % of card height (positive moves up).';
     }
 
-    // Special band edges
-    if (id === 't_frosty_min')
-      return 'Unused lower edge (ignored on save).';
+    // Band helpers with your exact drag semantics
+    const gap = '0.1 °C';
     if (id === 't_boiling_max')
-      return 'Unused upper edge (ignored on save).';
-
-    // Computed/locked mins: show driver and current resolved values
-    if (id in prevOf) {
-      const p = prevOf[id];
-      const pVal = this._config?.[p];
-      const cur  = this._config?.[id];
-      return `Locked = ${nice(p)} max +0.1 °C`;
-    }
-
-    // Drag rules in UI (only exposed fields):
-    // *.min drags the adjacent *.max; *.max drags the adjacent *.min
-    if (['t_boiling_max','t_hot_max','t_warm_max','t_perf_max'].includes(id)) {
-      return 'This *.max will pull the next *.min as needed to keep 0.1 °C gaps.';
-    }
-    if (['t_perf_min','t_mild_min','t_cool_min','t_chilly_min','t_cold_min','t_frosty_min'].includes(id)) {
-      return 'This *.min will push the previous *.max as needed to keep 0.1 °C gaps.';
-    }
-
-    // Generic band help (fallback)
-    if (/^t_.*_(min|max)$/.test(id)) {
-      return 'Bands use 0.1 °C steps. Each next min follows the previous max + 0.1.';
-    }
-
-    // Final fallback
+      return 'Dragging number down stops at BOILING.min. Dragging number up increases the scale. Keeps a 0.1 °C gap to HOT.max (via BOILING.min).';
+    if (id === 't_hot_max')
+      return 'Drags BOILING.min with it up or down. HOT.max can’t exceed BOILING.max and can’t go below WARM.max.';
+    if (id === 't_warm_max')
+      return 'WARM.max → outer-top. Drags HOT.min with it up or down. WARM.max can’t exceed HOT.max and can’t go below PERFECT.max.';
+    if (id === 't_perf_max')
+      return 'PERFECT.max → inner-top. Drags WARM.min with it up or down. Can’t exceed WARM.max; can’t go below PERFECT.min.';
+    if (id === 't_perf_min')
+      return 'PERFECT.min → inner-bottom. Drags MILD.max with it up or down. Can’t exceed PERFECT.max; can’t go below MILD.min.';
+    if (id === 't_mild_min')
+      return 'MILD.min → outer-bottom. Drags COOL.max with it up or down. Can’t exceed PERFECT.min; can’t go below COOL.min.';
+    if (id === 't_cool_min')
+      return 'COOL.min drags CHILLY.max with it up or down. Can’t exceed MILD.min; can’t go below CHILLY.min.';
+    if (id === 't_chilly_min')
+      return 'CHILLY.min drags COLD.max with it up or down. Can’t exceed COOL.min; can’t go below COLD.min.';
+    if (id === 't_cold_min')
+      return 'COLD.min drags FROSTY.max with it up or down. Can’t exceed CHILLY.min; can’t go below FROSTY.min.';
+    if (id === 't_frosty_min')
+      return 'FROSTY.min → bottom (0%). Dragging number up stops at FROSTY.max. Dragging number down increases the scale.';
+    if (/^t_.*_(min|max)$/.test(id))
+      return `All band edges keep contiguous ${gap} gaps automatically.`;
     return 'Tip: values update immediately; click Save when done.';
   };
 
@@ -1228,8 +1208,11 @@ class SimpleAirComfortCardEditor extends LitElement {
 
   // Keep bands contiguous using GUI order: Boiling max → … → Frosty min
   _applyTempsRowBiDirectional(cfgIn){
-    const r1 = v => Math.round((Number(v) ?? 0) * 10) / 10;
+    // round to 0.1 and coerce
+    const r1 = (v) => Math.round((Number(v) || 0) * 10) / 10;
     const step = 0.1;
+
+    // Pull GUI fields (only the 10 exposed)
     const P = {
       boiling_max: r1(cfgIn.t_boiling_max ?? 60.0),
       hot_max:     r1(cfgIn.t_hot_max     ?? 34.9),
@@ -1243,25 +1226,50 @@ class SimpleAirComfortCardEditor extends LitElement {
       frosty_min:  r1(cfgIn.t_frosty_min  ?? -40.0),
     };
 
-    // GUI chain (descending temperature)
-    const chain = ['boiling_max','hot_max','warm_max','perf_max','perf_min','mild_min','cool_min','chilly_min','cold_min','frosty_min'];
+    // 1) Enforce your hard neighbor limits (max can’t cross next min; min can’t cross prev max)
+    // Top half (descending):
+    P.hot_max    = Math.min(P.hot_max,    r1(P.boiling_max - step));      // HOT.max ≤ BOILING.max - 0.1
+    P.warm_max   = Math.min(P.warm_max,   r1(P.hot_max    - step));       // WARM.max ≤ HOT.max - 0.1
+    P.perf_max   = Math.min(P.perf_max,   Math.min(r1(P.warm_max - step), // PERFECT.max ≤ WARM.max - 0.1
+                                                   r1(Math.max(P.perf_min, -1e9) + 0))); // and ≥ PERFECT.min (checked later)
 
-    // Forward: enforce strictly descending by ≥0.1
-    for (let i = 1; i < chain.length; i++){
+    // Bottom half (descending):
+    P.mild_min   = Math.max(P.mild_min,   r1(P.cool_min   + step));       // MILD.min ≥ COOL.min + 0.1
+    P.perf_min   = Math.max(P.perf_min,   r1(P.mild_min   + step));       // PERFECT.min ≥ MILD.min + 0.1
+    P.cold_min   = Math.max(P.cold_min,   r1(P.frosty_min + step));       // COLD.min ≥ FROSTY.min + 0.1
+    P.chilly_min = Math.max(P.chilly_min, r1(P.cold_min   + step));       // CHILLY.min ≥ COLD.min + 0.1
+    P.cool_min   = Math.max(P.cool_min,   r1(P.chilly_min + step));       // COOL.min ≥ CHILLY.min + 0.1
+
+    // Re‑apply the “can’t exceed” chain downward for the mins against their upper neighbors:
+    P.mild_min   = Math.min(P.mild_min,   r1(P.perf_min   - 0));          // MILD.min ≤ PERFECT.min
+    P.cool_min   = Math.min(P.cool_min,   r1(P.mild_min   - 0));          // COOL.min ≤ MILD.min
+    P.chilly_min = Math.min(P.chilly_min, r1(P.cool_min   - 0));          // CHILLY.min ≤ COOL.min
+    P.cold_min   = Math.min(P.cold_min,   r1(P.chilly_min - 0));          // COLD.min ≤ CHILLY.min
+
+    // 2) Keep full monotone order with exact 0.1 gaps where required
+    //    (BOILING.max > HOT.max > WARM.max > PERFECT.max ≥ PERFECT.min > MILD.min > COOL.min > CHILLY.min > COLD.min > FROSTY.min)
+    const chain = ['boiling_max','hot_max','warm_max','perf_max','perf_min','mild_min','cool_min','chilly_min','cold_min','frosty_min'];
+    // forward pass (descending): each next ≤ prev - 0.1 (except the single equality check perf_max ≥ perf_min handled below)
+    for (let i=1;i<chain.length;i++){
       const prev = chain[i-1], cur = chain[i];
-      const limit = r1(P[prev] - step);
-      if (P[cur] > limit) P[cur] = limit;
+      if (prev === 'perf_max' && cur === 'perf_min') {
+        // ensure perf_min ≤ perf_max - 0.1 (and later we’ll also ensure perf_min ≥ mild_min + 0.1)
+        if (P.perf_min > r1(P.perf_max - step)) P.perf_min = r1(P.perf_max - step);
+      } else {
+        const limit = r1(P[prev] - step);
+        if (P[cur] > limit) P[cur] = limit;
+      }
     }
-    // Backward: ensure previous is ≤ next - 0.1
-    for (let i = chain.length - 2; i >= 0; i--){
+    // backward pass (ascending): each prev ≥ next + 0.1
+    for (let i=chain.length-2;i>=0;i--){
       const cur = chain[i], next = chain[i+1];
       const limit = r1(P[next] + step);
       if (P[cur] < limit) P[cur] = limit;
     }
 
+    // 3) Apply the explicit drag couplings by deriving “hidden” neighbors
+    //    (these are not directly edited but must move with the dragged handle)
     const out = { ...cfgIn };
-
-    // Write back the ten GUI fields
     out.t_boiling_max = P.boiling_max;
     out.t_hot_max     = P.hot_max;
     out.t_warm_max    = P.warm_max;
@@ -1273,17 +1281,17 @@ class SimpleAirComfortCardEditor extends LitElement {
     out.t_cold_min    = P.cold_min;
     out.t_frosty_min  = P.frosty_min;
 
-    // Derive the in-between neighbors to keep full band set contiguous
-    out.t_frosty_max  = r1(P.cold_min   - step);
-    out.t_cold_max    = r1(P.chilly_min - step);
-    out.t_chilly_max  = r1(P.cool_min   - step);
-    out.t_cool_max    = r1(P.mild_min   - step);
-    out.t_mild_max    = r1(P.perf_min   - step);
-    out.t_warm_min    = r1(P.perf_max   + step);
-    out.t_hot_min     = r1(P.warm_max   + step);
-    out.t_boiling_min = r1(P.hot_max    + step);
+    // Derived neighbors (these are the ones that “drag”)
+    out.t_boiling_min = r1(P.hot_max    + step); // HOT.max ↔ BOILING.min
+    out.t_hot_min     = r1(P.warm_max   + step); // WARM.max ↔ HOT.min
+    out.t_warm_min    = r1(P.perf_max   + step); // PERFECT.max ↔ WARM.min
+    out.t_mild_max    = r1(P.perf_min   - step); // PERFECT.min ↔ MILD.max
+    out.t_cool_max    = r1(P.mild_min   - step); // MILD.min ↔ COOL.max
+    out.t_chilly_max  = r1(P.cool_min   - step); // COOL.min ↔ CHILLY.max
+    out.t_cold_max    = r1(P.chilly_min - step); // CHILLY.min ↔ COLD.max
+    out.t_frosty_max  = r1(P.cold_min   - step); // COLD.min ↔ FROSTY.max
 
-    // RH calibration passthrough (unchanged)
+    // 4) RH calibration passthrough (unchanged)
     const clamp01 = v => Math.min(100, Math.max(0, r1(v)));
     out.rh_left_inner_pct  = clamp01(out.rh_left_inner_pct  ?? 40);
     out.rh_right_inner_pct = clamp01(out.rh_right_inner_pct ?? 60);
@@ -1292,6 +1300,7 @@ class SimpleAirComfortCardEditor extends LitElement {
     }
     return out;
   }
+
 
 
   // One-time auto-pick of temp/humidity if user hasn’t selected any
