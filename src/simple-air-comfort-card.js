@@ -821,27 +821,41 @@ class SimpleAirComfortCard extends LitElement {
     const y_inner_top    = a.y_inner_top;
     const y_outer_top    = a.y_outer_top;
 
-    // --- Even spacing for the low ladder (FROSTY.min..MILD.min) ---
-    // We place COLD.min, CHILLY.min, COOL.min evenly in this span.
-    const ladderPoints = 5; // FROSTY.min .. MILD.min (inclusive) ⇒ 5 steps
-    const ladderStep = (y_outer_bottom - y_bottom) / ladderPoints;
-    const y_frosty_min = y_bottom + ladderStep * 0; // 0% bottom
-    const y_cold_min   = y_bottom + ladderStep * 2;
-    const y_chilly_min = y_bottom + ladderStep * 3;
-    const y_cool_min   = y_bottom + ladderStep * 4;
-    const y_mild_min   = y_bottom + ladderStep * 5; // == y_outer_bottom
+    // --- Temperature-aware ladders ---
+    // Helper: safe fractional position of t within [t0..t1]
+    const _frac = (t, t0, t1) => {
+      const den = (t1 - t0);
+      if (!Number.isFinite(den) || Math.abs(den) < 1e-6) return 0;
+      return this.#clamp((t - t0) / den, 0, 1);
+    };
+
+    // Bottom ladder spans FROSTY.min..MILD.min  →  y_bottom..y_outer_bottom
+    const tB0 = B.FROSTY.min, tB1 = B.MILD.min;
+    const yB0 = y_bottom,     yB1 = y_outer_bottom;
+    const yFromBottomSpan = (t) => yB0 + _frac(t, tB0, tB1) * (yB1 - yB0);
+
+    const y_frosty_min = yFromBottomSpan(B.FROSTY.min); // = y_bottom
+    const y_cold_min   = yFromBottomSpan(B.COLD.min);
+    const y_chilly_min = yFromBottomSpan(B.CHILLY.min);
+    const y_cool_min   = yFromBottomSpan(B.COOL.min);
+    const y_mild_min   = yFromBottomSpan(B.MILD.min);   // = y_outer_bottom
 
     // Ordered anchors (temperature asc → Y% asc). Matches UI order.
+    // Top helper: place HOT.max proportionally in WARM.max..BOILING.max
+    const tT0 = B.WARM.max, tT1 = B.BOILING.max;
+    const yT0 = y_outer_top, yT1 = y_top;
+    const y_hot_max = yT0 + _frac(B.HOT.max, tT0, tT1) * (yT1 - yT0);
+
     const P = [
       { t: B.FROSTY.min,  y: y_frosty_min    }, // bottom (0%)  [LOCKED]
-      { t: B.COLD.min,    y: y_cold_min      }, // even ladder  [EVEN]
-      { t: B.CHILLY.min,  y: y_chilly_min    }, // even ladder  [EVEN]
-      { t: B.COOL.min,    y: y_cool_min      }, // even ladder  [EVEN]
+      { t: B.COLD.min,    y: y_cold_min      }, // parametric   [SPAN-FRACTION]
+      { t: B.CHILLY.min,  y: y_chilly_min    }, // parametric   [SPAN-FRACTION]
+      { t: B.COOL.min,    y: y_cool_min      }, // parametric   [SPAN-FRACTION]
       { t: B.MILD.min,    y: y_mild_min      }, // outer-bottom [LOCKED]
       { t: B.PERFECT.min, y: y_inner_bottom  }, // inner-bottom [LOCKED]
       { t: B.PERFECT.max, y: y_inner_top     }, // inner-top    [LOCKED]
       { t: B.WARM.max,    y: y_outer_top     }, // outer-top    [LOCKED]
-      { t: B.HOT.max,     y: (y_outer_top + y_top)/2 }, // even within WARM..BOIL window (visual helper)
+      { t: B.HOT.max,     y: y_hot_max       }, // proportional in WARM..BOILING
       { t: B.BOILING.max, y: y_top           }, // top (100%)   [LOCKED]
     ];
 
@@ -849,11 +863,9 @@ class SimpleAirComfortCard extends LitElement {
     if (Tc <= P[0].t) return P[0].y;
     if (Tc >= P[P.length-1].t) return P[P.length-1].y;
 
-    // Smoothstep interpolation between the surrounding anchors.
-    // This automatically yields:
-    //  - smooth FROSTY.min→MILD.min
-    //  - linear inner segments (MILD.min→MILD.max, PERFECT.min→PERFECT.max, PERFECT.max→WARM.max)
-    //  - smooth WARM.max→BOILING.max
+    // Interp between surrounding anchors:
+    //  - SMOOTH on the two outer spans (FROSTY.min→MILD.min, WARM.max→BOILING.max)
+    //  - LINEAR on the three inner spans (MILD.min→PERFECT.min, PERFECT.min→PERFECT.max, PERFECT.max→WARM.max)
     for (let i = 0; i < P.length - 1; i++){
       const a0 = P[i], a1 = P[i+1];
       if (Tc >= a0.t && Tc <= a1.t){
