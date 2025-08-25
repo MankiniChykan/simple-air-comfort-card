@@ -1127,6 +1127,7 @@ class SimpleAirComfortCardEditor extends LitElement {
   _helper = (s) => {
     const st   = (key) => this.hass?.states?.[this._config?.[key]];
     const unit = (key) => st(key)?.attributes?.unit_of_measurement ?? "";
+    const id = s.name; // ← needed so switch(id) works
 
     // Non-band helpers
     switch (id) {
@@ -1152,25 +1153,25 @@ class SimpleAirComfortCardEditor extends LitElement {
     // Band helpers with your exact drag semantics
     const gap = '0.1 °C';
     if (id === 't_boiling_max')
-      return 'Dragging number down stops at BOILING.min. Dragging number up increases the scale. Keeps a 0.1 °C gap to HOT.max (via BOILING.min).';
+      return 'BOILING.max → top (100%). Dragging down stops at BOILING.min (tracks HOT.max+0.1). Dragging up increases the scale.';
     if (id === 't_hot_max')
-      return 'Drags BOILING.min with it up or down. HOT.max can’t exceed BOILING.max and can’t go below WARM.max.';
+      return 'HOT.max. Drags BOILING.min with it up/down (BOILING.min = HOT.max+0.1). HOT.max ≤ BOILING.max−0.1 and ≥ WARM.max+0.1.';
     if (id === 't_warm_max')
-      return 'WARM.max → outer-top. Drags HOT.min with it up or down. WARM.max can’t exceed HOT.max and can’t go below PERFECT.max.';
+      return 'WARM.max → outer-top. Drags HOT.min with it (HOT.min = WARM.max+0.1). WARM.max ≤ HOT.max−0.1 and ≥ PERFECT.max+0.1.';
     if (id === 't_perf_max')
-      return 'PERFECT.max → inner-top. Drags WARM.min with it up or down. Can’t exceed WARM.max; can’t go below PERFECT.min.';
+      return 'PERFECT.max → inner-top. Drags WARM.min (WARM.min = PERFECT.max+0.1). PERFECT.max ≤ WARM.max−0.1 and ≥ PERFECT.min+0.1.';
     if (id === 't_perf_min')
-      return 'PERFECT.min → inner-bottom. Drags MILD.max with it up or down. Can’t exceed PERFECT.max; can’t go below MILD.min.';
+      return 'PERFECT.min → inner-bottom. Drags MILD.max (MILD.max = PERFECT.min−0.1). PERFECT.min ≤ PERFECT.max−0.1 and ≥ MILD.min+0.1.';
     if (id === 't_mild_min')
-      return 'MILD.min → outer-bottom. Drags COOL.max with it up or down. Can’t exceed PERFECT.min; can’t go below COOL.min.';
+      return 'MILD.min → outer-bottom. Drags COOL.max (COOL.max = MILD.min−0.1). MILD.min ≤ PERFECT.min and ≥ COOL.min+0.1.';
     if (id === 't_cool_min')
-      return 'COOL.min drags CHILLY.max with it up or down. Can’t exceed MILD.min; can’t go below CHILLY.min.';
+      return 'COOL.min. Drags CHILLY.max (CHILLY.max = COOL.min−0.1). COOL.min ≤ MILD.min and ≥ CHILLY.min+0.1.';
     if (id === 't_chilly_min')
-      return 'CHILLY.min drags COLD.max with it up or down. Can’t exceed COOL.min; can’t go below COLD.min.';
+      return 'CHILLY.min. Drags COLD.max (COLD.max = CHILLY.min−0.1). CHILLY.min ≤ COOL.min and ≥ COLD.min+0.1.';
     if (id === 't_cold_min')
-      return 'COLD.min drags FROSTY.max with it up or down. Can’t exceed CHILLY.min; can’t go below FROSTY.min.';
+      return 'COLD.min. Drags FROSTY.max (FROSTY.max = COLD.min−0.1). COLD.min ≤ CHILLY.min and ≥ FROSTY.min+0.1.';
     if (id === 't_frosty_min')
-      return 'FROSTY.min → bottom (0%). Dragging number up stops at FROSTY.max. Dragging number down increases the scale.';
+      return 'FROSTY.min → bottom (0%). Dragging up stops at FROSTY.max (COLD.max−0.1). Dragging down increases the scale lower.';
     if (/^t_.*_(min|max)$/.test(id))
       return `All band edges keep contiguous ${gap} gaps automatically.`;
     return 'Tip: values update immediately; click Save when done.';
