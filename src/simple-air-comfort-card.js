@@ -1197,18 +1197,23 @@ class SimpleAirComfortCardEditor extends LitElement {
     fireEvent(this, 'config-changed', { config: merged });
   };
 
-  // --- New: single-row temperature handler (hot→cold), with bi-directional drag ---
+  // --- New: single-field edit handler (no cascading) ---
   _onTempsChange = (ev) => {
     ev.stopPropagation();
-    const delta = { ...(ev.detail?.value || {}) };
-    if (!Object.keys(delta).length) return;
-    const cfg = this._applyTempsRowBiDirectional({ ...(this._config || {}), ...delta });
+    const next = { ...(this._config || {}), ...(ev.detail?.value || {}) };
+    // figure out which key actually changed
+    const changed = Object.keys(ev.detail?.value || {}).find(k => next[k] !== this._config?.[k]);
+    if (!changed) return;
+
+    // Only clamp what actually changed to avoid rippling unrelated anchors.
+    const changed = Object.keys(delta);
+    const cfg = this._applyTempsRowBiDirectional({ ...(this._config || {}), ...delta }, changed);
     this._config = cfg;
     fireEvent(this, 'config-changed', { config: cfg });
   };
 
-  // Keep bands contiguous using GUI order: Boiling max → … → Frosty min
-  _applyTempsRowBiDirectional(cfgIn){
+  // Clamp only the edited handles against *their local neighbors*; then update derived neighbors.
+  _applyTempsRowBiDirectional(cfgIn, changedKeys = []){
     // round to 0.1 and coerce
     const r1 = (v) => Math.round((Number(v) || 0) * 10) / 10;
     const step = 0.1;
@@ -1227,49 +1232,72 @@ class SimpleAirComfortCardEditor extends LitElement {
       frosty_min:  r1(cfgIn.t_frosty_min  ?? -40.0),
     };
 
-    // 1) Enforce your hard neighbor limits (max can’t cross next min; min can’t cross prev max)
-    // Top half (descending):
-    P.hot_max    = Math.min(P.hot_max,    r1(P.boiling_max - step));      // HOT.max ≤ BOILING.max - 0.1
-    P.warm_max   = Math.min(P.warm_max,   r1(P.hot_max    - step));       // WARM.max ≤ HOT.max - 0.1
-    P.perf_max   = Math.min(P.perf_max,   Math.min(r1(P.warm_max - step), // PERFECT.max ≤ WARM.max - 0.1
-                                                   r1(Math.max(P.perf_min, -1e9) + 0))); // and ≥ PERFECT.min (checked later)
+    // Map config field -> our P keys
+    const keyMap = {
+      t_boiling_max: 'boiling_max',
+      t_hot_max:     'hot_max',
+      t_warm_max:    'warm_max',
+      t_perf_max:    'perf_max',
+      t_perf_min:    'perf_min',
+      t_mild_min:    'mild_min',
+      t_cool_min:    'cool_min',
+      t_chilly_min:  'chilly_min',
+      t_cold_min:    'cold_min',
+      t_frosty_min:  'frosty_min',
+    };
 
-    // Bottom half (descending):
-    P.mild_min   = Math.max(P.mild_min,   r1(P.cool_min   + step));       // MILD.min ≥ COOL.min + 0.1
-    P.perf_min   = Math.max(P.perf_min,   r1(P.mild_min   + step));       // PERFECT.min ≥ MILD.min + 0.1
-    P.cold_min   = Math.max(P.cold_min,   r1(P.frosty_min + step));       // COLD.min ≥ FROSTY.min + 0.1
-    P.chilly_min = Math.max(P.chilly_min, r1(P.cold_min   + step));       // CHILLY.min ≥ COLD.min + 0.1
-    P.cool_min   = Math.max(P.cool_min,   r1(P.chilly_min + step));       // COOL.min ≥ CHILLY.min + 0.1
+    // If HA batches more than one, clamp each edited field *independently* against its immediate neighbors.
+    const targets = (changedKeys && changedKeys.length) ? changedKeys : Object.keys(keyMap);
+    const ks = targets.map(k => keyMap[k] || k).filter(Boolean);
 
-    // Re‑apply the “can’t exceed” chain downward for the mins against their upper neighbors:
-    P.mild_min   = Math.min(P.mild_min,   r1(P.perf_min   - 0));          // MILD.min ≤ PERFECT.min
-    P.cool_min   = Math.min(P.cool_min,   r1(P.mild_min   - 0));          // COOL.min ≤ MILD.min
-    P.chilly_min = Math.min(P.chilly_min, r1(P.cool_min   - 0));          // CHILLY.min ≤ COOL.min
-    P.cold_min   = Math.min(P.cold_min,   r1(P.chilly_min - 0));          // COLD.min ≤ CHILLY.min
-
-    // 2) Keep full monotone order with exact 0.1 gaps where required
-    //    (BOILING.max > HOT.max > WARM.max > PERFECT.max ≥ PERFECT.min > MILD.min > COOL.min > CHILLY.min > COLD.min > FROSTY.min)
-    const chain = ['boiling_max','hot_max','warm_max','perf_max','perf_min','mild_min','cool_min','chilly_min','cold_min','frosty_min'];
-    // forward pass (descending): each next ≤ prev - 0.1 (except the single equality check perf_max ≥ perf_min handled below)
-    for (let i=1;i<chain.length;i++){
-      const prev = chain[i-1], cur = chain[i];
-      if (prev === 'perf_max' && cur === 'perf_min') {
-        // ensure perf_min ≤ perf_max - 0.1 (and later we’ll also ensure perf_min ≥ mild_min + 0.1)
-        if (P.perf_min > r1(P.perf_max - step)) P.perf_min = r1(P.perf_max - step);
-      } else {
-        const limit = r1(P[prev] - step);
-        if (P[cur] > limit) P[cur] = limit;
+    const clampEdited = (k) => {
+      switch (k) {
+        case 'boiling_max':
+          // Drag down stops at BOILING.min (= HOT.max + 0.1). Drag up grows scale.
+          P.boiling_max = Math.max(P.boiling_max, r1(P.hot_max + step));
+          break;
+        case 'hot_max':
+          // HOT.max ∈ [WARM.max+0.1, BOILING.max-0.1]
+          P.hot_max = Math.max(r1(P.warm_max + step), Math.min(P.hot_max, r1(P.boiling_max - step)));
+          break;
+        case 'warm_max':
+          // WARM.max ∈ [PERFECT.max+0.1, HOT.max-0.1]
+          P.warm_max = Math.max(r1(P.perf_max + step), Math.min(P.warm_max, r1(P.hot_max - step)));
+          break;
+        case 'perf_max':
+          // PERFECT.max ∈ [PERFECT.min+0.1, WARM.max-0.1]
+          P.perf_max = Math.max(r1(P.perf_min + step), Math.min(P.perf_max, r1(P.warm_max - step)));
+          break;
+        case 'perf_min':
+          // PERFECT.min ∈ [MILD.min+0.1, PERFECT.max-0.1]
+          P.perf_min = Math.max(r1(P.mild_min + step), Math.min(P.perf_min, r1(P.perf_max - step)));
+          break;
+        case 'mild_min':
+          // MILD.min ∈ [COOL.min+0.1, PERFECT.min]
+          P.mild_min = Math.max(r1(P.cool_min + step), Math.min(P.mild_min, r1(P.perf_min - 0)));
+          break;
+        case 'cool_min':
+          // COOL.min ∈ [CHILLY.min+0.1, MILD.min]
+          P.cool_min = Math.max(r1(P.chilly_min + step), Math.min(P.cool_min, r1(P.mild_min - 0)));
+          break;
+        case 'chilly_min':
+          // CHILLY.min ∈ [COLD.min+0.1, COOL.min]
+          P.chilly_min = Math.max(r1(P.cold_min + step), Math.min(P.chilly_min, r1(P.cool_min - 0)));
+          break;
+        case 'cold_min':
+          // COLD.min ∈ [FROSTY.min+0.1, CHILLY.min]
+          P.cold_min = Math.max(r1(P.frosty_min + step), Math.min(P.cold_min, r1(P.chilly_min - 0)));
+          break;
+        case 'frosty_min':
+          // FROSTY.min ≤ COLD.min − 0.1 (dragging down increases scale)
+          P.frosty_min = Math.min(P.frosty_min, r1(P.cold_min - step));
+          break;
       }
-    }
-    // backward pass (ascending): each prev ≥ next + 0.1
-    for (let i=chain.length-2;i>=0;i--){
-      const cur = chain[i], next = chain[i+1];
-      const limit = r1(P[next] + step);
-      if (P[cur] < limit) P[cur] = limit;
-    }
+    };
+    ks.forEach(clampEdited);
 
     // 3) Apply the explicit drag couplings by deriving “hidden” neighbors
-    //    (these are not directly edited but must move with the dragged handle)
+    // Apply the explicit drag couplings by deriving “hidden” neighbors
     const out = { ...cfgIn };
     out.t_boiling_max = P.boiling_max;
     out.t_hot_max     = P.hot_max;
@@ -1282,7 +1310,7 @@ class SimpleAirComfortCardEditor extends LitElement {
     out.t_cold_min    = P.cold_min;
     out.t_frosty_min  = P.frosty_min;
 
-    // Derived neighbors (these are the ones that “drag”)
+    // Derived neighbors (follow spec: min/max pairs maintain 0.1 °C gaps)
     out.t_boiling_min = r1(P.hot_max    + step); // HOT.max ↔ BOILING.min
     out.t_hot_min     = r1(P.warm_max   + step); // WARM.max ↔ HOT.min
     out.t_warm_min    = r1(P.perf_max   + step); // PERFECT.max ↔ WARM.min
