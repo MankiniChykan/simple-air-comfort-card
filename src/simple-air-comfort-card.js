@@ -1201,9 +1201,6 @@ class SimpleAirComfortCardEditor extends LitElement {
   _onTempsChange = (ev) => {
     ev.stopPropagation();
     const next = { ...(this._config || {}), ...(ev.detail?.value || {}) };
-    // figure out which key actually changed
-    const changed = Object.keys(ev.detail?.value || {}).find(k => next[k] !== this._config?.[k]);
-    if (!changed) return;
 
     // Only clamp what actually changed to avoid rippling unrelated anchors.
     const changed = Object.keys(delta);
