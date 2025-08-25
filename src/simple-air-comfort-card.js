@@ -676,28 +676,33 @@ class SimpleAirComfortCard extends LitElement {
   #bandThresholds(){
     const C = this._config || {};
     const step = 0.1;
-    const r1 = (v) => Math.round(v*10)/10; // enforce one decimal
-    const B = {
-      FROSTY: {min:r1(C.t_frosty_min ?? -40.0), max:r1(C.t_frosty_max ??  2.9)},
-      COLD:   {min:r1(C.t_cold_min   ??   3.0), max:r1(C.t_cold_max   ??  4.9)},
-      CHILLY: {min:r1(C.t_chilly_min ??   5.0), max:r1(C.t_chilly_max ??  8.9)},
-      COOL:   {min:r1(C.t_cool_min   ??   9.0), max:r1(C.t_cool_max   ?? 13.9)},
-      MILD:   {min:r1(C.t_mild_min   ??  14.0), max:r1(C.t_mild_max   ?? 18.9)},
-      PERFECT:{min:r1(C.t_perf_min   ??  19.0), max:r1(C.t_perf_max   ?? 23.9)},
-      WARM:   {min:r1(C.t_warm_min   ??  24.0), max:r1(C.t_warm_max   ?? 27.9)},
-      HOT:    {min:r1(C.t_hot_min    ??  28.0), max:r1(C.t_hot_max    ?? 34.9)},
-      BOILING:{min:r1(C.t_boiling_min??  35.0), max:r1(C.t_boiling_max?? 60.0)},
+    // enforce one decimal & tolerate NaN by falling back to a default
+    const r1 = (v, dflt) => {
+      const n = Number.isFinite(v) ? v : dflt;
+      return Math.round(n * 10) / 10;
     };
-    // UI + mapping invariants:
-    // - Locked anchors: FROSTY.min, MILD.min, PERFECT.min, PERFECT.max, WARM.max, BOILING.max
-    // - Even spacing inside FROSTY.min..MILD.min for: COLD.min, CHILLY.min, COOL.min
-    // - HOT.max scales evenly in WARM.max..BOILING.max (helps smooth the top segment)
+    const B = {
+      FROSTY: {min:r1(C.t_frosty_min,  -40.0), max:r1(C.t_frosty_max,   2.9)},
+      COLD:   {min:r1(C.t_cold_min,      3.0), max:r1(C.t_cold_max,     4.9)},
+      CHILLY: {min:r1(C.t_chilly_min,    5.0), max:r1(C.t_chilly_max,   8.9)},
+      COOL:   {min:r1(C.t_cool_min,      9.0), max:r1(C.t_cool_max,    13.9)},
+      MILD:   {min:r1(C.t_mild_min,     14.0), max:r1(C.t_mild_max,    18.9)},
+      PERFECT:{min:r1(C.t_perf_min,     19.0), max:r1(C.t_perf_max,    23.9)},
+      WARM:   {min:r1(C.t_warm_min,     24.0), max:r1(C.t_warm_max,    27.9)},
+      HOT:    {min:r1(C.t_hot_min,      28.0), max:r1(C.t_hot_max,     34.9)},
+      BOILING:{min:r1(C.t_boiling_min,  35.0), max:r1(C.t_boiling_max, 60.0)},
+    };
+    // UI + Y‑mapping invariants:
+    // - “Locked” visual anchors used by the geometry map:
+    //   FROSTY.min, MILD.min, PERFECT.min, PERFECT.max, WARM.max, BOILING.max
+    // - Even spacing within FROSTY.min..MILD.min for: COLD.min, CHILLY.min, COOL.min
+    // - HOT.max is used as a helper inside WARM.max..BOILING.max for top smoothing
     const order = ["FROSTY","COLD","CHILLY","COOL","MILD","PERFECT","WARM","HOT","BOILING"];
     // Ensure each min >= previous max + 0.1, and max >= min
     for (let i=0;i<order.length;i++){
       const k = order[i], prev = order[i-1] && B[order[i-1]], cur = B[k];
       if (i>0){
-        const minAllowed = r1(prev.max + step);
+        const minAllowed = r1(prev.max + step, prev.max + step);
         if (cur.min < minAllowed) cur.min = minAllowed;
       }
       if (cur.max < cur.min) cur.max = cur.min;
