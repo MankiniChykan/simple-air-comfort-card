@@ -969,16 +969,57 @@ class SimpleAirComfortCardEditor extends LitElement {
   static properties = { hass:{type:Object}, _config:{state:true}, _schema:{state:true} };
   static styles = css`
     .wrap{ padding:12px 12px 16px; }
-    .row{ display:grid; grid-template-columns:auto 1fr auto auto; align-items:center; gap:10px; padding:8px 0; }
+    .row{
+      display:grid;
+      grid-template-columns:auto 1fr auto; /* title | value | button group */
+      align-items:center;
+      gap:10px;
+      padding:8px 0;
+    }
     .name{ font-weight:600; }
     .helper{ grid-column:1 / -1; opacity:.8; font-size:.92em; margin:-2px 0 4px; }
     .btn{
-      appearance:none; border:1px solid var(--divider-color, #444);
-      background:var(--ha-card-background, #1c1c1c); color:var(--primary-text-color,#fff);
-      padding:4px 10px; border-radius:8px; font-weight:600; cursor:pointer;
+      appearance:none;
+      border:1px solid var(--divider-color, #444);
+      background:linear-gradient(180deg, rgba(255,255,255,.06), rgba(0,0,0,.08));
+      color:var(--primary-text-color,#fff);
+      padding:6px 10px;
+      border-radius:10px;
+      font-weight:600;
+      cursor:pointer;
+      display:inline-flex;
+      align-items:center;
+      gap:8px;
+      box-shadow: 0 1px 0 rgba(255,255,255,.06) inset,
+                  0 1px 8px rgba(0,0,0,.15);
+      transition: transform .05s ease, box-shadow .15s ease, background .2s ease, opacity .2s ease;
+    }
+    .btn svg{ width:16px; height:16px; display:block; }
+    .btn:hover{
+      box-shadow: 0 1px 0 rgba(255,255,255,.08) inset,
+                  0 2px 12px rgba(0,0,0,.25);
     }
     .btn:active{ transform:translateY(1px); }
-    .value{ font-variant-numeric:tabular-nums; font-weight:600; }
+    .btn:focus-visible{
+      outline:2px solid transparent;
+      box-shadow:
+        0 0 0 2px rgba(255,255,255,.15) inset,
+        0 0 0 2px rgba(255,255,255,.15),
+        0 0 0 4px rgba(3,169,244,.45);
+    }
+    .btn.ghost{
+      background:transparent;
+      border-color:rgba(255,255,255,.15);
+    }
+    .btn[disabled]{ opacity:.45; cursor:not-allowed; box-shadow:none; }
+    .seg{ display:flex; gap:8px; }
+    .value{
+      font-variant-numeric:tabular-nums;
+      font-weight:700;
+      padding:2px 8px;
+      border-radius:8px;
+      background:rgba(255,255,255,.06);
+    }
     .title{ font-size:0.95em; opacity:.85; margin:12px 0 6px; }
     .mid{ margin:6px 0 4px; font-size:.95em; opacity:.9; }
     .actions{ display:flex; gap:8px; margin-top:10px; }
@@ -1111,12 +1152,41 @@ class SimpleAirComfortCardEditor extends LitElement {
   _anchorRow(name, title, helper, limited){
     const v = Number(this._config?.[name]);
     const display = Number.isFinite(v) ? `${v.toFixed(1)} °C` : '—';
+    const cap = limited ? this._capFor(name) : null;
+    const atLo = cap ? v <= cap.lo : false;
+    const atHi = cap ? v >= cap.hi : false;
     return html`
       <div class="row">
         <div class="name">${title}</div>
-        <div class="value">${display}</div>
-        <button class="btn" @click=${() => this._bump(name, -0.1, limited)} aria-label="${title} down">−</button>
-        <button class="btn" @click=${() => this._bump(name, +0.1, limited)} aria-label="${title} up">+</button>
+        <div class="value" title=${display}>${display}</div>
+        <div class="seg">
+          <button
+            class="btn ghost"
+            type="button"
+            ?disabled=${atLo}
+            @click=${() => this._bump(name, -0.1, limited)}
+            aria-label="${title} down"
+            title="Decrease by 0.1 °C"
+          >
+            <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+              <path fill="currentColor" d="M19 13H5v-2h14v2z"/>
+            </svg>
+            −
+          </button>
+          <button
+            class="btn"
+            type="button"
+            ?disabled=${atHi}
+            @click=${() => this._bump(name, +0.1, limited)}
+            aria-label="${title} up"
+            title="Increase by 0.1 °C"
+          >
+            <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+              <path fill="currentColor" d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/>
+            </svg>
+            +
+          </button>
+        </div>
         <div class="helper">${helper}</div>
       </div>
     `;
@@ -1187,6 +1257,15 @@ class SimpleAirComfortCardEditor extends LitElement {
     return `${((lo + hi) / 2).toFixed(2)} °C`;
   }
 
+  // --- New: cap helper so buttons can disable at ±4°C from defaults ---
+  _capFor(name){
+    const defKey = name.replace('t_', '');
+    const def = this._defaults[defKey];
+    if (def === undefined) return null; // edges: no caps
+    const r1 = (x) => Math.round(x * 10) / 10;
+    return { lo: r1(def - 4.0), hi: r1(def + 4.0) };
+  }
+
   // Reset visible anchors to defaults, re-derive neighbors, emit
   _resetDefaults = () => {
     const out = { ...(this._config || {}) };
@@ -1221,17 +1300,13 @@ class SimpleAirComfortCardEditor extends LitElement {
 
   // Button click → bump a single handle by delta, apply caps & derive neighbors
   _bump(name, delta, limited){
-    const step = 0.1;
     const r1 = (x) => Math.round(x * 10) / 10;
     const cfg = { ...(this._config || {}) };
     const before = Number(cfg[name]);
     if (!Number.isFinite(before)) return;
 
     // ±4°C caps for limited anchors based on defaults
-    let next = r1(before + (delta > 0 ? step : -step));
-    if (limited && this._defaults[name.replace('t_', '')] !== undefined){
-      const dkey = name; // defaults are stored as t_* names via mapping below
-    }
+    let next = r1(before + delta);
 
     // Map to defaults keys (we stored without 't_'; build a lookup)
     const mapDef = {
