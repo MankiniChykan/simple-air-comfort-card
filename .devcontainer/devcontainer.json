@@ -1,0 +1,34 @@
+{
+  "name": "Simple Air Comfort Card",
+  "build": { "dockerfile": "Dockerfile" },
+
+  "workspaceFolder": "/workspaces/${localWorkspaceFolderBasename}",
+  "remoteUser": "node",
+
+  "features": {
+    "ghcr.io/devcontainers/features/git:1": {},
+    "ghcr.io/devcontainers/features/node:1": { "version": "lts" }
+  },
+
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "esbenp.prettier-vscode",
+        "dbaeumer.vscode-eslint",
+        "redhat.vscode-yaml",
+        "bierner.lit-html",
+        "streetsidesoftware.code-spell-checker",
+        "keesschollaart.vscode-home-assistant"
+      ],
+      "settings": {
+        "editor.formatOnSave": true,
+        "eslint.format.enable": true,
+        "files.eol": "\n"
+      }
+    }
+  },
+
+  "onCreateCommand": "echo Devcontainer created",
+  "postCreateCommand": "npm ci",
+  "postStartCommand": "echo 'Ready: npm run build or npm run release'"
+}
