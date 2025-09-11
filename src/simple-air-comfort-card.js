@@ -995,6 +995,13 @@ class SimpleAirComfortCardEditor extends LitElement {
       transition: transform .05s ease, box-shadow .15s ease, background .2s ease, opacity .2s ease;
     }
     .btn svg{ width:16px; height:16px; display:block; }
+    /* icon-only button sizing */
+    .btn.icon{
+      width:34px;
+      height:34px;
+      padding:0;
+      justify-content:center;
+    }
     .btn:hover{
       box-shadow: 0 1px 0 rgba(255,255,255,.08) inset,
                   0 2px 12px rgba(0,0,0,.25);
@@ -1161,7 +1168,7 @@ class SimpleAirComfortCardEditor extends LitElement {
         <div class="value" title=${display}>${display}</div>
         <div class="seg">
           <button
-            class="btn ghost"
+            class="btn icon ghost"
             type="button"
             ?disabled=${atLo}
             @click=${() => this._bump(name, -0.1, limited)}
@@ -1171,10 +1178,9 @@ class SimpleAirComfortCardEditor extends LitElement {
             <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
               <path fill="currentColor" d="M19 13H5v-2h14v2z"/>
             </svg>
-            −
           </button>
           <button
-            class="btn"
+            class="btn icon"
             type="button"
             ?disabled=${atHi}
             @click=${() => this._bump(name, +0.1, limited)}
@@ -1184,7 +1190,6 @@ class SimpleAirComfortCardEditor extends LitElement {
             <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
               <path fill="currentColor" d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/>
             </svg>
-            +
           </button>
         </div>
         <div class="helper">${helper}</div>
