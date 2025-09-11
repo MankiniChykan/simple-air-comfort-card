@@ -1019,13 +1019,17 @@ class SimpleAirComfortCardEditor extends LitElement {
       border-color:rgba(255,255,255,.15);
     }
     .btn[disabled]{ opacity:.45; cursor:not-allowed; box-shadow:none; }
-    .seg{ display:flex; gap:8px; }
+    .seg{ display:flex; gap:8px; justify-self:end; }  /* keep the buttons on the right */
     .value{
       font-variant-numeric:tabular-nums;
       font-weight:700;
       padding:2px 8px;
       border-radius:8px;
       background:rgba(255,255,255,.06);
+      justify-self:end;   /* push the pill to the right edge of its grid cell */
+      text-align:right;   /* align digits inside the pill to the right */
+      min-width:6ch;      /* keeps width stable as numbers change */
+      margin-right:2px;   /* tiny breathing room before the buttons */
     }
     .title{ font-size:0.95em; opacity:.85; margin:12px 0 6px; }
     .mid{ margin:6px 0 4px; font-size:.95em; opacity:.9; }
