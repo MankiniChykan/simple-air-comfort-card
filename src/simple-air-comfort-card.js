@@ -1031,8 +1031,18 @@ class SimpleAirComfortCardEditor extends LitElement {
       min-width:6ch;      /* keeps width stable as numbers change */
       margin-right:2px;   /* tiny breathing room before the buttons */
     }
+    /* Center row styling (green) */
+    .name--center{ color: var(--sac-center-green, #8ef0ae); font-weight:700; }
+    .value--center{
+      background: rgba(76,175,80,.18);
+      color: var(--sac-center-green, #8ef0ae);
+      box-shadow: inset 0 0 0 1px rgba(76,175,80,.35);
+    }
+    /* Placeholder segment to keep grid alignment without visible buttons */
+    .seg--ghost{ visibility:hidden; }
     .title{ font-size:0.95em; opacity:.85; margin:12px 0 6px; }
-    .mid{ margin:6px 0 4px; font-size:.95em; opacity:.9; }
+    /* .mid no longer used */
+    .mid{ display:none; }
     .actions{ display:flex; gap:8px; margin-top:10px; }
     .danger{ border-color:#a33; color:#fff; background:#702; }
   `;
@@ -1122,7 +1132,16 @@ class SimpleAirComfortCardEditor extends LitElement {
       ${this._anchorRow('t_perf_max', 'PERFECT.max → Inner Comfort Circle Top',
         'Limit ±4°C from default.', true)}
 
-      <div class="mid">Center (Calculated PERFECT midpoint): ${this._centerTemp()}</div>
+      <!-- Center row (green, aligned like others) -->
+      ${(() => {
+        const center = this._centerTemp();
+        return html`
+          <div class="row">
+            <div class="name name--center">Center (Calculated PERFECT midpoint)</div>
+            <div class="value value--center" title=${center}>${center}</div>
+            <div class="seg seg--ghost"><button class="btn icon" aria-hidden="true"></button></div>
+          </div>`;
+      })()}
 
       ${this._anchorRow('t_perf_min', 'PERFECT.min → Inner Comfort Circle Bottom',
         'Limit ±4°C from default.', true)}
