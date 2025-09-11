@@ -676,24 +676,33 @@ class SimpleAirComfortCard extends LitElement {
   #bandThresholds(){
     const C = this._config || {};
     const step = 0.1;
-    const r1 = (v) => Math.round(v*10)/10; // enforce one decimal
-    const B = {
-      FROSTY: {min:r1(C.t_frosty_min ?? -40.0), max:r1(C.t_frosty_max ??  2.9)},
-      COLD:   {min:r1(C.t_cold_min   ??   3.0), max:r1(C.t_cold_max   ??  4.9)},
-      CHILLY: {min:r1(C.t_chilly_min ??   5.0), max:r1(C.t_chilly_max ??  8.9)},
-      COOL:   {min:r1(C.t_cool_min   ??   9.0), max:r1(C.t_cool_max   ?? 13.9)},
-      MILD:   {min:r1(C.t_mild_min   ??  14.0), max:r1(C.t_mild_max   ?? 18.9)},
-      PERFECT:{min:r1(C.t_perf_min   ??  19.0), max:r1(C.t_perf_max   ?? 23.9)},
-      WARM:   {min:r1(C.t_warm_min   ??  24.0), max:r1(C.t_warm_max   ?? 27.9)},
-      HOT:    {min:r1(C.t_hot_min    ??  28.0), max:r1(C.t_hot_max    ?? 34.9)},
-      BOILING:{min:r1(C.t_boiling_min??  35.0), max:r1(C.t_boiling_max?? 60.0)},
+    // enforce one decimal & tolerate NaN by falling back to a default
+    const r1 = (v, dflt) => {
+      const n = Number.isFinite(v) ? v : dflt;
+      return Math.round(n * 10) / 10;
     };
+    const B = {
+      FROSTY: {min:r1(C.t_frosty_min,  -40.0), max:r1(C.t_frosty_max,   2.9)},
+      COLD:   {min:r1(C.t_cold_min,      3.0), max:r1(C.t_cold_max,     4.9)},
+      CHILLY: {min:r1(C.t_chilly_min,    5.0), max:r1(C.t_chilly_max,   8.9)},
+      COOL:   {min:r1(C.t_cool_min,      9.0), max:r1(C.t_cool_max,    13.9)},
+      MILD:   {min:r1(C.t_mild_min,     14.0), max:r1(C.t_mild_max,    18.9)},
+      PERFECT:{min:r1(C.t_perf_min,     19.0), max:r1(C.t_perf_max,    23.9)},
+      WARM:   {min:r1(C.t_warm_min,     24.0), max:r1(C.t_warm_max,    27.9)},
+      HOT:    {min:r1(C.t_hot_min,      28.0), max:r1(C.t_hot_max,     34.9)},
+      BOILING:{min:r1(C.t_boiling_min,  35.0), max:r1(C.t_boiling_max, 60.0)},
+    };
+    // UI + Y‑mapping invariants:
+    // - “Locked” visual anchors used by the geometry map:
+    //   FROSTY.min, MILD.min, PERFECT.min, PERFECT.max, WARM.max, BOILING.max
+    // - Even spacing within FROSTY.min..MILD.min for: COLD.min, CHILLY.min, COOL.min
+    // - HOT.max is used as a helper inside WARM.max..BOILING.max for top smoothing
     const order = ["FROSTY","COLD","CHILLY","COOL","MILD","PERFECT","WARM","HOT","BOILING"];
     // Ensure each min >= previous max + 0.1, and max >= min
     for (let i=0;i<order.length;i++){
       const k = order[i], prev = order[i-1] && B[order[i-1]], cur = B[k];
       if (i>0){
-        const minAllowed = r1(prev.max + step);
+        const minAllowed = r1(prev.max + step, prev.max + step);
         if (cur.min < minAllowed) cur.min = minAllowed;
       }
       if (cur.max < cur.min) cur.max = cur.min;
@@ -778,18 +787,25 @@ class SimpleAirComfortCard extends LitElement {
   }
 
   /* -------------------------------------------
-   * Temperature → Y% mapping (smoothed)
-   * -------------------------------------------
-   * Locked anchors per spec:
-   *   PERFECT max → inner top
-   *   WARM    max → outer top
-   *   HOT     max → halfway between outer top and top endpoint
-   *   BOILING max → top endpoint (100%)
-   *   PERFECT min → inner bottom
-   *   MILD    min → outer bottom
-   *   COOL min, CHILLY min, COLD min, FROSTY max → evenly spaced
-   *     from outer bottom down to FROSTY min (bottom endpoint, 0%).
-   * Between each adjacent pair we smoothstep for natural motion.
+   * Temperature → Y% mapping (locked anchors + smooth segments)
+   * ORDER (and UI order) — top → bottom:
+   *   BOILING.max → top (100%)              [LOCKED]
+   *   HOT.max     → scales between          [EVEN between WARM.max..BOILING.max]
+   *   WARM.max    → outer-top               [LOCKED]
+   *   PERFECT.max → inner-top               [LOCKED]
+   *   PERFECT.min → inner-bottom            [LOCKED]
+   *   MILD.min    → outer-bottom            [LOCKED]
+   *   COOL.min    →                         [EVEN between FROSTY.min..MILD.min]
+   *   CHILLY.min  →                         [EVEN between FROSTY.min..MILD.min]
+   *   COLD.min    →                         [EVEN between FROSTY.min..MILD.min]
+   *   FROSTY.min  → bottom (0%)             [LOCKED]
+   *
+   * Segment rules:
+   * - FROSTY.min → MILD.min         : bottom → outer-bottom       (SMOOTH)
+   * - MILD.min   → PERFECT.min      : outer-bottom → inner-bottom (LINEAR)
+   * - PERFECT.min→ PERFECT.max      : inner-bottom → inner-top    (LINEAR)
+   * - PERFECT.max→ WARM.max         : inner-top → outer-top       (LINEAR)
+   * - WARM.max   → BOILING.max      : outer-top → top             (SMOOTH)
    */
   #tempToYPctGeometryAware(Tc){
     const a = this.#geomAnchors();
@@ -805,46 +821,65 @@ class SimpleAirComfortCard extends LitElement {
     const y_inner_top    = a.y_inner_top;
     const y_outer_top    = a.y_outer_top;
 
-    // HOT max sits midway from outer-top to top endpoint
-    const y_hot_half = (y_outer_top + y_top) / 2;
+    // --- Temperature-aware ladders ---
+    // Helper: safe fractional position of t within [t0..t1]
+    const _frac = (t, t0, t1) => {
+      const den = (t1 - t0);
+      if (!Number.isFinite(den) || Math.abs(den) < 1e-6) return 0;
+      return this.#clamp((t - t0) / den, 0, 1);
+    };
 
-    // Even ladder between outer-bottom and bottom endpoint for:
-    // COOL min, CHILLY min, COLD min, FROSTY max (include endpoints in spacing)
-    const gaps = 5; // 6 points: bottom .. outer-bottom → 5 equal gaps
-    const step = (y_outer_bottom - y_bottom) / gaps;
-    const y_frosty_min = y_bottom + step * 0; // endpoint
-    const y_frosty_max = y_bottom + step * 1;
-    const y_cold_min   = y_bottom + step * 2;
-    const y_chilly_min = y_bottom + step * 3;
-    const y_cool_min   = y_bottom + step * 4;
-    const y_mild_min   = y_bottom + step * 5; // == y_outer_bottom
+    // Bottom ladder spans FROSTY.min..MILD.min  →  y_bottom..y_outer_bottom
+    const tB0 = B.FROSTY.min, tB1 = B.MILD.min;
+    const yB0 = y_bottom,     yB1 = y_outer_bottom;
+    const yFromBottomSpan = (t) => yB0 + _frac(t, tB0, tB1) * (yB1 - yB0);
 
-    // Ordered anchors (temperature asc → Y% asc)
+    const y_frosty_min = yFromBottomSpan(B.FROSTY.min); // = y_bottom
+    const y_cold_min   = yFromBottomSpan(B.COLD.min);
+    const y_chilly_min = yFromBottomSpan(B.CHILLY.min);
+    const y_cool_min   = yFromBottomSpan(B.COOL.min);
+    const y_mild_min   = yFromBottomSpan(B.MILD.min);   // = y_outer_bottom
+
+    // Ordered anchors (temperature asc → Y% asc). Matches UI order.
+    // Top helper: place HOT.max proportionally in WARM.max..BOILING.max
+    const tT0 = B.WARM.max, tT1 = B.BOILING.max;
+    const yT0 = y_outer_top, yT1 = y_top;
+    const y_hot_max = yT0 + _frac(B.HOT.max, tT0, tT1) * (yT1 - yT0);
+
     const P = [
-      { t: B.FROSTY.min, y: y_frosty_min }, // bottom endpoint
-      { t: B.FROSTY.max, y: y_frosty_max },
-      { t: B.COLD.min,   y: y_cold_min   },
-      { t: B.CHILLY.min, y: y_chilly_min },
-      { t: B.COOL.min,   y: y_cool_min   },
-      { t: B.MILD.min,   y: y_mild_min   }, // locked outer-bottom
-      { t: B.PERFECT.min, y: y_inner_bottom }, // locked inner-bottom
-      { t: B.PERFECT.max, y: y_inner_top    }, // locked inner-top
-      { t: B.WARM.max,    y: y_outer_top    }, // locked outer-top
-      { t: B.HOT.max,     y: y_hot_half     }, // midway to top endpoint
-      { t: B.BOILING.max, y: y_top          }, // top endpoint
+      { t: B.FROSTY.min,  y: y_frosty_min    }, // bottom (0%)  [LOCKED]
+      { t: B.COLD.min,    y: y_cold_min      }, // parametric   [SPAN-FRACTION]
+      { t: B.CHILLY.min,  y: y_chilly_min    }, // parametric   [SPAN-FRACTION]
+      { t: B.COOL.min,    y: y_cool_min      }, // parametric   [SPAN-FRACTION]
+      { t: B.MILD.min,    y: y_mild_min      }, // outer-bottom [LOCKED]
+      { t: B.PERFECT.min, y: y_inner_bottom  }, // inner-bottom [LOCKED]
+      { t: B.PERFECT.max, y: y_inner_top     }, // inner-top    [LOCKED]
+      { t: B.WARM.max,    y: y_outer_top     }, // outer-top    [LOCKED]
+      { t: B.HOT.max,     y: y_hot_max       }, // proportional in WARM..BOILING
+      { t: B.BOILING.max, y: y_top           }, // top (100%)   [LOCKED]
     ];
 
     if (!Number.isFinite(Tc)) return a.y_center;
     if (Tc <= P[0].t) return P[0].y;
     if (Tc >= P[P.length-1].t) return P[P.length-1].y;
 
-    // Smoothstep interpolation between the surrounding anchors
+    // Interp between surrounding anchors:
+    //  - SMOOTH on the two outer spans (FROSTY.min→MILD.min, WARM.max→BOILING.max)
+    //  - LINEAR on the three inner spans (MILD.min→PERFECT.min, PERFECT.min→PERFECT.max, PERFECT.max→WARM.max)
     for (let i = 0; i < P.length - 1; i++){
       const a0 = P[i], a1 = P[i+1];
       if (Tc >= a0.t && Tc <= a1.t){
         const s = this.#clamp((Tc - a0.t) / (a1.t - a0.t), 0, 1);
-        const e = this.#smoothstep(s);
-        return a0.y + (a1.y - a0.y) * e;
+
+        // Linear for the three inner spans:
+        // [MILD.min→PERFECT.min], [PERFECT.min→PERFECT.max], [PERFECT.max→WARM.max]
+        const isLinear =
+          (a0.t === B.MILD.min    && a1.t === B.PERFECT.min) ||
+          (a0.t === B.PERFECT.min && a1.t === B.PERFECT.max) ||
+          (a0.t === B.PERFECT.max && a1.t === B.WARM.max);
+
+        const u = isLinear ? s : this.#smoothstep(s);
+        return a0.y + (a1.y - a0.y) * u;
       }
     }
     return a.y_center; // safe fallback
@@ -933,20 +968,84 @@ customElements.define('simple-air-comfort-card', SimpleAirComfortCard);
 class SimpleAirComfortCardEditor extends LitElement {
   static properties = { hass:{type:Object}, _config:{state:true}, _schema:{state:true} };
   static styles = css`
-    .wrap{ padding:8px 12px 16px; }
-    .columns{ display:grid; grid-template-columns:1fr 1fr; gap:12px; align-items:start; }
-    .col-title{ font-size:.9em; opacity:.8; margin:8px 0 4px; }
-    @media (max-width:560px){ .columns{ grid-template-columns:1fr; } }
-    /* Single-row temperature bar */
-    .temps-bar{ margin-top:12px; }
-    .temps-bar ha-form{
+    .wrap{ padding:12px 12px 16px; }
+    .row{
       display:grid;
-      grid-template-columns:repeat(10, minmax(90px,1fr));
-      gap:8px;
+      grid-template-columns:1fr auto auto; /* title | value | button group */
+      align-items:center;
+      gap:10px;
+      padding:8px 0;
     }
-    @media (max-width:980px){ .temps-bar ha-form{ grid-template-columns:repeat(5, minmax(90px,1fr)); } }
-    @media (max-width:560px){ .temps-bar ha-form{ grid-template-columns:repeat(2, minmax(120px,1fr)); } }
-    .center-readonly{ margin-top:6px; font-size:.95em; opacity:.8; }
+    .name{ font-weight:600; }
+    .helper{ grid-column:1 / -1; opacity:.8; font-size:.92em; margin:-2px 0 4px; }
+    .btn{
+      appearance:none;
+      border:1px solid var(--divider-color, #444);
+      background:linear-gradient(180deg, rgba(255,255,255,.06), rgba(0,0,0,.08));
+      color:var(--primary-text-color,#fff);
+      padding:6px 10px;
+      border-radius:10px;
+      font-weight:600;
+      cursor:pointer;
+      display:inline-flex;
+      align-items:center;
+      gap:8px;
+      box-shadow: 0 1px 0 rgba(255,255,255,.06) inset,
+                  0 1px 8px rgba(0,0,0,.15);
+      transition: transform .05s ease, box-shadow .15s ease, background .2s ease, opacity .2s ease;
+    }
+    .btn svg{ width:16px; height:16px; display:block; }
+    /* icon-only button sizing */
+    .btn.icon{
+      width:34px;
+      height:34px;
+      padding:0;
+      justify-content:center;
+    }
+    .btn:hover{
+      box-shadow: 0 1px 0 rgba(255,255,255,.08) inset,
+                  0 2px 12px rgba(0,0,0,.25);
+    }
+    .btn:active{ transform:translateY(1px); }
+    .btn:focus-visible{
+      outline:2px solid transparent;
+      box-shadow:
+        0 0 0 2px rgba(255,255,255,.15) inset,
+        0 0 0 2px rgba(255,255,255,.15),
+        0 0 0 4px rgba(3,169,244,.45);
+    }
+    .btn.ghost{
+      background:transparent;
+      border-color:rgba(255,255,255,.15);
+    }
+    .btn[disabled]{ opacity:.45; cursor:not-allowed; box-shadow:none; }
+    .seg{ display:flex; gap:8px; justify-self:end; }  /* keep the buttons on the right */
+    .value{
+      font-variant-numeric:tabular-nums;
+      font-weight:700;
+      padding:2px 8px;
+      border-radius:8px;
+      background:rgba(255,255,255,.06);
+      justify-self:end;   /* push the pill to the right edge of its grid cell */
+      text-align:right;   /* align digits inside the pill to the right */
+      min-width:6ch;      /* keeps width stable as numbers change */
+      margin-right:2px;   /* tiny breathing room before the buttons */
+      white-space:nowrap; /* prevent "°C" wrapping to next line */
+    }
+    /* Center row styling (green) */
+    .name--center{ color: var(--sac-center-green, #8ef0ae); font-weight:700; }
+    .value--center{
+      background: rgba(76,175,80,.18);
+      color: var(--sac-center-green, #8ef0ae);
+      box-shadow: inset 0 0 0 1px rgba(76,175,80,.35);
+    }
+    /* Placeholder segment to keep grid alignment without visible buttons */
+    .seg--ghost{ visibility:hidden; }
+    .title{ font-size:0.95em; opacity:.85; margin:12px 0 6px; }
+    /* .mid no longer used */
+    .mid{ display:none; }
+    .actions{ display:flex; gap:8px; margin-top:10px; }
+    .danger{ border-color:#a33; color:#fff; background:#702; }
   `;
   connectedCallback(){ super.connectedCallback(); window.loadCardHelpers?.().catch(()=>{}); }
 
@@ -958,7 +1057,7 @@ class SimpleAirComfortCardEditor extends LitElement {
   }
   get hass(){ return this._hass; }
 
-  // Build default config and editor schema; merge user overrides on top
+  // Build default config and keep default anchors for ±4°C caps
   setConfig(config){
     this._config = {
       name:'Area Name',
@@ -986,74 +1085,80 @@ class SimpleAirComfortCardEditor extends LitElement {
       ...(config ?? {}),
     };
 
-    // ha-form schema (misc only; temperature row defined separately below)
-    this._schema = [
-      { name:'name', selector:{ text:{} } },
-
-      // Entity pickers (restrict to correct device_class)
-      { name:'temperature', required:true, selector:{ entity:{ domain:'sensor', device_class:'temperature' } } },
-      { name:'humidity',    required:true, selector:{ entity:{ domain:'sensor', device_class:'humidity' } } },
-      { name:'windspeed', selector:{ entity:{ domain:'sensor', device_class:'wind_speed' } } },
-
-      // Number boxes
-      { name:'default_wind_speed', selector:{ number:{ min:0, max:50, step:0.1, mode:'box', unit_of_measurement:'m/s' } } },
-      { name:'decimals', selector:{ number:{ min:0, max:3, step:1, mode:'box' } } },
-
-    // NEW: Single temperature row, ordered Boiling→Frosty (top→bottom in GUI)
-    this._schemaTempsRow = [
-      { name:'t_boiling_max', selector:{ number:{ min:-60, max:80, step:0.1, mode:'box', unit_of_measurement:'°C' } } },
-      { name:'t_hot_max',     selector:{ number:{ min:-60, max:60, step:0.1, mode:'box', unit_of_measurement:'°C' } } },
-      { name:'t_warm_max',    selector:{ number:{ min:-60, max:50, step:0.1, mode:'box', unit_of_measurement:'°C' } } },
-      { name:'t_perf_max',    selector:{ number:{ min:-60, max:45, step:0.1, mode:'box', unit_of_measurement:'°C' } } },
-      { name:'t_perf_min',    selector:{ number:{ min:-60, max:45, step:0.1, mode:'box', unit_of_measurement:'°C' } } },
-      { name:'t_mild_min',    selector:{ number:{ min:-60, max:40, step:0.1, mode:'box', unit_of_measurement:'°C' } } },
-      { name:'t_cool_min',    selector:{ number:{ min:-60, max:35, step:0.1, mode:'box', unit_of_measurement:'°C' } } },
-      { name:'t_chilly_min',  selector:{ number:{ min:-60, max:30, step:0.1, mode:'box', unit_of_measurement:'°C' } } },
-      { name:'t_cold_min',    selector:{ number:{ min:-60, max:25, step:0.1, mode:'box', unit_of_measurement:'°C' } } },
-      { name:'t_frosty_min',  selector:{ number:{ min:-60, max:20, step:0.1, mode:'box', unit_of_measurement:'°C' } } },
-    ];
-
-      // RH→X calibration (inner-circle intersections)
-      { name:'rh_left_inner_pct',  selector:{ number:{ min:0, max:100, step:0.1, mode:'box', unit_of_measurement:'%' } } },
-      { name:'rh_right_inner_pct', selector:{ number:{ min:0, max:100, step:0.1, mode:'box', unit_of_measurement:'%' } } },
-
-      // Optional geometry calibration fields
-      { name:'y_offset_pct', selector:{ number:{ min:-30, max:30,  step:0.5,  mode:'box', unit_of_measurement:'%' } } },
-    ];
+    // Capture defaults for ±4°C movement caps (non-edge anchors)
+    this._defaults = {
+      hot_max: 34.9,
+      warm_max: 27.9,
+      perf_max: 23.9,
+      perf_min: 19.0,
+      mild_min: 14.0,
+      cool_min: 9.0,
+      chilly_min: 5.0,
+      cold_min: 3.0,
+    };
   }
 
-  // Render two-column form: misc settings + separate columns for band mins/maxes
+
+  // Render button UI for anchors + small ha-form for entities/misc
   render(){
     if (!this.hass || !this._config) return html``;
-
-    // Misc section only; temps row is rendered separately
-    const miscSchema = this._schema;
-
     return html`<div class="wrap">
+      <div class="title">Entities & Misc</div>
       <ha-form
         .hass=${this.hass}
         .data=${this._config}
-        .schema=${miscSchema}
+        .schema=${[
+          { name:'name', selector:{ text:{} } },
+          { name:'temperature', required:true, selector:{ entity:{ domain:'sensor', device_class:'temperature' } } },
+          { name:'humidity',    required:true, selector:{ entity:{ domain:'sensor', device_class:'humidity' } } },
+          { name:'windspeed', selector:{ entity:{ domain:'sensor', device_class:'wind_speed' } } },
+          { name:'default_wind_speed', selector:{ number:{ min:0, max:50, step:0.1, mode:'box', unit_of_measurement:'m/s' } } },
+          { name:'decimals', selector:{ number:{ min:0, max:3, step:1, mode:'box' } } },
+          { name:'rh_left_inner_pct',  selector:{ number:{ min:0, max:100, step:0.1, mode:'box', unit_of_measurement:'%' } } },
+          { name:'rh_right_inner_pct', selector:{ number:{ min:0, max:100, step:0.1, mode:'box', unit_of_measurement:'%' } } },
+          { name:'y_offset_pct', selector:{ number:{ min:-30, max:30, step:0.5, mode:'box', unit_of_measurement:'%' } } },
+        ]}
         .computeLabel=${this._label}
         .computeHelper=${this._helper}
-        @value-changed=${this._onChange}>
         @value-changed=${this._onMiscChange}>
       </ha-form>
 
+      <div class="title">Temperature anchors (buttons)</div>
+      ${this._anchorRow('t_boiling_max', 'BOILING.max → Top of Card (100%)', 
+        'Changes how far (HOT.max) is from the edge of the card.', false)}
+      ${this._anchorRow('t_hot_max', 'HOT.max (Scales with BOILING.max)',
+        'Limit ±4°C from default.', true)}
+      ${this._anchorRow('t_warm_max', 'WARM.max → Outer Ring Top ',
+        'Limit ±4°C from default.', true)}
+      ${this._anchorRow('t_perf_max', 'PERFECT.max → Inner Comfort Circle Top',
+        'Limit ±4°C from default.', true)}
 
-      <div class="col-title" style="margin-top:10px;">Temperature anchors (single row)</div>
-      <div class="temps-bar">
-        <ha-form
-          .hass=${this.hass}
-          .data=${this._config}
-          .schema=${this._schemaTempsRow}
-          .computeLabel=${this._labelTemp}
-          .computeHelper=${this._helperTemp}
-          @value-changed=${this._onTempsChange}>
-        </ha-form>
-      </div>
-      <div class="center-readonly">
-        Center (PERFECT mid): <b>${this._centerTemp()}</b>
+      <!-- Center row (green, aligned like others) -->
+      ${(() => {
+        const center = this._centerTemp();
+        return html`
+          <div class="row">
+            <div class="name name--center">Center (Calculated PERFECT midpoint)</div>
+            <div class="value value--center" title=${center}>${center}</div>
+            <div class="seg seg--ghost"><button class="btn icon" aria-hidden="true"></button></div>
+          </div>`;
+      })()}
+
+      ${this._anchorRow('t_perf_min', 'PERFECT.min → Inner Comfort Circle Bottom',
+        'Limit ±4°C from default.', true)}
+      ${this._anchorRow('t_mild_min', 'MILD.min → Outer Ring Bottom',
+        'Limit ±4°C from default.', true)}
+      ${this._anchorRow('t_cool_min', 'COOL.min (Scales with FROSTY.min)',
+        'Limit ±4°C from default.', true)}
+      ${this._anchorRow('t_chilly_min', 'CHILLY.min (Scales with FROSTY.min)',
+        'Limit ±4°C from default.', true)}
+      ${this._anchorRow('t_cold_min', 'COLD.min (Scales with FROSTY.min)',
+        'Limit ±4°C from default.', true)}
+      ${this._anchorRow('t_frosty_min', 'FROSTY.min → Bottom of Card (0%)',
+        'Changes how far (COOL.min → COLD.min) is from the edge of the card.', false)}
+
+      <div class="actions">
+        <button class="btn danger" @click=${this._resetDefaults}>Reset to defaults</button>
       </div>
     </div>`;
   }
@@ -1074,42 +1179,56 @@ class SimpleAirComfortCardEditor extends LitElement {
     return base ?? id;
   };
 
-  // Human labels for the single-row temperature anchors (Boiling→Frosty)
-  _labelTemp = (s) => ({
-    t_boiling_max:'BOILING max (°C)',
-    t_hot_max:'HOT max (°C)',
-    t_warm_max:'WARM max (°C)',
-    t_perf_max:'PERFECT max (°C)',
-    t_perf_min:'PERFECT min (°C)',
-    t_mild_min:'MILD min (°C)',
-    t_cool_min:'COOL min (°C)',
-    t_chilly_min:'CHILLY min (°C)',
-    t_cold_min:'COLD min (°C)',
-    t_frosty_min:'FROSTY min (°C)',
-  }[s.name] ?? s.name);
+  // Button row factory (name, title, helper, limited?)
+  _anchorRow(name, title, helper, limited){
+    const v = Number(this._config?.[name]);
+    const display = Number.isFinite(v) ? `${v.toFixed(1)} °C` : '—';
+    const cap = limited ? this._capFor(name) : null;
+    const atLo = cap ? v <= cap.lo : false;
+    const atHi = cap ? v >= cap.hi : false;
+    return html`
+      <div class="row">
+        <div class="name">${title}</div>
+        <div class="value" title=${display}>${display}</div>
+        <div class="seg">
+          <button
+            class="btn icon ghost"
+            type="button"
+            ?disabled=${atLo}
+            @click=${() => this._bump(name, -0.1, limited)}
+            aria-label="${title} down"
+            title="Decrease by 0.1 °C"
+          >
+            <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+              <path fill="currentColor" d="M19 13H5v-2h14v2z"/>
+            </svg>
+          </button>
+          <button
+            class="btn icon"
+            type="button"
+            ?disabled=${atHi}
+            @click=${() => this._bump(name, +0.1, limited)}
+            aria-label="${title} up"
+            title="Increase by 0.1 °C"
+          >
+            <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+              <path fill="currentColor" d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/>
+            </svg>
+          </button>
+        </div>
+        <div class="helper">${helper}</div>
+      </div>
+    `;
+  }
   
 
   // Helper/tooltips for each field (shows under the input)
   _helper = (s) => {
-    const id = s.name;
     const st   = (key) => this.hass?.states?.[this._config?.[key]];
     const unit = (key) => st(key)?.attributes?.unit_of_measurement ?? "";
+    const id = s.name; // ← needed so switch(id) works
 
-    // Which min follows which max
-    const prevOf = {
-      t_cold_min:   't_frosty_max',
-      t_chilly_min: 't_cold_max',
-      t_cool_min:   't_chilly_max',
-      t_mild_min:   't_cool_max',
-      t_perf_min:   't_mild_max',
-      t_warm_min:   't_perf_max',
-      t_hot_min:    't_warm_max',
-    };
-
-    // Pretty band name
-    const nice = (k) => (k?.match(/^t_(.+)_(min|max)$/)?.[1] || '').toUpperCase();
-
-    // Non-band helpers (unchanged from your version)
+    // Non-band helpers
     switch (id) {
       case 'name':
         return 'Shown as the small grey title at the top of the card.';
@@ -1130,34 +1249,30 @@ class SimpleAirComfortCardEditor extends LitElement {
         return 'Fine-tune the dot’s vertical position in % of card height (positive moves up).';
     }
 
-    // Special band edges
-    if (id === 't_frosty_min')
-      return 'Unused lower edge (ignored on save).';
+    // Band helpers with your exact drag semantics
+    const gap = '0.1 °C';
     if (id === 't_boiling_max')
-      return 'Unused upper edge (ignored on save).';
-
-    // Computed/locked mins: show driver and current resolved values
-    if (id in prevOf) {
-      const p = prevOf[id];
-      const pVal = this._config?.[p];
-      const cur  = this._config?.[id];
-      return `Locked = ${nice(p)} max +0.1 °C`;
-    }
-
-    // Editable controls: all *_max except BOILING max, plus t_boiling_min
-    if ([
-      't_frosty_max','t_cold_max','t_chilly_max','t_cool_max',
-      't_mild_max','t_perf_max','t_warm_max','t_hot_max','t_boiling_min'
-    ].includes(id)) {
-      return 'Moving this shifts the next Min';
-    }
-
-    // Generic band help (fallback)
-    if (/^t_.*_(min|max)$/.test(id)) {
-      return 'Bands use 0.1 °C steps. Each next min follows the previous max + 0.1.';
-    }
-
-    // Final fallback
+      return 'BOILING.max → top (100%). Dragging down stops at BOILING.min (tracks HOT.max+0.1). Dragging up increases the scale.';
+    if (id === 't_hot_max')
+      return 'HOT.max. Drags BOILING.min with it up/down (BOILING.min = HOT.max+0.1). HOT.max ≤ BOILING.max−0.1 and ≥ WARM.max+0.1.';
+    if (id === 't_warm_max')
+      return 'WARM.max → outer-top. Drags HOT.min with it (HOT.min = WARM.max+0.1). WARM.max ≤ HOT.max−0.1 and ≥ PERFECT.max+0.1.';
+    if (id === 't_perf_max')
+      return 'PERFECT.max → inner-top. Drags WARM.min (WARM.min = PERFECT.max+0.1). PERFECT.max ≤ WARM.max−0.1 and ≥ PERFECT.min+0.1.';
+    if (id === 't_perf_min')
+      return 'PERFECT.min → inner-bottom. Drags MILD.max (MILD.max = PERFECT.min−0.1). PERFECT.min ≤ PERFECT.max−0.1 and ≥ MILD.min+0.1.';
+    if (id === 't_mild_min')
+      return 'MILD.min → outer-bottom. Drags COOL.max (COOL.max = MILD.min−0.1). MILD.min ≤ PERFECT.min and ≥ COOL.min+0.1.';
+    if (id === 't_cool_min')
+      return 'COOL.min. Drags CHILLY.max (CHILLY.max = COOL.min−0.1). COOL.min ≤ MILD.min and ≥ CHILLY.min+0.1.';
+    if (id === 't_chilly_min')
+      return 'CHILLY.min. Drags COLD.max (COLD.max = CHILLY.min−0.1). CHILLY.min ≤ COOL.min and ≥ COLD.min+0.1.';
+    if (id === 't_cold_min')
+      return 'COLD.min. Drags FROSTY.max (FROSTY.max = COLD.min−0.1). COLD.min ≤ CHILLY.min and ≥ FROSTY.min+0.1.';
+    if (id === 't_frosty_min')
+      return 'FROSTY.min → bottom (0%). Dragging up stops at FROSTY.max (COLD.max−0.1). Dragging down increases the scale lower.';
+    if (/^t_.*_(min|max)$/.test(id))
+      return `All band edges keep contiguous ${gap} gaps automatically.`;
     return 'Tip: values update immediately; click Save when done.';
   };
 
@@ -1171,6 +1286,37 @@ class SimpleAirComfortCardEditor extends LitElement {
     return `${((lo + hi) / 2).toFixed(2)} °C`;
   }
 
+  // --- New: cap helper so buttons can disable at ±4°C from defaults ---
+  _capFor(name){
+    const defKey = name.replace('t_', '');
+    const def = this._defaults[defKey];
+    if (def === undefined) return null; // edges: no caps
+    const r1 = (x) => Math.round(x * 10) / 10;
+    return { lo: r1(def - 4.0), hi: r1(def + 4.0) };
+  }
+
+  // Reset visible anchors to defaults, re-derive neighbors, emit
+  _resetDefaults = () => {
+    const out = { ...(this._config || {}) };
+    // Restore the 10 exposed handles to their schema defaults
+    out.t_boiling_max = 60.0;
+    out.t_hot_max     = 34.9;
+    out.t_warm_max    = 27.9;
+    out.t_perf_max    = 23.9;
+    out.t_perf_min    = 19.0;
+    out.t_mild_min    = 14.0;
+    out.t_cool_min    =  9.0;
+    out.t_chilly_min  =  5.0;
+    out.t_cold_min    =  3.0;
+    out.t_frosty_min  = -40.0;
+    const derived = this._applyTempsRowBiDirectional(out, [
+      't_boiling_max','t_hot_max','t_warm_max','t_perf_max','t_perf_min',
+      't_mild_min','t_cool_min','t_chilly_min','t_cold_min','t_frosty_min'
+    ]);
+    this._config = derived;
+    fireEvent(this, 'config-changed', { config: derived });
+  };
+
   // --- New: misc handler (entities/decimals/RH/offsets) ---
   _onMiscChange = (ev) => {
     ev.stopPropagation();
@@ -1181,20 +1327,49 @@ class SimpleAirComfortCardEditor extends LitElement {
     fireEvent(this, 'config-changed', { config: merged });
   };
 
-  // --- New: single-row temperature handler (hot→cold), with bi-directional drag ---
-  _onTempsChange = (ev) => {
-    ev.stopPropagation();
-    const delta = { ...(ev.detail?.value || {}) };
-    if (!Object.keys(delta).length) return;
-    const cfg = this._applyTempsRowBiDirectional({ ...(this._config || {}), ...delta });
-    this._config = cfg;
-    fireEvent(this, 'config-changed', { config: cfg });
-  };
+  // Button click → bump a single handle by delta, apply caps & derive neighbors
+  _bump(name, delta, limited){
+    const r1 = (x) => Math.round(x * 10) / 10;
+    const cfg = { ...(this._config || {}) };
+    const before = Number(cfg[name]);
+    if (!Number.isFinite(before)) return;
 
-  // Keep bands contiguous using GUI order: Boiling max → … → Frosty min
-  _applyTempsRowBiDirectional(cfgIn){
-    const r1 = v => Math.round((Number(v) ?? 0) * 10) / 10;
+    // ±4°C caps for limited anchors based on defaults
+    let next = r1(before + delta);
+
+    // Map to defaults keys (we stored without 't_'; build a lookup)
+    const mapDef = {
+      t_hot_max:'t_hot_max',
+      t_warm_max:'t_warm_max',
+      t_perf_max:'t_perf_max',
+      t_perf_min:'t_perf_min',
+      t_mild_min:'t_mild_min',
+      t_cool_min:'t_cool_min',
+      t_chilly_min:'t_chilly_min',
+      t_cold_min:'t_cold_min',
+    };
+    if (limited && mapDef[name]){
+      const defVal = this._defaults[mapDef[name].replace('t_','')];
+      if (Number.isFinite(defVal)){
+        const lo = r1(defVal - 4.0);
+        const hi = r1(defVal + 4.0);
+        next = Math.min(hi, Math.max(lo, next));
+      }
+    }
+
+    const merged = { ...cfg, [name]: next };
+    const derived = this._applyTempsRowBiDirectional(merged, [name]);
+    this._config = derived;
+    fireEvent(this, 'config-changed', { config: derived });
+  }
+
+  // Clamp only the edited handles against *their local neighbors*; then update derived neighbors.
+  _applyTempsRowBiDirectional(cfgIn, changedKeys = []){
+    // round to 0.1 and coerce
+    const r1 = (v) => Math.round((Number(v) || 0) * 10) / 10;
     const step = 0.1;
+
+    // Pull GUI fields (only the 10 exposed)
     const P = {
       boiling_max: r1(cfgIn.t_boiling_max ?? 60.0),
       hot_max:     r1(cfgIn.t_hot_max     ?? 34.9),
@@ -1208,25 +1383,73 @@ class SimpleAirComfortCardEditor extends LitElement {
       frosty_min:  r1(cfgIn.t_frosty_min  ?? -40.0),
     };
 
-    // GUI chain (descending temperature)
-    const chain = ['boiling_max','hot_max','warm_max','perf_max','perf_min','mild_min','cool_min','chilly_min','cold_min','frosty_min'];
+    // Map config field -> our P keys
+    const keyMap = {
+      t_boiling_max: 'boiling_max',
+      t_hot_max:     'hot_max',
+      t_warm_max:    'warm_max',
+      t_perf_max:    'perf_max',
+      t_perf_min:    'perf_min',
+      t_mild_min:    'mild_min',
+      t_cool_min:    'cool_min',
+      t_chilly_min:  'chilly_min',
+      t_cold_min:    'cold_min',
+      t_frosty_min:  'frosty_min',
+    };
 
-    // Forward: enforce strictly descending by ≥0.1
-    for (let i = 1; i < chain.length; i++){
-      const prev = chain[i-1], cur = chain[i];
-      const limit = r1(P[prev] - step);
-      if (P[cur] > limit) P[cur] = limit;
-    }
-    // Backward: ensure previous is ≤ next - 0.1
-    for (let i = chain.length - 2; i >= 0; i--){
-      const cur = chain[i], next = chain[i+1];
-      const limit = r1(P[next] + step);
-      if (P[cur] < limit) P[cur] = limit;
-    }
+    // If HA batches more than one, clamp each edited field *independently* against its immediate neighbors.
+    const targets = (changedKeys && changedKeys.length) ? changedKeys : Object.keys(keyMap);
+    const ks = targets.map(k => keyMap[k] || k).filter(Boolean);
 
+    const clampEdited = (k) => {
+      switch (k) {
+        case 'boiling_max':
+          // Drag down stops at BOILING.min (= HOT.max + 0.1). Drag up grows scale.
+          P.boiling_max = Math.max(P.boiling_max, r1(P.hot_max + step));
+          break;
+        case 'hot_max':
+          // HOT.max ∈ [WARM.max+0.1, BOILING.max-0.1]
+          P.hot_max = Math.max(r1(P.warm_max + step), Math.min(P.hot_max, r1(P.boiling_max - step)));
+          break;
+        case 'warm_max':
+          // WARM.max ∈ [PERFECT.max+0.1, HOT.max-0.1]
+          P.warm_max = Math.max(r1(P.perf_max + step), Math.min(P.warm_max, r1(P.hot_max - step)));
+          break;
+        case 'perf_max':
+          // PERFECT.max ∈ [PERFECT.min+0.1, WARM.max-0.1]
+          P.perf_max = Math.max(r1(P.perf_min + step), Math.min(P.perf_max, r1(P.warm_max - step)));
+          break;
+        case 'perf_min':
+          // PERFECT.min ∈ [MILD.min+0.1, PERFECT.max-0.1]
+          P.perf_min = Math.max(r1(P.mild_min + step), Math.min(P.perf_min, r1(P.perf_max - step)));
+          break;
+        case 'mild_min':
+          // MILD.min ∈ [COOL.min+0.1, PERFECT.min]
+          P.mild_min = Math.max(r1(P.cool_min + step), Math.min(P.mild_min, r1(P.perf_min - 0)));
+          break;
+        case 'cool_min':
+          // COOL.min ∈ [CHILLY.min+0.1, MILD.min]
+          P.cool_min = Math.max(r1(P.chilly_min + step), Math.min(P.cool_min, r1(P.mild_min - 0)));
+          break;
+        case 'chilly_min':
+          // CHILLY.min ∈ [COLD.min+0.1, COOL.min]
+          P.chilly_min = Math.max(r1(P.cold_min + step), Math.min(P.chilly_min, r1(P.cool_min - 0)));
+          break;
+        case 'cold_min':
+          // COLD.min ∈ [FROSTY.min+0.1, CHILLY.min]
+          P.cold_min = Math.max(r1(P.frosty_min + step), Math.min(P.cold_min, r1(P.chilly_min - 0)));
+          break;
+        case 'frosty_min':
+          // FROSTY.min ≤ COLD.min − 0.1 (dragging down increases scale)
+          P.frosty_min = Math.min(P.frosty_min, r1(P.cold_min - step));
+          break;
+      }
+    };
+    ks.forEach(clampEdited);
+
+    // 3) Apply the explicit drag couplings by deriving “hidden” neighbors
+    // Apply the explicit drag couplings by deriving “hidden” neighbors
     const out = { ...cfgIn };
-
-    // Write back the ten GUI fields
     out.t_boiling_max = P.boiling_max;
     out.t_hot_max     = P.hot_max;
     out.t_warm_max    = P.warm_max;
@@ -1238,17 +1461,17 @@ class SimpleAirComfortCardEditor extends LitElement {
     out.t_cold_min    = P.cold_min;
     out.t_frosty_min  = P.frosty_min;
 
-    // Derive the in-between neighbors to keep full band set contiguous
-    out.t_frosty_max  = r1(P.cold_min   - step);
-    out.t_cold_max    = r1(P.chilly_min - step);
-    out.t_chilly_max  = r1(P.cool_min   - step);
-    out.t_cool_max    = r1(P.mild_min   - step);
-    out.t_mild_max    = r1(P.perf_min   - step);
-    out.t_warm_min    = r1(P.perf_max   + step);
-    out.t_hot_min     = r1(P.warm_max   + step);
-    out.t_boiling_min = r1(P.hot_max    + step);
+    // Derived neighbors (follow spec: min/max pairs maintain 0.1 °C gaps)
+    out.t_boiling_min = r1(P.hot_max    + step); // HOT.max ↔ BOILING.min
+    out.t_hot_min     = r1(P.warm_max   + step); // WARM.max ↔ HOT.min
+    out.t_warm_min    = r1(P.perf_max   + step); // PERFECT.max ↔ WARM.min
+    out.t_mild_max    = r1(P.perf_min   - step); // PERFECT.min ↔ MILD.max
+    out.t_cool_max    = r1(P.mild_min   - step); // MILD.min ↔ COOL.max
+    out.t_chilly_max  = r1(P.cool_min   - step); // COOL.min ↔ CHILLY.max
+    out.t_cold_max    = r1(P.chilly_min - step); // CHILLY.min ↔ COLD.max
+    out.t_frosty_max  = r1(P.cold_min   - step); // COLD.min ↔ FROSTY.max
 
-    // RH calibration passthrough (unchanged)
+    // 4) RH calibration passthrough (unchanged)
     const clamp01 = v => Math.min(100, Math.max(0, r1(v)));
     out.rh_left_inner_pct  = clamp01(out.rh_left_inner_pct  ?? 40);
     out.rh_right_inner_pct = clamp01(out.rh_right_inner_pct ?? 60);
@@ -1257,6 +1480,7 @@ class SimpleAirComfortCardEditor extends LitElement {
     }
     return out;
   }
+
 
 
   // One-time auto-pick of temp/humidity if user hasn’t selected any

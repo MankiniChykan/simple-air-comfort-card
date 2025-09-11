@@ -1032,6 +1032,13 @@ class SimpleAirComfortCardEditor extends LitElement {
       margin-right:2px;   /* tiny breathing room before the buttons */
       white-space:nowrap; /* prevent "°C" wrapping to next line */
     }
+    /* band-tinted value pill (uses --pill-col provided inline) */
+    .value.coloured{
+      color: var(--pill-col);
+      /* modern browsers: soft fill + subtle border from band color */
+      background: color-mix(in srgb, var(--pill-col) 18%, transparent);
+      box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--pill-col) 45%, transparent);
+    }
     /* Center row styling (green) */
     .name--center{ color: var(--sac-center-green, #8ef0ae); font-weight:700; }
     .value--center{
@@ -1178,18 +1185,51 @@ class SimpleAirComfortCardEditor extends LitElement {
     })[id];
     return base ?? id;
   };
+  
+  // Map band key to the same colours the card uses
+  _bandBaseColour(name){
+    const t = String(name || '').toLowerCase();
+    if (t==='frosty')  return 'mediumblue';
+    if (t==='cold')    return 'dodgerblue';
+    if (t==='chilly')  return 'deepskyblue';
+    if (t==='cool')    return 'mediumaquamarine';
+    if (t==='mild')    return 'seagreen';
+    if (t==='perfect') return 'limegreen';
+    if (t==='warm')    return 'gold';
+    if (t==='hot')     return 'orange';
+    if (t==='boiling') return 'crimson';
+    return 'dimgray';
+  }
 
+  // Which band colour to use for each anchor row's value pill
+  _bandForAnchor(anchorName){
+    switch(anchorName){
+      case 't_boiling_max': return 'boiling';
+      case 't_hot_max':     return 'hot';
+      case 't_warm_max':    return 'warm';
+      case 't_perf_max':
+      case 't_perf_min':    return 'perfect';
+      case 't_mild_min':    return 'mild';
+      case 't_cool_min':    return 'cool';
+      case 't_chilly_min':  return 'chilly';
+      case 't_cold_min':    return 'cold';
+      case 't_frosty_min':  return 'frosty';
+      default:              return null;
+    }
+  }
   // Button row factory (name, title, helper, limited?)
   _anchorRow(name, title, helper, limited){
     const v = Number(this._config?.[name]);
     const display = Number.isFinite(v) ? `${v.toFixed(1)} °C` : '—';
+    const band = this._bandForAnchor(name);
+    const col  = band ? this._bandBaseColour(band) : null;
     const cap = limited ? this._capFor(name) : null;
     const atLo = cap ? v <= cap.lo : false;
     const atHi = cap ? v >= cap.hi : false;
     return html`
       <div class="row">
         <div class="name">${title}</div>
-        <div class="value" title=${display}>${display}</div>
+        <div class="value ${col ? 'coloured' : ''}" style=${col ? `--pill-col:${col}` : nothing} title=${display}>${display}</div>
         <div class="seg">
           <button
             class="btn icon ghost"
