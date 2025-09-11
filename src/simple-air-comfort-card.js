@@ -1076,14 +1076,14 @@ class SimpleAirComfortCardEditor extends LitElement {
 
     // Capture defaults for ±4°C movement caps (non-edge anchors)
     this._defaults = {
-      t_hot_max: 34.9,
-      t_warm_max: 27.9,
-      t_perf_max: 23.9,
-      t_perf_min: 19.0,
-      t_mild_min: 14.0,
-      t_cool_min: 9.0,
-      t_chilly_min: 5.0,
-      t_cold_min: 3.0,
+      hot_max: 34.9,
+      warm_max: 27.9,
+      perf_max: 23.9,
+      perf_min: 19.0,
+      mild_min: 14.0,
+      cool_min: 9.0,
+      chilly_min: 5.0,
+      cold_min: 3.0,
     };
   }
 
