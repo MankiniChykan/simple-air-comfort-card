@@ -968,21 +968,20 @@ customElements.define('simple-air-comfort-card', SimpleAirComfortCard);
 class SimpleAirComfortCardEditor extends LitElement {
   static properties = { hass:{type:Object}, _config:{state:true}, _schema:{state:true} };
   static styles = css`
-    .wrap{ padding:12px 12px 16px; }
-    .row{ display:grid; grid-template-columns:auto 1fr auto auto; align-items:center; gap:10px; padding:8px 0; }
-    .name{ font-weight:600; }
-    .helper{ grid-column:1 / -1; opacity:.8; font-size:.92em; margin:-2px 0 4px; }
-    .btn{
-      appearance:none; border:1px solid var(--divider-color, #444);
-      background:var(--ha-card-background, #1c1c1c); color:var(--primary-text-color,#fff);
-      padding:4px 10px; border-radius:8px; font-weight:600; cursor:pointer;
+    .wrap{ padding:8px 12px 16px; }
+    .columns{ display:grid; grid-template-columns:1fr 1fr; gap:12px; align-items:start; }
+    .col-title{ font-size:.9em; opacity:.8; margin:8px 0 4px; }
+    @media (max-width:560px){ .columns{ grid-template-columns:1fr; } }
+    /* Single-row temperature bar */
+    .temps-bar{ margin-top:12px; }
+    .temps-bar ha-form{
+      display:grid;
+      grid-template-columns:repeat(10, minmax(90px,1fr));
+      gap:8px;
     }
-    .btn:active{ transform:translateY(1px); }
-    .value{ font-variant-numeric:tabular-nums; font-weight:600; }
-    .title{ font-size:0.95em; opacity:.85; margin:12px 0 6px; }
-    .mid{ margin:6px 0 4px; font-size:.95em; opacity:.9; }
-    .actions{ display:flex; gap:8px; margin-top:10px; }
-    .danger{ border-color:#a33; color:#fff; background:#702; }
+    @media (max-width:980px){ .temps-bar ha-form{ grid-template-columns:repeat(5, minmax(90px,1fr)); } }
+    @media (max-width:560px){ .temps-bar ha-form{ grid-template-columns:repeat(2, minmax(120px,1fr)); } }
+    .center-readonly{ margin-top:6px; font-size:.95em; opacity:.8; }
   `;
   connectedCallback(){ super.connectedCallback(); window.loadCardHelpers?.().catch(()=>{}); }
 
@@ -994,7 +993,7 @@ class SimpleAirComfortCardEditor extends LitElement {
   }
   get hass(){ return this._hass; }
 
-  // Build default config and keep default anchors for ±4°C caps
+  // Build default config and editor schema; merge user overrides on top
   setConfig(config){
     this._config = {
       name:'Area Name',
@@ -1022,72 +1021,74 @@ class SimpleAirComfortCardEditor extends LitElement {
       ...(config ?? {}),
     };
 
-    // Capture defaults for ±4°C movement caps (non-edge anchors)
-    this._defaults = {
-      t_hot_max: 34.9,
-      t_warm_max: 27.9,
-      t_perf_max: 23.9,
-      t_perf_min: 19.0,
-      t_mild_min: 14.0,
-      t_cool_min: 9.0,
-      t_chilly_min: 5.0,
-      t_cold_min: 3.0,
-    };
+    // Editor shows ONLY these fields in this exact order:
+    // BOILING.max, HOT.max, WARM.max, PERFECT.max, (midpoint text), PERFECT.min, MILD.min, COOL.min, CHILLY.min, COLD.min, FROSTY.min
+    this._schemaTempsTop = [
+      { name:'t_boiling_max', selector:{ number:{ min:-60, max:80, step:0.1, mode:'box', unit_of_measurement:'°C' } } },
+      { name:'t_hot_max',     selector:{ number:{ min:-60, max:60, step:0.1, mode:'box', unit_of_measurement:'°C' } } },
+      { name:'t_warm_max',    selector:{ number:{ min:-60, max:50, step:0.1, mode:'box', unit_of_measurement:'°C' } } },
+      { name:'t_perf_max',    selector:{ number:{ min:-60, max:45, step:0.1, mode:'box', unit_of_measurement:'°C' } } },
+    ];
+    this._schemaTempsBottom = [
+      { name:'t_perf_min',    selector:{ number:{ min:-60, max:45, step:0.1, mode:'box', unit_of_measurement:'°C' } } },
+      { name:'t_mild_min',    selector:{ number:{ min:-60, max:40, step:0.1, mode:'box', unit_of_measurement:'°C' } } },
+      { name:'t_cool_min',    selector:{ number:{ min:-60, max:35, step:0.1, mode:'box', unit_of_measurement:'°C' } } },
+      { name:'t_chilly_min',  selector:{ number:{ min:-60, max:30, step:0.1, mode:'box', unit_of_measurement:'°C' } } },
+      { name:'t_cold_min',    selector:{ number:{ min:-60, max:25, step:0.1, mode:'box', unit_of_measurement:'°C' } } },
+      { name:'t_frosty_min',  selector:{ number:{ min:-60, max:20, step:0.1, mode:'box', unit_of_measurement:'°C' } } },
+    ];
+
+    // Misc (non-temperature) settings shown separately in the editor
+    this._schemaMisc = [
+      { name:'name', selector:{ text:{} } },
+      { name:'temperature', required:true, selector:{ entity:{ domain:'sensor', device_class:'temperature' } } },
+      { name:'humidity',    required:true, selector:{ entity:{ domain:'sensor', device_class:'humidity' } } },
+      { name:'windspeed', selector:{ entity:{ domain:'sensor', device_class:'wind_speed' } } },
+      { name:'default_wind_speed', selector:{ number:{ min:0, max:50, step:0.1, mode:'box', unit_of_measurement:'m/s' } } },
+      { name:'decimals', selector:{ number:{ min:0, max:3, step:1, mode:'box' } } },
+      { name:'rh_left_inner_pct',  selector:{ number:{ min:0, max:100, step:0.1, mode:'box', unit_of_measurement:'%' } } },
+      { name:'rh_right_inner_pct', selector:{ number:{ min:0, max:100, step:0.1, mode:'box', unit_of_measurement:'%' } } },
+      { name:'y_offset_pct', selector:{ number:{ min:-30, max:30, step:0.5, mode:'box', unit_of_measurement:'%' } } },
+    ];
   }
 
 
-  // Render button UI for anchors + small ha-form for entities/misc
+  // Render misc form + single-row temperatures with midpoint display
   render(){
     if (!this.hass || !this._config) return html``;
     return html`<div class="wrap">
-      <div class="title">Entities & Misc</div>
+      <!-- Miscellaneous settings -->
       <ha-form
         .hass=${this.hass}
         .data=${this._config}
-        .schema=${[
-          { name:'name', selector:{ text:{} } },
-          { name:'temperature', required:true, selector:{ entity:{ domain:'sensor', device_class:'temperature' } } },
-          { name:'humidity',    required:true, selector:{ entity:{ domain:'sensor', device_class:'humidity' } } },
-          { name:'windspeed', selector:{ entity:{ domain:'sensor', device_class:'wind_speed' } } },
-          { name:'default_wind_speed', selector:{ number:{ min:0, max:50, step:0.1, mode:'box', unit_of_measurement:'m/s' } } },
-          { name:'decimals', selector:{ number:{ min:0, max:3, step:1, mode:'box' } } },
-          { name:'rh_left_inner_pct',  selector:{ number:{ min:0, max:100, step:0.1, mode:'box', unit_of_measurement:'%' } } },
-          { name:'rh_right_inner_pct', selector:{ number:{ min:0, max:100, step:0.1, mode:'box', unit_of_measurement:'%' } } },
-          { name:'y_offset_pct', selector:{ number:{ min:-30, max:30, step:0.5, mode:'box', unit_of_measurement:'%' } } },
-        ]}
+        .schema=${this._schemaMisc}
         .computeLabel=${this._label}
         .computeHelper=${this._helper}
         @value-changed=${this._onMiscChange}>
       </ha-form>
 
-      <div class="title">Temperature anchors (buttons)</div>
-      ${this._anchorRow('t_boiling_max', 'BOILING.max → top (100%)', 
-        'Dragging number down stops at BOILING.min. Dragging number up increases the scale.', false)}
-      ${this._anchorRow('t_hot_max', 'HOT.max (tied to BOILING.min +0.1)',
-        'Button down drops BOILING.min. Button up increases HOT.max. Limit ±4°C from default.', true)}
-      ${this._anchorRow('t_warm_max', 'WARM.max → outer-top (tied to HOT.min +0.1)',
-        'Button down drops HOT.min. Button up increases WARM.max. Limit ±4°C from default.', true)}
-      ${this._anchorRow('t_perf_max', 'PERFECT.max → inner-top (tied to WARM.min +0.1)',
-        'Button down drops WARM.min. Button up increases PERFECT.max. Limit ±4°C from default.', true)}
-
-      <div class="mid">Center (midpoint PERFECT min/max): ${this._centerTemp()}</div>
-
-      ${this._anchorRow('t_perf_min', 'PERFECT.min → inner-bottom (tied to MILD.max −0.1)',
-        'Button down drops PERFECT.min. Button up increases MILD.max. Limit ±4°C from default.', true)}
-      ${this._anchorRow('t_mild_min', 'MILD.min → outer-bottom (tied to COOL.max −0.1)',
-        'Button down drops MILD.min. Button up increases COOL.max. Limit ±4°C from default.', true)}
-      ${this._anchorRow('t_cool_min', 'COOL.min (tied to CHILLY.max −0.1)',
-        'Button down drops COOL.min. Button up increases CHILLY.max. Limit ±4°C from default.', true)}
-      ${this._anchorRow('t_chilly_min', 'CHILLY.min (tied to COLD.max −0.1)',
-        'Button down drops CHILLY.min. Button up increases COLD.max. Limit ±4°C from default.', true)}
-      ${this._anchorRow('t_cold_min', 'COLD.min (tied to FROSTY.max −0.1)',
-        'Button down drops COLD.min. Button up increases FROSTY.max. Limit ±4°C from default.', true)}
-      ${this._anchorRow('t_frosty_min', 'FROSTY.min → bottom (0%)',
-        'Dragging number up stops at FROSTY.max. Dragging number down increases the scale.', false)}
-
-      <div class="actions">
-        <button class="btn danger" @click=${this._resetDefaults}>Reset to defaults</button>
+      <!-- Temperature anchors (°C) — shown in required order -->
+      <div class="col-title" style="margin-top:12px">Temperature anchors (°C)</div>
+      <!-- Top block: BOILING.max, HOT.max, WARM.max, PERFECT.max -->
+      <ha-form
+        .hass=${this.hass}
+        .data=${this._config}
+        .schema=${this._schemaTempsTop}
+        .computeLabel=${this._labelTemp}
+        @value-changed=${this._onTempsChange}>
+      </ha-form>
+      <!-- Calculated midpoint text placed HERE -->
+      <div class="col-title" style="margin:8px 0;opacity:.8">
+        Center (exact midpoint between PERFECT min & max): ${this._centerTemp()}
       </div>
+      <!-- Bottom block: PERFECT.min, MILD.min, COOL.min, CHILLY.min, COLD.min, FROSTY.min -->
+      <ha-form
+        .hass=${this.hass}
+        .data=${this._config}
+        .schema=${this._schemaTempsBottom}
+        .computeLabel=${this._labelTemp}
+        @value-changed=${this._onTempsChange}>
+      </ha-form>
     </div>`;
   }
 
@@ -1107,20 +1108,19 @@ class SimpleAirComfortCardEditor extends LitElement {
     return base ?? id;
   };
 
-  // Button row factory (name, title, helper, limited?)
-  _anchorRow(name, title, helper, limited){
-    const v = Number(this._config?.[name]);
-    const display = Number.isFinite(v) ? `${v.toFixed(1)} °C` : '—';
-    return html`
-      <div class="row">
-        <div class="name">${title}</div>
-        <div class="value">${display}</div>
-        <button class="btn" @click=${() => this._bump(name, -0.1, limited)} aria-label="${title} down">−</button>
-        <button class="btn" @click=${() => this._bump(name, +0.1, limited)} aria-label="${title} up">+</button>
-        <div class="helper">${helper}</div>
-      </div>
-    `;
-  }
+  // Human labels for the exposed temperature anchors (exact order)
+  _labelTemp = (s) => ({
+    t_boiling_max:'BOILING.max → top (100%)',
+    t_hot_max:'HOT.max (drags BOILING.min)',
+    t_warm_max:'WARM.max → outer-top (drags HOT.min)',
+    t_perf_max:'PERFECT.max → inner-top (drags WARM.min)',
+    t_perf_min:'PERFECT.min → inner-bottom (drags MILD.max)',
+    t_mild_min:'MILD.min → outer-bottom (drags COOL.max)',
+    t_cool_min:'COOL.min (drags CHILLY.max)',
+    t_chilly_min:'CHILLY.min (drags COLD.max)',
+    t_cold_min:'COLD.min (drags FROSTY.max)',
+    t_frosty_min:'FROSTY.min → bottom (0%)',
+  }[s.name] ?? s.name);
   
 
   // Helper/tooltips for each field (shows under the input)
@@ -1187,28 +1187,6 @@ class SimpleAirComfortCardEditor extends LitElement {
     return `${((lo + hi) / 2).toFixed(2)} °C`;
   }
 
-  // Reset visible anchors to defaults, re-derive neighbors, emit
-  _resetDefaults = () => {
-    const out = { ...(this._config || {}) };
-    // Restore the 10 exposed handles to their schema defaults
-    out.t_boiling_max = 60.0;
-    out.t_hot_max     = 34.9;
-    out.t_warm_max    = 27.9;
-    out.t_perf_max    = 23.9;
-    out.t_perf_min    = 19.0;
-    out.t_mild_min    = 14.0;
-    out.t_cool_min    =  9.0;
-    out.t_chilly_min  =  5.0;
-    out.t_cold_min    =  3.0;
-    out.t_frosty_min  = -40.0;
-    const derived = this._applyTempsRowBiDirectional(out, [
-      't_boiling_max','t_hot_max','t_warm_max','t_perf_max','t_perf_min',
-      't_mild_min','t_cool_min','t_chilly_min','t_cold_min','t_frosty_min'
-    ]);
-    this._config = derived;
-    fireEvent(this, 'config-changed', { config: derived });
-  };
-
   // --- New: misc handler (entities/decimals/RH/offsets) ---
   _onMiscChange = (ev) => {
     ev.stopPropagation();
@@ -1219,45 +1197,16 @@ class SimpleAirComfortCardEditor extends LitElement {
     fireEvent(this, 'config-changed', { config: merged });
   };
 
-  // Button click → bump a single handle by delta, apply caps & derive neighbors
-  _bump(name, delta, limited){
-    const step = 0.1;
-    const r1 = (x) => Math.round(x * 10) / 10;
-    const cfg = { ...(this._config || {}) };
-    const before = Number(cfg[name]);
-    if (!Number.isFinite(before)) return;
-
-    // ±4°C caps for limited anchors based on defaults
-    let next = r1(before + (delta > 0 ? step : -step));
-    if (limited && this._defaults[name.replace('t_', '')] !== undefined){
-      const dkey = name; // defaults are stored as t_* names via mapping below
-    }
-
-    // Map to defaults keys (we stored without 't_'; build a lookup)
-    const mapDef = {
-      t_hot_max:'t_hot_max',
-      t_warm_max:'t_warm_max',
-      t_perf_max:'t_perf_max',
-      t_perf_min:'t_perf_min',
-      t_mild_min:'t_mild_min',
-      t_cool_min:'t_cool_min',
-      t_chilly_min:'t_chilly_min',
-      t_cold_min:'t_cold_min',
-    };
-    if (limited && mapDef[name]){
-      const defVal = this._defaults[mapDef[name].replace('t_','')];
-      if (Number.isFinite(defVal)){
-        const lo = r1(defVal - 4.0);
-        const hi = r1(defVal + 4.0);
-        next = Math.min(hi, Math.max(lo, next));
-      }
-    }
-
-    const merged = { ...cfg, [name]: next };
-    const derived = this._applyTempsRowBiDirectional(merged, [name]);
-    this._config = derived;
-    fireEvent(this, 'config-changed', { config: derived });
-  }
+  // Only clamp the actually edited handles; no chain ripples
+  _onTempsChange = (ev) => {
+    ev.stopPropagation();
+    const delta = { ...(ev.detail?.value || {}) };
+    if (!Object.keys(delta).length) return;
+    const changed = Object.keys(delta);
+    const cfg = this._applyTempsRowBiDirectional({ ...(this._config || {}), ...delta }, changed);
+    this._config = cfg;
+    fireEvent(this, 'config-changed', { config: cfg });
+  };
 
   // Clamp only the edited handles against *their local neighbors*; then update derived neighbors.
   _applyTempsRowBiDirectional(cfgIn, changedKeys = []){
