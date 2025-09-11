@@ -1114,28 +1114,28 @@ class SimpleAirComfortCardEditor extends LitElement {
 
       <div class="title">Temperature anchors (buttons)</div>
       ${this._anchorRow('t_boiling_max', 'BOILING.max → Top of Card (100%)', 
-        'Dragging number down stops at BOILING.min. Dragging number up increases the scale.', false)}
+        'Changes how far (HOT.max) is from the edge of the card.', false)}
       ${this._anchorRow('t_hot_max', 'HOT.max (Scales with BOILING.max)',
-        'Button down drops BOILING.min. Button up increases HOT.max. Limit ±4°C from default.', true)}
+        'Limit ±4°C from default.', true)}
       ${this._anchorRow('t_warm_max', 'WARM.max → Outer Ring Top ',
-        'Button down drops HOT.min. Button up increases WARM.max. Limit ±4°C from default.', true)}
+        'Limit ±4°C from default.', true)}
       ${this._anchorRow('t_perf_max', 'PERFECT.max → Inner Comfort Circle Top',
-        'Button down drops WARM.min. Button up increases PERFECT.max. Limit ±4°C from default.', true)}
+        'Limit ±4°C from default.', true)}
 
       <div class="mid">Center (Calculated PERFECT midpoint): ${this._centerTemp()}</div>
 
       ${this._anchorRow('t_perf_min', 'PERFECT.min → Inner Comfort Circle Bottom',
-        'Button down drops PERFECT.min. Button up increases MILD.max. Limit ±4°C from default.', true)}
+        'Limit ±4°C from default.', true)}
       ${this._anchorRow('t_mild_min', 'MILD.min → Outer Ring Bottom',
-        'Button down drops MILD.min. Button up increases COOL.max. Limit ±4°C from default.', true)}
+        'Limit ±4°C from default.', true)}
       ${this._anchorRow('t_cool_min', 'COOL.min (Scales with FROSTY.min)',
-        'Button down drops COOL.min. Button up increases CHILLY.max. Limit ±4°C from default.', true)}
+        'Limit ±4°C from default.', true)}
       ${this._anchorRow('t_chilly_min', 'CHILLY.min (Scales with FROSTY.min)',
-        'Button down drops CHILLY.min. Button up increases COLD.max. Limit ±4°C from default.', true)}
+        'Limit ±4°C from default.', true)}
       ${this._anchorRow('t_cold_min', 'COLD.min (Scales with FROSTY.min)',
-        'Button down drops COLD.min. Button up increases FROSTY.max. Limit ±4°C from default.', true)}
-      ${this._anchorRow('t_frosty_min', 'FROSTY.min → bottom (0%)',
-        'Dragging number up stops at FROSTY.max. Dragging number down increases the scale.', false)}
+        'Limit ±4°C from default.', true)}
+      ${this._anchorRow('t_frosty_min', 'FROSTY.min → Bottom of Card (0%)',
+        'Changes how far (COOL.min → COLD.min) is from the edge of the card.', false)}
 
       <div class="actions">
         <button class="btn danger" @click=${this._resetDefaults}>Reset to defaults</button>
