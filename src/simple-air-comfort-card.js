@@ -971,7 +971,7 @@ class SimpleAirComfortCardEditor extends LitElement {
     .wrap{ padding:12px 12px 16px; }
     .row{
       display:grid;
-      grid-template-columns:auto 1fr auto; /* title | value | button group */
+      grid-template-columns:1fr auto auto; /* title | value | button group */
       align-items:center;
       gap:10px;
       padding:8px 0;
@@ -1030,6 +1030,7 @@ class SimpleAirComfortCardEditor extends LitElement {
       text-align:right;   /* align digits inside the pill to the right */
       min-width:6ch;      /* keeps width stable as numbers change */
       margin-right:2px;   /* tiny breathing room before the buttons */
+      white-space:nowrap; /* prevent "°C" wrapping to next line */
     }
     /* Center row styling (green) */
     .name--center{ color: var(--sac-center-green, #8ef0ae); font-weight:700; }
