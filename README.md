@@ -57,8 +57,6 @@ resources:
     type: module
 ```
 
----
-
 ### 4. Configuration
 
 ## 🧩 Lovelace Configuration
