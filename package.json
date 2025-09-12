@@ -1,6 +1,6 @@
 {
   "name": "simple-air-comfort-card",
-  "version": "--prerelease",
+  "version": "1.0.314-dev.3",
   "type": "module",
   "description": "Dynamic Lovelace card for visualizing indoor comfort using temperature, humidity, and dew point.",
   "main": "dist/simple-air-comfort-card.js",
@@ -16,7 +16,7 @@
     "serve": "http-server . -c-1 -p 5173",
     "dev": "npm-run-all --parallel watch serve",
     "release": "node github-release-helper.js",
-    "release:dev": "node github-release-helper.js --prerelease"
+    "release:dev": "CHANNEL=dev node github-release-helper.js"
   },
   "author": "Hunter",
   "license": "MIT",
