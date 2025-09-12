@@ -20,7 +20,7 @@ temp/
 # ─────────────────────────────────────────────────────────────
 # dist/ contents: ignore by default, unignore the files we ship
 # ─────────────────────────────────────────────────────────────
-dist/
+dist/*
 # …but keep the shipped artifacts:
 !dist/simple-air-comfort-card.js
 !dist/simple-air-comfort-card.js.gz
