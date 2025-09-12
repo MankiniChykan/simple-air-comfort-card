@@ -152,7 +152,7 @@ try {
   const prev = latestTagOrEmpty();
   const notes = makeReleaseNotes(prev, tagName).replace(/"/g, '\\"');
   const isPrerelease = (process.env.CHANNEL || '').toLowerCase() === 'dev';
-  const prereleaseFlags = isPrerelease ? '--prerelease --latest=false' : '';
+  const prereleaseFlags = isPrerelease ? ' --prerelease --latest=false' : '';
 
   // 8) GitHub Release (create or upload, always include checksums)
   if (!releaseExists(tagName)) {
@@ -163,6 +163,11 @@ try {
       dist/sac_background_overlay.svg \
       dist/checksums.txt \
       --title "${tagName}" --notes "${notes}"${prereleaseFlags}`);
+
+    // Enforce pre-release state even if flags were ignored by CLI/shell
+    if (isPrerelease) {
+      sh(`gh release edit ${tagName} --prerelease=true --latest=false`);
+    }
   } else {
     console.log('📤 Release exists; uploading assets (clobber) …');
     sh(`gh release upload ${tagName} \
@@ -171,6 +176,11 @@ try {
       dist/sac_background_overlay.svg \
       dist/checksums.txt \
       --clobber`);
+
+    // Ensure existing release is toggled to pre-release on dev channel
+    if (isPrerelease) {
+      sh(`gh release edit ${tagName} --prerelease=true --latest=false`);
+    }
   }
 
   console.log('✅ Done.');
