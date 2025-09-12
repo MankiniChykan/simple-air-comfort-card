@@ -136,9 +136,16 @@ try {
   console.log('🔨 Building …');
   sh('npm run build');
 
-  // 4) Checksums
+  // 4) Verify assets, show dist, and write checksums for whatever exists
+  console.log('📂 dist contents:');
+  try { sh('ls -lh dist'); } catch {}
+  const existing = ASSETS.filter(p => p.endsWith('checklists.txt') ? true : existsSync(p)).filter(p => p !== 'dist/checksums.txt');
+  if (!existing.length) {
+    throw new Error('No build assets found in dist/. Did the build run with sourcemaps and SVG copy?');
+  }
   console.log('🧮 Writing checksums …');
-  sh('sha256sum dist/simple-air-comfort-card.js dist/simple-air-comfort-card.js.map dist/simple-air-comfort-card.js.gz dist/sac_background_overlay.svg dist/sac_background_overlay.svg.gz > dist/checksums.txt');
+  sh(`sha256sum ${existing.join(' ')} > dist/checksums.txt`);
+  const uploadFiles = [...existing, 'dist/checksums.txt'];
 
   // 5) Commit build artifacts (+ package.json/lock) if changed
   console.log(`📁 Committing build artifacts for ${tagName} …`);
@@ -170,7 +177,7 @@ try {
   // 8) GitHub Release (create or upload, always include checksums)
   if (!releaseExists(tagName)) {
     console.log('🏷  Creating GitHub release …');
-    sh(`gh release create ${tagName} ${ASSETS.join(' ')} --title "${tagName}" --notes "${notes}"${prereleaseFlags}`);
+    sh(`gh release create ${tagName} ${uploadFiles.join(' ')} --title "${tagName}" --notes "${notes}"${prereleaseFlags}`);
 
     // Enforce pre-release state even if flags were ignored by CLI/shell
     if (isPrerelease) {
@@ -181,7 +188,7 @@ try {
     }
   } else {
     console.log('📤 Release exists; uploading assets (clobber) …');
-    sh(`gh release upload ${tagName} ${ASSETS.join(' ')} --clobber`);
+    sh(`gh release upload ${tagName} ${uploadFiles.join(' ')} --clobber`);
 
     // Ensure existing release is toggled to pre-release on dev channel
     if (isPrerelease) {

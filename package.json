@@ -10,8 +10,9 @@
   ],
   "scripts": {
     "clean": "rimraf dist",
+    "prebuild": "npm run clean",
     "build": "rollup -c",
-    "postbuild": "gzip -kf dist/simple-air-comfort-card.js",
+    "postbuild": "gzip -kf dist/simple-air-comfort-card.js && gzip -kf dist/sac_background_overlay.svg",
     "watch": "rollup -c -w",
     "serve": "http-server . -c-1 -p 5173",
     "dev": "npm-run-all --parallel watch serve",
