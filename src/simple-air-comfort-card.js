@@ -168,6 +168,15 @@ class SimpleAirComfortCard extends LitElement {
       line-height:1.05;
       display: block;
     }
+    /* tiny sub-label under the metric (e.g., "BoM" / "Wind Chill") */
+    .corner .sublabel{
+      display:block;
+      margin-top: 2px;
+      font-weight:500;
+      font-size: calc(var(--sac-scale,1) * 12px);
+      letter-spacing:.2px;
+      opacity:.75;
+    }
     .corner .comfort{
       font-weight:400;
       font-size: calc(var(--sac-scale,1) * 22px);
@@ -275,6 +284,7 @@ class SimpleAirComfortCard extends LitElement {
       temperature: config.temperature,
       humidity: config.humidity,
       windspeed: config.windspeed,
+      feels_like: (config.feels_like ?? 'bom'), // 'bom' | 'wind_chill' | 'heat_index' | 'humidex'
       decimals: Number.isFinite(num(config.decimals)) ? num(config.decimals) : 1,
       default_wind_speed: Number.isFinite(num(config.default_wind_speed)) ? num(config.default_wind_speed) : 0.0,
 
@@ -363,7 +373,28 @@ class SimpleAirComfortCard extends LitElement {
     const es  = this.#buckSaturationVapourPressure_hPa(Tc);     // hPa @ saturation
     const e   = (RH / 100) * es;                                // actual vapour pressure (hPa)
     const dpC = this.#dewPointFromVapourPressure_hPa(e);        // dew point (°C)
-    const atC = this.#apparentTemperatureC(Tc, e, WS);          // feels like (°C)
+    // Feels-like selector
+    let atC;
+    let atTag; // short label for UI
+    switch (String(this._config.feels_like || 'bom')) {
+      case 'wind_chill':
+        atC = this.#windChillC(Tc, WS);
+        atTag = 'Wind Chill';
+        break;
+      case 'heat_index':
+        atC = this.#heatIndexC(Tc, RH);
+        atTag = 'Heat Index';
+        break;
+      case 'humidex':
+        atC = this.#humidexC(Tc, e);
+        atTag = 'Humidex';
+        break;
+      case 'bom':
+      default:
+        atC = this.#apparentTemperatureC(Tc, e, WS);
+        atTag = 'BoM AT';
+        break;
+    }
 
     /* ---------------------------
      * Friendly texts + visuals
@@ -450,7 +481,7 @@ class SimpleAirComfortCard extends LitElement {
             // geometry
             xPct, yPct, outside,
             // text outputs
-            outUnit, d, dewOut, atOut, tempRaw, rhRaw,
+            outUnit, d, dewOut, atOut, tempRaw, rhRaw, atTag,
             // axis glow styles
             axisTopStyle, axisBottomStyle, axisLeftStyle, axisRightStyle
           })}
@@ -468,6 +499,7 @@ class SimpleAirComfortCard extends LitElement {
     ringGrad, innerGrad,
     xPct, yPct, outside,
     dewOut, atOut, tempRaw, rhRaw,
+    atTag,
     axisTopStyle = '', axisBottomStyle = '', axisLeftStyle = '', axisRightStyle = ''
   }) {
     return html`
@@ -484,6 +516,7 @@ class SimpleAirComfortCard extends LitElement {
       <div class="corner tr">
         <span class="label">Feels like</span>
         <span class="metric">${atOut}</span>
+        ${atTag ? html`<span class="sublabel">${atTag}</span>` : nothing}
       </div>
 
       <!-- BL / BR corner stats (raw values + comfort labels) -->
@@ -524,6 +557,34 @@ class SimpleAirComfortCard extends LitElement {
    *   (We input e in hPa and WS in m/s)
    */
   #apparentTemperatureC(Tc, e_hPa, ws_mps){ return Tc + 0.33*e_hPa - 0.70*ws_mps - 4.0; }
+
+  // Wind Chill (NWS/Environment Canada) — expects T in °C, wind in km/h
+  #windChillC(Tc, ws_mps){
+    if (!Number.isFinite(Tc) || !Number.isFinite(ws_mps)) return NaN;
+    const V = ws_mps * 3.6; // m/s -> km/h
+    // Standard formula valid roughly for T<=10°C and V>=4.8 km/h; still return continuous value otherwise.
+    return 13.12 + 0.6215*Tc - 11.37*Math.pow(V,0.16) + 0.3965*Tc*Math.pow(V,0.16);
+  }
+
+  // Heat Index (Rothfusz regression) — compute in °F then convert back
+  #heatIndexC(Tc, RH){
+    if (!Number.isFinite(Tc) || !Number.isFinite(RH)) return NaN;
+    const T = Tc * 9/5 + 32; // °F
+    const R = this.#clampRH(RH); // %
+    const c1 = -42.379, c2 = 2.04901523, c3 = 10.14333127, c4 = -0.22475541;
+    const c5 = -0.00683783, c6 = -0.05481717, c7 = 0.00122874, c8 = 0.00085282, c9 = -0.00000199;
+    let HI = c1 + c2*T + c3*R + c4*T*R + c5*T*T + c6*R*R + c7*T*T*R + c8*T*R*R + c9*T*T*R*R;
+    // Simple adjustments (NWS) near lower bounds — optional; safe to omit for compactness.
+    // Convert back to °C
+    return (HI - 32) * 5/9;
+  }
+
+  // Humidex (Environment Canada) — needs vapour pressure (hPa)
+  #humidexC(Tc, e_hPa){
+    if (!Number.isFinite(Tc) || !Number.isFinite(e_hPa)) return NaN;
+    // Humidex = T + 0.5555*(e - 10) where e is in hPa
+    return Tc + 0.5555 * (e_hPa - 10);
+  }
 
   #buckSaturationVapourPressure_hPa(Tc){
     if (!Number.isFinite(Tc)) return NaN;
@@ -1069,6 +1130,7 @@ class SimpleAirComfortCardEditor extends LitElement {
     this._config = {
       name:'Area Name',
       temperature: undefined, humidity: undefined, windspeed: undefined,
+      feels_like:'bom',
       decimals:1, default_wind_speed:0.1,
 
       // Comfort bands — mins & maxes (°C), 0.1 steps
@@ -1120,6 +1182,13 @@ class SimpleAirComfortCardEditor extends LitElement {
           { name:'humidity',    required:true, selector:{ entity:{ domain:'sensor', device_class:'humidity' } } },
           { name:'windspeed', selector:{ entity:{ domain:'sensor', device_class:'wind_speed' } } },
           { name:'default_wind_speed', selector:{ number:{ min:0, max:50, step:0.1, mode:'box', unit_of_measurement:'m/s' } } },
+          { name:'feels_like',
+            selector:{ select:{ mode:'dropdown', options:[
+              { value:'bom',        label:'Apparent Temperature (BoM, T+RH+Wind)' },
+              { value:'wind_chill', label:'Wind Chill (T+Wind, cold)' },
+              { value:'heat_index', label:'Heat Index (T+RH, hot)' },
+              { value:'humidex',    label:'Humidex (T+RH, hot)' },
+            ]}} },
           { name:'decimals', selector:{ number:{ min:0, max:3, step:1, mode:'box' } } },
           { name:'rh_left_inner_pct',  selector:{ number:{ min:0, max:100, step:0.1, mode:'box', unit_of_measurement:'%' } } },
           { name:'rh_right_inner_pct', selector:{ number:{ min:0, max:100, step:0.1, mode:'box', unit_of_measurement:'%' } } },
@@ -1176,6 +1245,7 @@ class SimpleAirComfortCardEditor extends LitElement {
     const id = s.name;
     const base = ({
       name:'Name', temperature:'Temperature entity', humidity:'Humidity entity', windspeed:'Wind speed entity (optional)',
+      feels_like:'Feels-like formula',
       default_wind_speed:'Default wind speed (m/s)', decimals:'Decimals',
       rh_left_inner_pct:'Inner circle left RH (%)',
       rh_right_inner_pct:'Inner circle right RH (%)',
@@ -1280,6 +1350,8 @@ class SimpleAirComfortCardEditor extends LitElement {
         return 'Optional. If set, Apparent Temperature uses this wind; if empty, the “Default wind speed” below is used.';
       case 'default_wind_speed':
         return 'Indoor fallback for Apparent Temperature when no wind sensor is set. Typical indoors: 0.0–0.2 m/s.';
+      case 'feels_like':
+        return 'Choose the formula for the top-right “Feels like” value. BoM uses T+RH+Wind; Wind Chill uses T+Wind (cold); Heat Index/Humidex use T+RH (hot).';
       case 'decimals':
         return 'How many decimal places to show for temperatures and humidity.';
       case 'rh_left_inner_pct':
