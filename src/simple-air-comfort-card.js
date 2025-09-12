@@ -85,6 +85,7 @@ class SimpleAirComfortCard extends LitElement {
         box-sizing: border-box;
         min-height: 0;
         --sac-scale: 1;
+        --sac-top-offset: calc(var(--sac-scale, 1) * 36px);
         position: relative;
         padding: var(--card-content-padding, 0px);
         overflow: hidden;
@@ -184,8 +185,8 @@ class SimpleAirComfortCard extends LitElement {
       display: block;
       margin-top: 0rem;
     }
-    .tl{ left:0%;  top:0%;  transform:translate(20%,100%); text-align:left; }
-    .tr{ right:0%; top:0%;  transform:translate(-20%,100%); text-align:right; }
+    .tl{ left:0%;  top:var(--sac-top-offset); transform:translate(20%,0);  text-align:left; }
+    .tr{ right:0%; top:var(--sac-top-offset); transform:translate(-20%,0); text-align:right; }
     .bl{ left:0%;  bottom:0%; transform:translate(20%,-5%);   text-align:left; }
     .br{ right:0%; bottom:0%; transform:translate(-20%,-5%);   text-align:right; }
 
