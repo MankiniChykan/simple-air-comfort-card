@@ -425,14 +425,21 @@ class SimpleAirComfortCard extends LitElement {
     const isLowRH  = Number.isFinite(RH) && RH < Lh;
     const isHighRH = Number.isFinite(RH) && RH > Rh;
 
-    const axisTopStyle    = isHot ? `color:white; text-shadow:
-      0 0 1px white, 0 0 6px ${pal.hot}, 0 0 24px ${pal.hot}, 0 0 40px ${pal.hot}` : '';
-    const axisBottomStyle = isCold ? `color:white; text-shadow:
-      0 0 1px white, 0 0 6px ${pal.cold}, 0 0 24px ${pal.cold}, 0 0 40px ${pal.cold}` : '';
-    const axisLeftStyle   = isLowRH ? `color:white; text-shadow:
-      0 0 1px white, 0 0 6px ${pal.humid}, 0 0 24px ${pal.humid}, 0 0 40px ${pal.humid}` : '';
-    const axisRightStyle  = isHighRH ? `color:white; text-shadow:
-      0 0 1px white, 0 0 6px ${pal.humid}, 0 0 24px ${pal.humid}, 0 0 40px ${pal.humid}` : '';
+    const axisTopStyle    = isHot    ? GLOW(pal.hot)   : '';
+    const axisBottomStyle = isCold   ? GLOW(pal.cold)  : '';
+    const axisLeftStyle   = isLowRH  ? GLOW(pal.humid) : '';
+    const axisRightStyle  = isHighRH ? GLOW(pal.humid) : '';
+
+    const GLOW = (col) => `
+      color:white;
+      text-shadow:
+        0 0 calc(var(--sac-scale,1) * 2px)  rgba(255,255,255,.95),
+        0 0 calc(var(--sac-scale,1) * 10px) ${col},
+        0 0 calc(var(--sac-scale,1) * 22px) ${col},
+        0 0 calc(var(--sac-scale,1) * 40px) ${col},
+        0 0 calc(var(--sac-scale,1) * 70px) ${col},
+        0 0 calc(var(--sac-scale,1) * 100px) ${col};
+    `;
 
     /* ---------------------------
      * Dot position (percentages)
