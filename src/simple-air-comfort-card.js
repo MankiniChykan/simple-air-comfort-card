@@ -85,7 +85,7 @@ class SimpleAirComfortCard extends LitElement {
         box-sizing: border-box;
         min-height: 0;
         --sac-scale: 1;
-        --sac-top-offset: calc(var(--sac-scale, 1) * 40px);
+        --sac-top-offset: calc(var(--sac-scale, 1) * 50px);
         position: relative;
         padding: var(--card-content-padding, 0px);
         overflow: hidden;
