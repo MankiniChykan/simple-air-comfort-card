@@ -22,7 +22,7 @@ const out = (cmd)            => execSync(cmd, { encoding: 'utf8' }).trim();
 // ───────────────────────────────────────────────────────────────────────────────
 const version = process.argv[2];
 if (!version) {
-  console.error('❌ Usage: node github-release-helper.js <version>');
+  console.error('❌ Usage: node github-release-helper.js <version> [--prerelease]');
   process.exit(1);
 }
 
@@ -36,6 +36,16 @@ const TAG_PREFIX = 'v';
 // ───────────────────────────────────────────────────────────────────────────────
 // Helpers
 // ───────────────────────────────────────────────────────────────────────────────
+// Release asset list (single source of truth)
+const ASSETS = [
+  'dist/simple-air-comfort-card.js',
+  'dist/simple-air-comfort-card.js.map',
+  'dist/simple-air-comfort-card.js.gz',
+  'dist/sac_background_overlay.svg',
+  'dist/sac_background_overlay.svg.gz',
+  'dist/checksums.txt',
+];
+
 const tagName = `${TAG_PREFIX}${version}`;
 
 function tagExists(tag) {
@@ -128,7 +138,7 @@ try {
 
   // 4) Checksums
   console.log('🧮 Writing checksums …');
-  sh('sha256sum dist/simple-air-comfort-card.js dist/simple-air-comfort-card.js.gz dist/sac_background_overlay.svg > dist/checksums.txt');
+  sh('sha256sum dist/simple-air-comfort-card.js dist/simple-air-comfort-card.js.map dist/simple-air-comfort-card.js.gz dist/sac_background_overlay.svg dist/sac_background_overlay.svg.gz > dist/checksums.txt');
 
   // 5) Commit build artifacts (+ package.json/lock) if changed
   console.log(`📁 Committing build artifacts for ${tagName} …`);
@@ -151,35 +161,33 @@ try {
   // 7) Release notes
   const prev = latestTagOrEmpty();
   const notes = makeReleaseNotes(prev, tagName).replace(/"/g, '\\"');
-  const isPrerelease = (process.env.CHANNEL || '').toLowerCase() === 'dev';
+  // Dev channel can be set via env or CLI flag
+  const isPrerelease =
+    (process.env.CHANNEL || '').toLowerCase() === 'dev' ||
+    process.argv.slice(3).includes('--prerelease');
   const prereleaseFlags = isPrerelease ? ' --prerelease --latest=false' : '';
 
   // 8) GitHub Release (create or upload, always include checksums)
   if (!releaseExists(tagName)) {
     console.log('🏷  Creating GitHub release …');
-    sh(`gh release create ${tagName} \
-      dist/simple-air-comfort-card.js \
-      dist/simple-air-comfort-card.js.gz \
-      dist/sac_background_overlay.svg \
-      dist/checksums.txt \
-      --title "${tagName}" --notes "${notes}"${prereleaseFlags}`);
+    sh(`gh release create ${tagName} ${ASSETS.join(' ')} --title "${tagName}" --notes "${notes}"${prereleaseFlags}`);
 
     // Enforce pre-release state even if flags were ignored by CLI/shell
     if (isPrerelease) {
       sh(`gh release edit ${tagName} --prerelease=true --latest=false`);
+    } else {
+      // Explicitly mark stable as latest (defensive)
+      sh(`gh release edit ${tagName} --prerelease=false --latest=true`);
     }
   } else {
     console.log('📤 Release exists; uploading assets (clobber) …');
-    sh(`gh release upload ${tagName} \
-      dist/simple-air-comfort-card.js \
-      dist/simple-air-comfort-card.js.gz \
-      dist/sac_background_overlay.svg \
-      dist/checksums.txt \
-      --clobber`);
+    sh(`gh release upload ${tagName} ${ASSETS.join(' ')} --clobber`);
 
     // Ensure existing release is toggled to pre-release on dev channel
     if (isPrerelease) {
       sh(`gh release edit ${tagName} --prerelease=true --latest=false`);
+    } else {
+      sh(`gh release edit ${tagName} --prerelease=false --latest=true`);
     }
   }
 
