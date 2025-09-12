@@ -426,13 +426,13 @@ class SimpleAirComfortCard extends LitElement {
     const isHighRH = Number.isFinite(RH) && RH > Rh;
 
     const axisTopStyle    = isHot ? `color:white; text-shadow:
-      0 0 2px white, 0 0 6px ${pal.hot}, 0 0 12px ${pal.hot}, 0 0 20px ${pal.hot}` : '';
+      0 0 1px white, 0 0 6px ${pal.hot}, 0 0 24px ${pal.hot}, 0 0 40px ${pal.hot}` : '';
     const axisBottomStyle = isCold ? `color:white; text-shadow:
-      0 0 2px white, 0 0 6px ${pal.cold}, 0 0 12px ${pal.cold}, 0 0 20px ${pal.cold}` : '';
+      0 0 1px white, 0 0 6px ${pal.cold}, 0 0 24px ${pal.cold}, 0 0 40px ${pal.cold}` : '';
     const axisLeftStyle   = isLowRH ? `color:white; text-shadow:
-      0 0 2px white, 0 0 6px ${pal.humid}, 0 0 12px ${pal.humid}, 0 0 20px ${pal.humid}` : '';
+      0 0 1px white, 0 0 6px ${pal.humid}, 0 0 24px ${pal.humid}, 0 0 40px ${pal.humid}` : '';
     const axisRightStyle  = isHighRH ? `color:white; text-shadow:
-      0 0 2px white, 0 0 6px ${pal.humid}, 0 0 12px ${pal.humid}, 0 0 20px ${pal.humid}` : '';
+      0 0 1px white, 0 0 6px ${pal.humid}, 0 0 24px ${pal.humid}, 0 0 40px ${pal.humid}` : '';
 
     /* ---------------------------
      * Dot position (percentages)
