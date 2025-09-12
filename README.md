@@ -1,119 +1,196 @@
-# IN DEVELOPMENT NOT WORKING YET
-
 # Simple Air Comfort Card
 
-A high-visibility, responsive Lovelace custom card for Home Assistant that visualizes thermal comfort using temperature, humidity, dew point, and apparent temperature (feels like). The floating dot moves dynamically and blinks when conditions are outside the comfort zone.
+A **custom Lovelace card for Home Assistant** that visualizes indoor climate comfort using a square dial with a moving **comfort dot**.  
+The dot’s position is determined by **Relative Humidity** (X-axis) and **Temperature** (Y-axis). The card derives **dew point**, **Apparent Temperature (BoM)**, and shows comfort words and color cues for fast, at-a-glance status.
 
----
+> **Source of truth:** This README documents exactly what’s in the current code. Anything not implemented in the file is listed under **Road Map**.
 
-## 💡 Features
+## ✨ Features (implemented)
 
-- 🎯 Floating **comfort dot** that tracks temp/humidity in real time
-- 🌡️ Dynamic **apparent temperature** (feels like), calculated with temp, humidity, and wind
-- 🫁 Optional CO₂ sensor display overrides apparent temp if defined
-- 💬 Comfort descriptors: dew point, temperature, humidity
-- 🎨 Color-coded gradients for temperature and dew point
-- 🔁 Blinking indicator when outside comfort zone
-- 🧊 Fully passive visual card (no tap actions)
-- 🧱 Configurable color overrides via YAML
+- **Comfort Dot Dial**
+  - **X = RH (%)** mapped across the card width with calibrated inner-circle intersections.
+  - **Y = Temperature** mapped to comfort bands (FROSTY → BOILING) with geometry-aware anchors.
+  - Pulsing red halo when outside comfort bounds.
 
----
+- **Color Cues**
+  - **Background**: temperature comfort gradient.
+  - **Outer ring**: dew point comfort gradient.
+  - **Inner circle**: humidity & temperature alerts.
 
-## 📊 Required Sensors
+- **Corner Stats**
+  - TL: Dew Point
+  - TR: Apparent Temperature (“Feels like”)
+  - BL: Raw Temperature + comfort word
+  - BR: Humidity + comfort word
 
-| Sensor       | Units  | Required | Description                                                   |
-|--------------|--------|----------|---------------------------------------------------------------|
-| `temperature`| °C     | ✅       | Room temperature                                              |
-| `humidity`   | %      | ✅       | Room relative humidity                                        |
-| `wind`       | km/h   | ❌       | Optional: for calculating apparent temperature (feels like)   |
-| `co2`        | ppm    | ❌       | Optional: overrides feels like chip if defined                |
+- **Physics**
+  - Dew Point: Arden Buck formula
+  - Apparent Temperature (BoM): `AT = T + 0.33e − 0.70ws − 4.0`
+  - Optional wind speed conversion
 
-> ⚠️ Apparent temperature is **always calculated** from temp, humidity, and optional wind unless overridden by `co2`.
+- **Responsive & Accessible**
+  - Square aspect ratio
+  - Typography scales via `--sac-scale`
+  - ARIA labels for accessibility
 
----
+- **GUI Editor**
+  - Entity selectors
+  - Number inputs (decimals, wind, RH calibration, vertical offset)
+  - Temperature anchors with buttons (±0.1 °C, enforced contiguous bands)
+  - Reset-to-defaults
 
-## 🧮 Apparent Temperature Formula
+## 📦 Installation
 
-Used when `co2` is not defined:
+### HACS (recommended)
+1. Open **HACS → Frontend → Custom repositories**.
+2. Add: `https://github.com/MankiniChykan/simple-air-comfort-card`
+3. Category: **Lovelace**
+4. Install → Restart HA.
 
-```
-Apparent = T + 0.33 × RH × 6.105 × e^(17.27×T / (237.7+T)) − 0.7 × Wind − 4.0
-```
-
----
-
-## 🧾 YAML Configuration Example
-
-```yaml
-type: custom:simple-air-comfort-card
-title: Master Bedroom
-temperature: sensor.master_temp
-humidity: sensor.master_humidity
-wind: sensor.master_wind_speed        # Optional
-co2: sensor.master_co2                # Optional override
-colorOverrides:
-  comfort: "#00FFAA"
-  warning: "#FFAA00"
-  danger: "#FF3300"
-```
-
----
-
-## 🧪 Example with Multiple Cards
-
-```yaml
-type: vertical-stack
-cards:
-  - type: custom:simple-air-comfort-card
-    title: "Upstairs"
-    temperature: sensor.temp_upstairs
-    humidity: sensor.humidity_upstairs
-    wind: sensor.wind_upstairs
-  - type: custom:simple-air-comfort-card
-    title: "Master Bedroom"
-    temperature: sensor.master_temp
-    humidity: sensor.master_humidity
-    co2: sensor.master_co2
-```
-
----
-
-## 🖼 Dot Positioning
-
-- Temperature range: **10°C – 30°C** → affects vertical axis (`top`)
-- Humidity range: **20% – 80%** → affects horizontal axis (`left`)
-- Comfort zone: dot stays still; outside zone: dot blinks
-
----
-
-## 🔧 Manual Installation
-
-1. Copy `simple-air-comfort-card.js` into `www/community/simple-air-comfort-card/`
-2. Add to Lovelace resources:
-
+### Manual
+1. Download `dist/simple-air-comfort-card.js` from the release.
+2. Copy to `/config/www/`
+3. Add resource:
 ```yaml
 resources:
-  - url: /local/community/simple-air-comfort-card/simple-air-comfort-card.js
+  - url: /local/simple-air-comfort-card.js?v=1
     type: module
-```
+
 
 ---
 
-## 🧱 HACS Installation
+### 4. Configuration
+```markdown
+## 🧩 Lovelace Configuration
 
-1. In HACS, go to *Frontend → Custom Repositories*
-2. Add `https://github.com/yourname/simple-air-comfort-card`
-3. Choose category: **Lovelace**
-4. Click **Install**, then restart UI
+**Minimum:**
+```yaml
+type: custom:simple-air-comfort-card
+name: Living Room
+temperature: sensor.living_temperature
+humidity: sensor.living_humidity
+
+type: custom:simple-air-comfort-card
+name: Living Room
+temperature: sensor.living_temperature
+humidity: sensor.living_humidity
+windspeed: sensor.living_wind
+default_wind_speed: 0.1
+decimals: 1
+rh_left_inner_pct: 40
+rh_right_inner_pct: 60
+y_offset_pct: 0
+
+## ⚙️ Configuration Options
+
+### Required
+- **temperature** — sensor entity (reports °C or °F)  
+- **humidity** — sensor entity (reports %)
+
+### Optional
+- **windspeed** — sensor entity (reports air speed)  
+- **default_wind_speed** — fallback value in m/s when no wind entity is set  
+- **decimals** — number of decimal places to display (0–3)  
+- **rh_left_inner_pct** — left inner-circle intersection for RH mapping (%)  
+- **rh_right_inner_pct** — right inner-circle intersection for RH mapping (%)  
+- **y_offset_pct** — fine vertical offset of the comfort dot (% of card height)
+
 
 ---
 
-## 🖥 Screenshot
+### 5. GUI Editor
+```markdown
+## 🛠️ GUI Editor
 
-![Card Preview](https://your-repo-url/preview.png)
+- Entity pickers for temp/humidity/wind
+- Inputs for decimals, RH calibration, vertical offset
+- Button-based anchors for temperature bands (±0.1 °C, contiguous)
+- Reset defaults
+- Auto-pick first available temp/humidity entity if blank
+- Colored value pills reflect comfort bands
 
----
+## 📊 Comfort Bands (defaults)
 
-## 📄 License
+| Band     | Min (°C) | Max (°C) |
+|----------|----------|----------|
+| FROSTY   | -40.0    | 2.9      |
+| COLD     | 3.0      | 4.9      |
+| CHILLY   | 5.0      | 8.9      |
+| COOL     | 9.0      | 13.9     |
+| MILD     | 14.0     | 18.9     |
+| PERFECT  | 19.0     | 23.9     |
+| WARM     | 24.0     | 27.9     |
+| HOT      | 28.0     | 34.9     |
+| BOILING  | 35.0     | 60.0     |
 
-MIT License © Hunter
+**Humidity words**
+- DRY (< left threshold, default 40%)
+- COMFY (between left/right thresholds, default 40–60%)
+- HUMID (> right threshold, default 60%)
+
+**Dew point words**
+- Very Dry, Dry, Pleasant, Comfortable, Sticky Humid, Muggy, Sweltering, Stifling
+
+## 🧪 How It Works
+
+- **Buck vapour pressure (hPa):** piecewise exponential.
+- **Dew point:** numeric inversion via bisection search.
+- **Apparent Temperature (BoM):** `AT = T + 0.33e − 0.70ws − 4.0`.
+- **Unit handling:**
+  - Temp: °C or °F based on entity
+  - Wind: auto-converts (m/s, km/h, mph, kn → m/s)
+- **Y-mapping:** locked anchors for band edges (geometry-aware).
+
+## 🎨 Styling Hooks
+
+CSS variables:
+
+- `--sac-scale` → typography scaling
+- `--sac-temp-bg` → background gradient
+- `--sac-dewpoint-ring` → outer ring gradient
+- `--sac-inner-gradient` → inner circle gradient
+
+Palette (overridable):
+- `--sac-col-hot`
+- `--sac-col-cold`
+- `--sac-col-humid-alert`
+- `--sac-col-inband`
+
+## 🧱 Layout Hints
+
+- `getCardSize()` → ≈3 (Masonry heuristic).
+- `getGridOptions()` (Sections layout):
+  - columns: 6 (min), 12 (max)
+  - rows: auto (min 1, max 6)
+- Card is **host-only** (no `<ha-card>`).
+- Self-registers via `window.customCards.push(...)`.
+- Logs version banner with `__VERSION__`.
+
+## 🐞 Troubleshooting
+
+- **Blank card:** Ensure `temperature` & `humidity` are set.
+- **Weird “feels like”:** Check wind sensor unit or set `default_wind_speed`.
+- **Dot offset:** Adjust `y_offset_pct`.
+- **Humidity words off:** Adjust `rh_left_inner_pct` / `rh_right_inner_pct`.
+- **Cache:** bump `?v=` in resource URL after updates.
+
+## 🗺️ Road Map (planned)
+
+- Multiple feels-like formulas (Heat Index, Wind Chill, Steadman)
+- Alternative corner metrics (CO₂, TVOC, PM, HCHO, CO, windspeed display)
+- Translations for corner labels and comfort words
+- Imperial/metric toggle in editor
+- Advanced calibration tools
+- Optional theming presets
+
+## 🤝 Contributing
+
+PRs and issues welcome.  
+Please:
+- Show screenshots and config when reporting bugs
+- Keep comfort bands contiguous with 0.1 °C gaps
+- Avoid wrapping in `<ha-card>` — this card is host-only
+
+## 📜 License
+
+MIT License.
