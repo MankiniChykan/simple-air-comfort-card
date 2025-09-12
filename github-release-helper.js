@@ -151,6 +151,8 @@ try {
   // 7) Release notes
   const prev = latestTagOrEmpty();
   const notes = makeReleaseNotes(prev, tagName).replace(/"/g, '\\"');
+  const isPrerelease = (process.env.CHANNEL || '').toLowerCase() === 'dev';
+  const prereleaseFlags = isPrerelease ? '--prerelease --latest=false' : '';
 
   // 8) GitHub Release (create or upload, always include checksums)
   if (!releaseExists(tagName)) {
@@ -160,7 +162,7 @@ try {
       dist/simple-air-comfort-card.js.gz \
       dist/sac_background_overlay.svg \
       dist/checksums.txt \
-      --title "${tagName}" --notes "${notes}"`);
+      --title "${tagName}" --notes "${notes}" ${prereleaseFlags}
   } else {
     console.log('📤 Release exists; uploading assets (clobber) …');
     sh(`gh release upload ${tagName} \

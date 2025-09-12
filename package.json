@@ -15,7 +15,8 @@
     "watch": "rollup -c -w",
     "serve": "http-server . -c-1 -p 5173",
     "dev": "npm-run-all --parallel watch serve",
-    "release": "node github-release-helper.js"
+    "release": "node github-release-helper.js",
+    "release:dev": "CHANNEL=dev node github-release-helper.js"
   },
   "author": "Hunter",
   "license": "MIT",
