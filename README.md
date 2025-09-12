@@ -55,7 +55,7 @@ The dot’s position is determined by **Relative Humidity** (X-axis) and **Tempe
 resources:
   - url: /local/simple-air-comfort-card.js?v=1
     type: module
-
+```
 
 ---
 
