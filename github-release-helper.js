@@ -162,7 +162,7 @@ try {
       dist/simple-air-comfort-card.js.gz \
       dist/sac_background_overlay.svg \
       dist/checksums.txt \
-      --title "${tagName}" --notes "${notes}" ${prereleaseFlags}
+      --title "${tagName}" --notes "${notes}"${prereleaseFlags}`);
   } else {
     console.log('📤 Release exists; uploading assets (clobber) …');
     sh(`gh release upload ${tagName} \
