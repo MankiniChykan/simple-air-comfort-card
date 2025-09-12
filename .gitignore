@@ -1,8 +1,58 @@
+# ─────────────────────────────────────────────────────────────
+# Node / package managers
+# ─────────────────────────────────────────────────────────────
 node_modules/
-- dist/
-+ !dist/
-+ !dist/simple-air-comfort-card.js
-+ !dist/*.map
+npm-debug.log*
+yarn-debug.log*
+pnpm-debug.log*
+
+# ─────────────────────────────────────────────────────────────
+# Build caches / temp (we keep dist artifacts for HACS)
+# ─────────────────────────────────────────────────────────────
 build/
 .parcel-cache/
-.vscode/
+.cache/
+coverage/
+tmp/
+temp/
+*.log
+
+# ─────────────────────────────────────────────────────────────
+# dist/ contents: ignore by default, unignore the files we ship
+# ─────────────────────────────────────────────────────────────
+dist/
+!dist/simple-air-comfort-card.js
+!dist/simple-air-comfort-card.js.gz
+!dist/sac_background_overlay.svg
+# !dist/checksums.txt
+# Optional: keep sourcemaps if you want dev debugging
+!dist/simple-air-comfort-card.js.map
+
+# ─────────────────────────────────────────────────────────────
+# OS junk
+# ─────────────────────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+
+# ─────────────────────────────────────────────────────────────
+# Editor / IDE (keep shared project settings)
+# ─────────────────────────────────────────────────────────────
+.vscode/*
+!.vscode/settings.json
+!.vscode/extensions.json
+!.vscode/tasks.json
+.idea/
+*.iml
+
+# ─────────────────────────────────────────────────────────────
+# Environment / local
+# ─────────────────────────────────────────────────────────────
+.env
+.env.*
+*.local
+
+# ─────────────────────────────────────────────────────────────
+# Patch artifacts
+# ─────────────────────────────────────────────────────────────
+*.orig
+*.rej
