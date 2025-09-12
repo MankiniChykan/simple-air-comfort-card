@@ -173,7 +173,7 @@ class SimpleAirComfortCard extends LitElement {
     .corner .sublabel{
       display:block;
       margin-top: 2px;
-      font-weight:500;
+      font-weight:300;
       font-size: calc(var(--sac-scale,1) * 12px);
       letter-spacing:.2px;
       opacity:.75;
