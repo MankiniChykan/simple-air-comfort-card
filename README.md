@@ -60,7 +60,7 @@ resources:
 ---
 
 ### 4. Configuration
-```markdown
+
 ## 🧩 Lovelace Configuration
 
 **Minimum:**
@@ -69,7 +69,8 @@ type: custom:simple-air-comfort-card
 name: Living Room
 temperature: sensor.living_temperature
 humidity: sensor.living_humidity
-
+```
+```yaml
 type: custom:simple-air-comfort-card
 name: Living Room
 temperature: sensor.living_temperature
@@ -80,6 +81,7 @@ decimals: 1
 rh_left_inner_pct: 40
 rh_right_inner_pct: 60
 y_offset_pct: 0
+```
 
 ## ⚙️ Configuration Options
 
@@ -99,7 +101,7 @@ y_offset_pct: 0
 ---
 
 ### 5. GUI Editor
-```markdown
+
 ## 🛠️ GUI Editor
 
 - Entity pickers for temp/humidity/wind
