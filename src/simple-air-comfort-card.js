@@ -118,14 +118,14 @@ class SimpleAirComfortCard extends LitElement {
       background:#fff; box-shadow:0 0 6px rgba(0,0,0,.45);
       transform:translate(-50%, 50%); /* align dot center to coordinate */
       transition:left .8s ease-in-out,bottom .8s ease-in-out; /* smooth moves */
-      z-index:2;
+      z-index:1;
     }
 
     /* When comfort is outside, show a pulsing halo */
     .dot.outside::before{
       content:""; position:absolute; inset:-50%; border-radius:50%;
       background:radial-gradient(circle, rgba(255,0,0,.8) 20%, rgba(255,0,0,.3) 50%, rgba(255,0,0,.1) 70%, rgba(255,0,0,0) 100%);
-      animation:sac-heartbeat 2s cubic-bezier(.215,.61,.355,1) infinite; z-index:-1;
+      animation:sac-heartbeat 2s cubic-bezier(.215,.61,.355,1) infinite; z-index:2;
     }
     @keyframes sac-heartbeat{
       /* two quick pulses, then rest */
@@ -143,7 +143,7 @@ class SimpleAirComfortCard extends LitElement {
     /* Header area: small grey title + white comfort subtitle centered near top */
     .header{
       position:absolute; top:10%; left:50%; transform:translate(-50%,-50%);
-      width:100%; text-align:center; pointer-events:none;
+      width:100%; text-align:center; pointer-events:none; z-index:-1;
     }
     .title{
       color:#c9c9c9; font-weight:300;
@@ -161,7 +161,7 @@ class SimpleAirComfortCard extends LitElement {
     .corner .label{
       font-weight:300; opacity:.75; letter-spacing:.1px;
       font-size: calc(var(--sac-scale,1) * 16px);
-      display:block;
+      display:block; z-index: -1;
     }
     .corner .metric{
       font-weight:500;
