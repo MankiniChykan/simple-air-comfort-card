@@ -118,7 +118,7 @@ class SimpleAirComfortCard extends LitElement {
       background:#fff; box-shadow:0 0 6px rgba(0,0,0,.45);
       transform:translate(-50%, 50%); /* align dot center to coordinate */
       transition:left .8s ease-in-out,bottom .8s ease-in-out; /* smooth moves */
-      z-index:1;
+      z-index:3;
     }
 
     /* When comfort is outside, show a pulsing halo */
@@ -138,12 +138,12 @@ class SimpleAirComfortCard extends LitElement {
     }
 
     /* Layer to hold the dial graphics */
-    .canvas{ position:absolute; inset:0; padding:0; }
+    .canvas{ position:absolute; inset:0; padding:0; z-index:0; }
 
     /* Header area: small grey title + white comfort subtitle centered near top */
     .header{
       position:absolute; top:10%; left:50%; transform:translate(-50%,-50%);
-      width:100%; text-align:center; pointer-events:none; z-index:-1;
+      width:100%; text-align:center; pointer-events:none; z-index:4;
     }
     .title{
       color:#c9c9c9; font-weight:300;
@@ -157,11 +157,11 @@ class SimpleAirComfortCard extends LitElement {
     }
 
     /* Corner stats: TL dew point, TR apparent temp, BL raw temp, BR RH */
-    .corner{ position:absolute; color:#fff; text-shadow:0 1px 2px rgba(0,0,0,.35); }
+    .corner{ position:absolute; color:#fff; text-shadow:0 1px 2px rgba(0,0,0,.35); z-index:4; }
     .corner .label{
       font-weight:300; opacity:.75; letter-spacing:.1px;
       font-size: calc(var(--sac-scale,1) * 16px);
-      display:block; z-index: -1;
+      display:block;
     }
     .corner .metric{
       font-weight:500;
@@ -193,7 +193,7 @@ class SimpleAirComfortCard extends LitElement {
     /* The circular dial (outer ring + inner circle) sized at 45% of the stage */
     .graphic{
       position:absolute; top:50%; left:50%; transform:translate(-50%,-50%);
-      width:45%; height:45%;
+      width:45%; height:45%; z-index:1;
     }
 
     /* Axis labels (dim) placed just outside the dial */
@@ -201,7 +201,7 @@ class SimpleAirComfortCard extends LitElement {
       position:absolute; color:rgba(200,200,200,.8);
       font-weight:300; text-shadow:0 1px 2px rgba(0,0,0,.25);
       font-size: calc(var(--sac-scale,1) * 16px);
-      pointer-events:none;
+      pointer-events:none; z-index:2;
     }
     .axis-top    { top:-10px;  left:50%; transform:translate(-50%,-50%); }
     .axis-bottom { bottom:-10px;left:50%; transform:translate(-50%, 50%); }
