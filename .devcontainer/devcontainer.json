@@ -4,6 +4,7 @@
 
   "workspaceFolder": "/workspaces/${localWorkspaceFolderBasename}",
   "remoteUser": "node",
+  "updateRemoteUserUID": true,
 
   "features": {
     "ghcr.io/devcontainers/features/git:1": {},
