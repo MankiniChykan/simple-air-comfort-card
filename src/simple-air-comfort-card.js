@@ -1223,11 +1223,19 @@ class SimpleAirComfortCardEditor extends LitElement {
       <!-- Center row (green, aligned like others) -->
       ${(() => {
         const center = this._centerTemp();
+
+        const min = Number(this._config?.t_perf_min);
+        const max = Number(this._config?.t_perf_max);
+        const helper = (Number.isFinite(min) && Number.isFinite(max))
+          ? `Read-only. Midpoint of PERFECT band: (${min.toFixed(1)} + ${max.toFixed(1)}) ÷ 2 = ${((min + max) / 2).toFixed(2)} °C. Updates automatically when either edge changes.`
+          : 'Read-only. Midpoint of PERFECT band. Set PERFECT.min and PERFECT.max to compute.';
+
         return html`
           <div class="row">
-            <div class="name name--center">Center (Calculated PERFECT midpoint)</div>
+            <div class="name name--center">Calculated PERFECT midpoint)</div>
             <div class="value value--center" title=${center}>${center}</div>
             <div class="seg seg--ghost"><button class="btn icon" aria-hidden="true"></button></div>
+            <div class="helper">${helper}</div>
           </div>`;
       })()}
 
