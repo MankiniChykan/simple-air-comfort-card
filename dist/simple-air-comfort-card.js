@@ -324,9 +324,9 @@ const w=globalThis,$=w.trustedTypes,C=$?$.createPolicy("lit-html",{createHTML:t=
       ${this._anchorRow("t_perf_max","PERFECT.max → Inner Comfort Circle Top","High Temperature Alert : Limit ±4°C from default.",!0)}
 
       <!-- Center row (green, aligned like others) -->
-      ${(()=>{const t=this._centerTemp(),e=Number(this._config?.t_perf_min),i=Number(this._config?.t_perf_max),r=Number.isFinite(e)&&Number.isFinite(i)?`Read-only. Midpoint of PERFECT band: (${e.toFixed(1)} + ${i.toFixed(1)}) ÷ 2 = ${((e+i)/2).toFixed(2)} °C. Updates automatically when either edge changes.`:"Read-only. Midpoint of PERFECT band. Set PERFECT.min and PERFECT.max to compute.";return U`
+      ${(()=>{const t=this._centerTemp(),e=Number(this._config?.t_perf_min),i=Number(this._config?.t_perf_max),r=Number.isFinite(e)&&Number.isFinite(i)?`Midpoint of PERFECT band: (${e.toFixed(1)} → ${i.toFixed(1)}). Updates automatically when either edge changes.`:"Read-only. Midpoint of PERFECT band. Set PERFECT.min and PERFECT.max to compute.";return U`
           <div class="row">
-            <div class="name name--center">Calculated PERFECT midpoint)</div>
+            <div class="name name--center">Calculated PERFECT midpoint</div>
             <div class="value value--center" title=${t}>${t}</div>
             <div class="seg seg--ghost"><button class="btn icon" aria-hidden="true"></button></div>
             <div class="helper">${r}</div>
