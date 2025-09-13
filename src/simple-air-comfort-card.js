@@ -290,7 +290,7 @@ class SimpleAirComfortCard extends LitElement {
       default_wind_speed: Number.isFinite(num(config.default_wind_speed)) ? num(config.default_wind_speed) : 0.0,
 
       // Comfort bands: contiguous ranges for label lookup; the editor enforces 0.1 °C steps
-      t_frosty_min: Number.isFinite(num(config.t_frosty_min)) ? num(config.t_frosty_min) : -40.0,
+      t_frosty_min: Number.isFinite(num(config.t_frosty_min)) ? num(config.t_frosty_min) :   0.0,
       t_frosty_max: Number.isFinite(num(config.t_frosty_max)) ? num(config.t_frosty_max) :   2.9,
       t_cold_min:   Number.isFinite(num(config.t_cold_min))   ? num(config.t_cold_min)   :   3.0,
       t_cold_max:   Number.isFinite(num(config.t_cold_max))   ? num(config.t_cold_max)   :   4.9,
@@ -307,7 +307,7 @@ class SimpleAirComfortCard extends LitElement {
       t_hot_min:    Number.isFinite(num(config.t_hot_min))    ? num(config.t_hot_min)    :  28.0,
       t_hot_max:    Number.isFinite(num(config.t_hot_max))    ? num(config.t_hot_max)    :  34.9,
       t_boiling_min:Number.isFinite(num(config.t_boiling_min))? num(config.t_boiling_min):  35.0,
-      t_boiling_max:Number.isFinite(num(config.t_boiling_max))? num(config.t_boiling_max):  60.0,
+      t_boiling_max:Number.isFinite(num(config.t_boiling_max))? num(config.t_boiling_max):  50.0,
 
       // Geometry calibration (should match CSS)
       ring_pct, inner_pct, center_pct, y_offset_pct,
@@ -751,7 +751,7 @@ class SimpleAirComfortCard extends LitElement {
       return Math.round(n * 10) / 10;
     };
     const B = {
-      FROSTY: {min:r1(C.t_frosty_min,  -40.0), max:r1(C.t_frosty_max,   2.9)},
+      FROSTY: {min:r1(C.t_frosty_min,    0.0), max:r1(C.t_frosty_max,   2.9)},
       COLD:   {min:r1(C.t_cold_min,      3.0), max:r1(C.t_cold_max,     4.9)},
       CHILLY: {min:r1(C.t_chilly_min,    5.0), max:r1(C.t_chilly_max,   8.9)},
       COOL:   {min:r1(C.t_cool_min,      9.0), max:r1(C.t_cool_max,    13.9)},
@@ -759,7 +759,7 @@ class SimpleAirComfortCard extends LitElement {
       PERFECT:{min:r1(C.t_perf_min,     19.0), max:r1(C.t_perf_max,    23.9)},
       WARM:   {min:r1(C.t_warm_min,     24.0), max:r1(C.t_warm_max,    27.9)},
       HOT:    {min:r1(C.t_hot_min,      28.0), max:r1(C.t_hot_max,     34.9)},
-      BOILING:{min:r1(C.t_boiling_min,  35.0), max:r1(C.t_boiling_max, 60.0)},
+      BOILING:{min:r1(C.t_boiling_min,  35.0), max:r1(C.t_boiling_max, 50.0)},
     };
     // UI + Y‑mapping invariants:
     // - “Locked” visual anchors used by the geometry map:
@@ -1142,7 +1142,7 @@ class SimpleAirComfortCardEditor extends LitElement {
       decimals:1, default_wind_speed:0.1,
 
       // Comfort bands — mins & maxes (°C), 0.1 steps
-      t_frosty_min: -40.0, t_frosty_max:  2.9,
+      t_frosty_min:   0.0, t_frosty_max:  2.9,
       t_cold_min:     3.0, t_cold_max:    4.9,
       t_chilly_min:   5.0, t_chilly_max:  8.9,
       t_cool_min:     9.0, t_cool_max:   13.9,
@@ -1150,7 +1150,7 @@ class SimpleAirComfortCardEditor extends LitElement {
       t_perf_min:    19.0, t_perf_max:   23.9,
       t_warm_min:    24.0, t_warm_max:   27.9,
       t_hot_min:     28.0, t_hot_max:    34.9,
-      t_boiling_min: 35.0, t_boiling_max:60.0,
+      t_boiling_min: 35.0, t_boiling_max:50.0,
 
       // Optional geometry calibration
       y_offset_pct: 0,
@@ -1419,7 +1419,7 @@ class SimpleAirComfortCardEditor extends LitElement {
   _resetDefaults = () => {
     const out = { ...(this._config || {}) };
     // Restore the 10 exposed handles to their schema defaults
-    out.t_boiling_max = 60.0;
+    out.t_boiling_max = 50.0;
     out.t_hot_max     = 34.9;
     out.t_warm_max    = 27.9;
     out.t_perf_max    = 23.9;
@@ -1428,7 +1428,7 @@ class SimpleAirComfortCardEditor extends LitElement {
     out.t_cool_min    =  9.0;
     out.t_chilly_min  =  5.0;
     out.t_cold_min    =  3.0;
-    out.t_frosty_min  = -40.0;
+    out.t_frosty_min  =  0.0;
     const derived = this._applyTempsRowBiDirectional(out, [
       't_boiling_max','t_hot_max','t_warm_max','t_perf_max','t_perf_min',
       't_mild_min','t_cool_min','t_chilly_min','t_cold_min','t_frosty_min'
@@ -1491,7 +1491,7 @@ class SimpleAirComfortCardEditor extends LitElement {
 
     // Pull GUI fields (only the 10 exposed)
     const P = {
-      boiling_max: r1(cfgIn.t_boiling_max ?? 60.0),
+      boiling_max: r1(cfgIn.t_boiling_max ?? 50.0),
       hot_max:     r1(cfgIn.t_hot_max     ?? 34.9),
       warm_max:    r1(cfgIn.t_warm_max    ?? 27.9),
       perf_max:    r1(cfgIn.t_perf_max    ?? 23.9),
@@ -1500,7 +1500,7 @@ class SimpleAirComfortCardEditor extends LitElement {
       cool_min:    r1(cfgIn.t_cool_min    ??  9.0),
       chilly_min:  r1(cfgIn.t_chilly_min  ??  5.0),
       cold_min:    r1(cfgIn.t_cold_min    ??  3.0),
-      frosty_min:  r1(cfgIn.t_frosty_min  ?? -40.0),
+      frosty_min:  r1(cfgIn.t_frosty_min  ??  0.0),
     };
 
     // Map config field -> our P keys
