@@ -1199,14 +1199,16 @@ class SimpleAirComfortCardEditor extends LitElement {
               { value:'humidex',    label:'Humidex (T+RH, hot)' },
             ]}} },
           { name:'decimals', selector:{ number:{ min:0, max:3, step:1, mode:'box' } } },
-          { name:'rh_left_inner_pct',  selector:{ number:{ min:0, max:100, step:0.1, mode:'box', unit_of_measurement:'%' } } },
-          { name:'rh_right_inner_pct', selector:{ number:{ min:0, max:100, step:0.1, mode:'box', unit_of_measurement:'%' } } },
           { name:'y_offset_pct', selector:{ number:{ min:-30, max:30, step:0.5, mode:'box', unit_of_measurement:'%' } } },
         ]}
         .computeLabel=${this._label}
         .computeHelper=${this._helper}
         @value-changed=${this._onMiscChange}>
       </ha-form>
+
+      <div class="title">Humidity anchors (buttons)</div>
+      ${this._rhRow('rh_left_inner_pct',  'Inner circle left RH (%)')}
+      ${this._rhRow('rh_right_inner_pct', 'Inner circle right RH (%)')}
 
       <div class="title">Temperature anchors (buttons)</div>
       ${this._anchorRow('t_boiling_max', 'BOILING.max → Top of Card (100%)', 
@@ -1337,7 +1339,61 @@ class SimpleAirComfortCardEditor extends LitElement {
       </div>
     `;
   }
-  
+
+  // Humidity rows styled like temperature anchors
+  _rhRow(name, title){
+    const v = Number(this._config?.[name]);
+    const display = Number.isFinite(v) ? `${v.toFixed(1)} %` : '—';
+    const col = 'hotpink';              // same alert hue used in the card
+    const step = 0.1;
+
+    const L = Number(this._config?.rh_left_inner_pct  ?? 40);
+    const R = Number(this._config?.rh_right_inner_pct ?? 60);
+
+    // Disable buttons at sensible limits and keep L < R by 0.1%
+    let atLo = false, atHi = false;
+    if (name === 'rh_left_inner_pct'){
+      atLo = v <= 0;
+      atHi = v >= (R - step);           // cannot cross right anchor
+    } else { // rh_right_inner_pct
+      atLo = v <= (L + step);           // cannot cross left anchor
+      atHi = v >= 100;
+    }
+
+    const helper = this._helper({ name }); // reuse your existing helper copy
+
+    return html`
+      <div class="row">
+        <div class="name">${title}</div>
+        <div class="value coloured" style="--pill-col:${col}" title=${display}>${display}</div>
+        <div class="seg">
+          <button
+            class="btn icon ghost"
+            type="button"
+            ?disabled=${atLo}
+            @click=${() => this._bump(name, -step, /*limited*/false)}
+            aria-label="${title} down"
+            title="Decrease by ${step} %">
+            <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+              <path fill="currentColor" d="M19 13H5v-2h14v2z"/>
+            </svg>
+          </button>
+          <button
+            class="btn icon"
+            type="button"
+            ?disabled=${atHi}
+            @click=${() => this._bump(name, +step, /*limited*/false)}
+            aria-label="${title} up"
+            title="Increase by ${step} %">
+            <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+              <path fill="currentColor" d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/>
+            </svg>
+          </button>
+        </div>
+        <div class="helper">${helper}</div>
+      </div>
+    `;
+  }
 
   // Helper/tooltips for each field (shows under the input)
   _helper = (s) => {
