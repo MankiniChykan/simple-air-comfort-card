@@ -1207,8 +1207,8 @@ class SimpleAirComfortCardEditor extends LitElement {
       </ha-form>
 
       <div class="title">Humidity anchors (buttons)</div>
-      ${this._rhRow('rh_left_inner_pct',  'Inner circle left RH (%)')}
-      ${this._rhRow('rh_right_inner_pct', 'Inner circle right RH (%)')}
+      ${this._rhRow('rh_left_inner_pct',  'Low Humidity Alert (%)')}
+      ${this._rhRow('rh_right_inner_pct', 'High Humidity Alert (%)')}
 
       <div class="title">Temperature anchors (buttons)</div>
       ${this._anchorRow('t_boiling_max', 'BOILING.max → Top of Card (100%)', 
@@ -1418,8 +1418,9 @@ class SimpleAirComfortCardEditor extends LitElement {
       case 'decimals':
         return 'How many decimal places to show for temperatures and humidity.';
       case 'rh_left_inner_pct':
+        return 'Maps RH to the inner-comfort-circle intersections horizontally: Left = this %. Low Humidty Alert';
       case 'rh_right_inner_pct':
-        return 'Maps RH to the inner-circle intersections horizontally: left = this %, right = this %. 0% stays at the left edge; 100% stays at the right edge.';
+        return 'Maps RH to the inner-comfort-circle intersections horizontally: Right = this %. High Humidty Alert';
       case 'y_offset_pct':
         return 'Fine-tune the dot’s vertical position in % of card height (positive moves up).';
     }
