@@ -19,6 +19,12 @@ import { LitElement, html, css, nothing } from 'lit';
  *   updates based on the card’s actual size (so it looks crisp at any size).
  * - The circular dial is 45% of the square by default (configurable).
  * - The dot gets a pulsing red halo when outside comfort bounds.
+ * 
+ * EDGE POLICY (locked):
+ * - Bottom of card (0%) is anchored by t_frosty_min
+ * - Top of card (100%) is anchored by t_boiling_max
+ * Do NOT substitute frosty_max / boiling_min for the vertical extremes.
+ * These keys define the visual ladder endpoints used by the Y mapping.
  *
  * DATA REQUIREMENTS
  * -----------------
@@ -485,7 +491,7 @@ class SimpleAirComfortCard extends LitElement {
             Tc, RH, dpC, atC,
             // labels + gradients
             dewText, tempText, rhText,
-            cardBg, ringGrad, innerGrad,
+            ringGrad, innerGrad,
             // geometry
             xPct, yPct, outside,
             // text outputs
@@ -805,13 +811,9 @@ class SimpleAirComfortCard extends LitElement {
     const y_inner_top    = C + R_inner;
     const y_center       = C;
 
-    // Halfway positions to ease extremes gracefully
-    const y_half_below_outer = (0 + y_outer_bottom)/2;
-    const y_half_above_outer = (100 + y_outer_top)/2;
-
     return {
       y_outer_bottom, y_outer_top, y_inner_bottom, y_inner_top,
-      y_center, y_half_below_outer, y_half_above_outer,
+      y_center,
       x_inner_left, x_inner_right
     };
   }
@@ -868,7 +870,8 @@ class SimpleAirComfortCard extends LitElement {
    *   CHILLY.min  →                         [EVEN between FROSTY.min..MILD.min]
    *   COLD.min    →                         [EVEN between FROSTY.min..MILD.min]
    *   FROSTY.min  → bottom (0%)             [LOCKED]
-   *
+   
+   * Note: bottom/top are locked to t_frosty_min and t_boiling_max respectively.
    * Segment rules:
    * - FROSTY.min → MILD.min         : bottom → outer-bottom       (SMOOTH)
    * - MILD.min   → PERFECT.min      : outer-bottom → inner-bottom (LINEAR)
@@ -1035,7 +1038,7 @@ customElements.define('simple-air-comfort-card', SimpleAirComfortCard);
  * It auto-fills temperature/humidity once on mount if blank.
  */
 class SimpleAirComfortCardEditor extends LitElement {
-  static properties = { hass:{type:Object}, _config:{state:true}, _schema:{state:true} };
+  static properties = { hass:{type:Object}, _config:{state:true}, };
   static styles = css`
     .wrap{ padding:12px 12px 16px; }
     .row{
@@ -1118,8 +1121,6 @@ class SimpleAirComfortCardEditor extends LitElement {
     /* Placeholder segment to keep grid alignment without visible buttons */
     .seg--ghost{ visibility:hidden; }
     .title{ font-size:0.95em; opacity:.85; margin:12px 0 6px; }
-    /* .mid no longer used */
-    .mid{ display:none; }
     .actions{ display:flex; gap:8px; margin-top:10px; }
     .danger{ border-color:#a33; color:#fff; background:#702; }
   `;
@@ -1257,8 +1258,6 @@ class SimpleAirComfortCardEditor extends LitElement {
       default_wind_speed:'Default wind speed (m/s)', decimals:'Decimals',
       rh_left_inner_pct:'Inner circle left RH (%)',
       rh_right_inner_pct:'Inner circle right RH (%)',
-      ring_pct:'Outer ring box size (% of card)',
-      inner_pct:'Inner circle size (% of ring box)',
       y_offset_pct:'Vertical dot offset (%)',
     })[id];
     return base ?? id;
