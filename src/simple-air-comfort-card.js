@@ -1218,7 +1218,7 @@ class SimpleAirComfortCardEditor extends LitElement {
       ${this._anchorRow('t_warm_max', 'WARM.max → Outer Ring Top ',
         'Limit ±4°C from default.', true)}
       ${this._anchorRow('t_perf_max', 'PERFECT.max → Inner Comfort Circle Top',
-        'Limit ±4°C from default.', true)}
+        'High Temperature Alert : Limit ±4°C from default.', true)}
 
       <!-- Center row (green, aligned like others) -->
       ${(() => {
@@ -1232,7 +1232,7 @@ class SimpleAirComfortCardEditor extends LitElement {
       })()}
 
       ${this._anchorRow('t_perf_min', 'PERFECT.min → Inner Comfort Circle Bottom',
-        'Limit ±4°C from default.', true)}
+        'Low Temperature Alert Limit : ±4°C from default.', true)}
       ${this._anchorRow('t_mild_min', 'MILD.min → Outer Ring Bottom',
         'Limit ±4°C from default.', true)}
       ${this._anchorRow('t_cool_min', 'COOL.min (Scales with FROSTY.min)',
@@ -1418,9 +1418,9 @@ class SimpleAirComfortCardEditor extends LitElement {
       case 'decimals':
         return 'How many decimal places to show for temperatures and humidity.';
       case 'rh_left_inner_pct':
-        return 'Maps RH to the inner-comfort-circle intersections horizontally: Left = this %. Low Humidty Alert';
+        return 'Maps RH to the inner-comfort-circle LEFT intersection horizontally';
       case 'rh_right_inner_pct':
-        return 'Maps RH to the inner-comfort-circle intersections horizontally: Right = this %. High Humidty Alert';
+        return 'Maps RH to the inner-comfort-circle RIGHT intersection horizontally';
       case 'y_offset_pct':
         return 'Fine-tune the dot’s vertical position in % of card height (positive moves up).';
     }
