@@ -1,3 +1,5 @@
+<img width="720" height="720" alt="Icon" src="https://github.com/user-attachments/assets/31170dba-d536-4d9d-acda-949ebb08549d" />
+
 # Simple Air Comfort Card
 
 A **custom Lovelace card for Home Assistant** that visualizes indoor climate comfort using a square dial with a moving **comfort dot**.  
