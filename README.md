@@ -1,4 +1,4 @@
-<img width="100" height="100" alt="Icon" src="https://github.com/user-attachments/assets/31170dba-d536-4d9d-acda-949ebb08549d" />
+<img width="100" height="100" alt="Icon" src="./src/assets/icon.svg" />
 
 # Simple Air Comfort Card
 
