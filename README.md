@@ -7,6 +7,8 @@ Dot position = **Relative Humidity** (X) + **Temperature** (Y). The card derives
 
 > **Source of truth:** This README matches the current code. Anything not implemented lives under **Roadmap**.
 
+<img width="635" height="952" alt="image" src="https://github.com/user-attachments/assets/c44f4e7f-f98b-461a-b816-63a4b19b5152" />
+
 ---
 
 ## ✨ Features (implemented)
