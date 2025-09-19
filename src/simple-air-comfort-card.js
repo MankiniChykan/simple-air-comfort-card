@@ -1379,9 +1379,9 @@ class SimpleAirComfortCardEditor extends LitElement {
           @value-changed=${this._onMiscChange}>
         </ha-form>
 
-        <!-- Temperature Options (after temperature) -->
+        <!-- Temperature Unit (after temperature) -->
         <details class="panel">
-          <summary>Temperature Options</summary>
+          <summary>Temperature Unit</summary>
           <ha-form
             .hass=${this.hass}
             .data=${this._config}
@@ -1447,12 +1447,30 @@ class SimpleAirComfortCardEditor extends LitElement {
           </div>
         </details>
 
-        <!-- Humidity + Feels Like + Wind entity + Default wind speed (under windspeed) -->
+        <!-- Humidity entity ONLY (so we can place anchors directly below it) -->
         <ha-form
           .hass=${this.hass}
           .data=${this._config}
           .schema=${[
             { name:'humidity', required:true, selector:{ entity:{ domain:'sensor', device_class:'humidity' } } },
+          ]}
+          .computeLabel=${this._label}
+          .computeHelper=${this._helper}
+          @value-changed=${this._onMiscChange}>
+        </ha-form>
+
+        <!-- Humidity Alert Anchors (immediately below Humidity entity) -->
+        <details class="panel">
+          <summary>Humidity Alert Anchors</summary>
+          ${this._rhRow('rh_left_inner_pct',  'Low Humidity Alert (%)')}
+          ${this._rhRow('rh_right_inner_pct', 'High Humidity Alert (%)')}
+        </details>
+
+        <!-- Feels Like (still "under humidity") -->
+        <ha-form
+          .hass=${this.hass}
+          .data=${this._config}
+          .schema=${[
             { name:'feels_like',
               selector:{ select:{ mode:'dropdown', options:[
                 { value:'bom',        label:'Apparent Temperature (BoM, T+RH+Wind)' },
@@ -1460,6 +1478,17 @@ class SimpleAirComfortCardEditor extends LitElement {
                 { value:'heat_index', label:'Heat Index (T+RH, hot)' },
                 { value:'humidex',    label:'Humidex (T+RH, hot)' },
               ]}} },
+          ]}
+          .computeLabel=${this._label}
+          .computeHelper=${this._helper}
+          @value-changed=${this._onMiscChange}>
+        </ha-form>
+
+        <!-- Wind entity + default wind speed (default sits under windspeed) -->
+        <ha-form
+          .hass=${this.hass}
+          .data=${this._config}
+          .schema=${[
             { name:'windspeed', selector:{ entity:{ domain:'sensor', device_class:'wind_speed' } } },
             { name:'default_wind_speed', selector:{ number:{
                 min:0, max:200, step:0.1, mode:'box',
@@ -1471,16 +1500,9 @@ class SimpleAirComfortCardEditor extends LitElement {
           @value-changed=${this._onMiscChange}>
         </ha-form>
 
-        <!-- Humidity Alert Anchors (dropdown under Humidity entity) -->
+        <!-- Wind Unit -->
         <details class="panel">
-          <summary>Humidity Alert Anchors</summary>
-          ${this._rhRow('rh_left_inner_pct',  'Low Humidity Alert (%)')}
-          ${this._rhRow('rh_right_inner_pct', 'High Humidity Alert (%)')}
-        </details>
-
-        <!-- Wind Options (dropdown now contains only wind_display_unit) -->
-        <details class="panel">
-          <summary>Wind Options</summary>
+          <summary>Wind Unit</summary>
           <ha-form
             .hass=${this.hass}
             .data=${this._config}
@@ -1499,7 +1521,7 @@ class SimpleAirComfortCardEditor extends LitElement {
           </ha-form>
         </details>
 
-        <!-- Card Options dropdown -->
+        <!-- Card Options -->
         <details class="panel">
           <summary>Card Options</summary>
           <ha-form
