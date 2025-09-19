@@ -1,4 +1,4 @@
-<img width="100" height="100" alt="Icon" src="./src/assets/icon.svg" />
+<img src="https://raw.githubusercontent.com/MankiniChykan/simple-air-comfort-card/v1.0.322/src/assets/icon.svg" width="100" height="100" alt="Icon" />
 
 # Simple Air Comfort Card
 
@@ -7,7 +7,7 @@ Dot position = **Relative Humidity** (X) + **Temperature** (Y). The card derives
 
 > **Source of truth:** This README matches the current code. Anything not implemented lives under **Roadmap**.
 
-<img width="635" height="952" alt="image" src="https://github.com/user-attachments/assets/c44f4e7f-f98b-461a-b816-63a4b19b5152" />
+<img src="https://raw.githubusercontent.com/MankiniChykan/simple-air-comfort-card/v1.0.322/src/assets/simple-air-comfort-card-example.png" width="635" height="952" alt="Icon" />
 
 ---
 
