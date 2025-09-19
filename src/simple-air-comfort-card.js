@@ -1466,23 +1466,26 @@ class SimpleAirComfortCardEditor extends LitElement {
           ${this._rhRow('rh_right_inner_pct', 'High Humidity Alert (%)')}
         </details>
 
-        <!-- Feels Like (still "under humidity") -->
-        <ha-form
-          .hass=${this.hass}
-          .data=${this._config}
-          .schema=${[
-            { name:'feels_like',
-              selector:{ select:{ mode:'dropdown', options:[
-                { value:'bom',        label:'Apparent Temperature (BoM, T+RH+Wind)' },
-                { value:'wind_chill', label:'Wind Chill (T+Wind, cold)' },
-                { value:'heat_index', label:'Heat Index (T+RH, hot)' },
-                { value:'humidex',    label:'Humidex (T+RH, hot)' },
-              ]}} },
-          ]}
-          .computeLabel=${this._label}
-          .computeHelper=${this._helper}
-          @value-changed=${this._onMiscChange}>
-        </ha-form>
+          <!-- Feels Like (still "under humidity") -->
+        <details class="panel">
+          <summary>Feels Like Formula</summary>
+          <ha-form
+            .hass=${this.hass}
+            .data=${this._config}
+            .schema=${[
+              { name:'feels_like',
+                selector:{ select:{ mode:'dropdown', options:[
+                  { value:'bom',        label:'Apparent Temperature (BoM, T+RH+Wind)' },
+                  { value:'wind_chill', label:'Wind Chill (T+Wind, cold)' },
+                  { value:'heat_index', label:'Heat Index (T+RH, hot)' },
+                  { value:'humidex',    label:'Humidex (T+RH, hot)' },
+                ]}} },
+            ]}
+            .computeLabel=${this._label}
+            .computeHelper=${this._helper}
+            @value-changed=${this._onMiscChange}>
+          </ha-form>
+        </details>
 
         <!-- Wind entity + default wind speed (default sits under windspeed) -->
         <ha-form
