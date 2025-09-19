@@ -1206,6 +1206,23 @@ class SimpleAirComfortCardEditor extends LitElement {
       gap:10px;
       padding:8px 0;
     }
+    .panel {
+      border: 1px solid var(--divider-color, #444);
+      border-radius: 10px;
+      margin: 8px 0 14px;
+    }
+    .panel > summary {
+      cursor: pointer;
+      padding: 10px 12px;
+      font-weight: 600;
+      list-style: none;
+    }
+    .panel[open] > summary {
+      border-bottom: 1px solid var(--divider-color, #444);
+    }
+    .panel > *:not(summary) {
+      padding: 10px 12px;
+    }
     .name{ font-weight:600; }
     .helper{ grid-column:1 / -1; opacity:.8; font-size:.92em; margin:-2px 0 4px; }
     .btn{
