@@ -1381,7 +1381,7 @@ class SimpleAirComfortCardEditor extends LitElement {
 
         <!-- Temperature Unit (after temperature) -->
         <details class="panel">
-          <summary>Temperature Unit</summary>
+          <summary>Temperature Display Unit</summary>
           <ha-form
             .hass=${this.hass}
             .data=${this._config}
@@ -1505,7 +1505,7 @@ class SimpleAirComfortCardEditor extends LitElement {
 
         <!-- Wind Unit -->
         <details class="panel">
-          <summary>Wind Unit</summary>
+          <summary>Wind Display Unit</summary>
           <ha-form
             .hass=${this.hass}
             .data=${this._config}
