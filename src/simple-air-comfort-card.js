@@ -250,7 +250,7 @@ class SimpleAirComfortCard extends LitElement {
 
     /* The shiny outer ring: solid border + subtle glow */
     .outer-ring{
-      position:absolute; inset:0; border-radius:50%; border-style: solid; border-color: #fff; border-width: max(1px, calc(var(--sac-scale, 1) * var(--sac-ring-border-base, 2.5px)));
+      position:absolute; inset:0; border-radius:50%; border-style: solid; border-color: #fff; border-width: max(1.5px, calc(var(--sac-scale, 1) * var(--sac-ring-border-base, 2.5px)));
       background:var(--sac-dewpoint-ring,radial-gradient(circle,dimgray, 55%,rgba(100,100,100,.15),rgba(100,100,100,.15)));
       box-shadow:0 0 6px 3px rgba(0,0,0,.18), 0 0 18px 6px rgba(0,0,0,.22);
     }
@@ -1351,32 +1351,31 @@ class SimpleAirComfortCardEditor extends LitElement {
         .schema=${[
           { name:'name', selector:{ text:{} } },
           { name:'temperature', required:true, selector:{ entity:{ domain:'sensor', device_class:'temperature' } } },
-          { name:'humidity',    required:true, selector:{ entity:{ domain:'sensor', device_class:'humidity' } } },
-          { name:'windspeed', selector:{ entity:{ domain:'sensor', device_class:'wind_speed' } } },
-          // Display unit prefs
           { name:'temp_display_unit',
             selector:{ select:{ mode:'dropdown', options:[
               { value:'auto', label:'Auto (follow sensor)' },
               { value:'c',    label:'Celsius (°C)' },
               { value:'f',    label:'Fahrenheit (°F)' },
             ]}} },
-          { name:'wind_display_unit',
-            selector:{ select:{ mode:'dropdown', options:[
-              { value:'ms',  label:'m/s'  },
-              { value:'kmh', label:'km/h' },
-              { value:'mph', label:'mph'  },
-              { value:'kn',  label:'kn'   },
-            ]}} },
-          { name:'default_wind_speed', selector:{ number:{
-              min:0, max:200, step:0.1, mode:'box',
-              unit_of_measurement: ({ ms:'m/s', kmh:'km/h', mph:'mph', kn:'kn' }[this._config?.wind_display_unit || 'ms'])
-          } } },
+          { name:'humidity',    required:true, selector:{ entity:{ domain:'sensor', device_class:'humidity' } } },
           { name:'feels_like',
             selector:{ select:{ mode:'dropdown', options:[
               { value:'bom',        label:'Apparent Temperature (BoM, T+RH+Wind)' },
               { value:'wind_chill', label:'Wind Chill (T+Wind, cold)' },
               { value:'heat_index', label:'Heat Index (T+RH, hot)' },
               { value:'humidex',    label:'Humidex (T+RH, hot)' },
+            ]}} },
+          { name:'windspeed', selector:{ entity:{ domain:'sensor', device_class:'wind_speed' } } },
+          { name:'default_wind_speed', selector:{ number:{
+              min:0, max:200, step:0.1, mode:'box',
+              unit_of_measurement: ({ ms:'m/s', kmh:'km/h', mph:'mph', kn:'kn' }[this._config?.wind_display_unit || 'ms'])
+          } } },
+          { name:'wind_display_unit',
+            selector:{ select:{ mode:'dropdown', options:[
+              { value:'ms',  label:'m/s'  },
+              { value:'kmh', label:'km/h' },
+              { value:'mph', label:'mph'  },
+              { value:'kn',  label:'kn'   },
             ]}} },
           { name:'decimals', selector:{ number:{ min:0, max:3, step:1, mode:'box' } } },
           { name:'y_offset_pct', selector:{ number:{ min:-30, max:30, step:0.5, mode:'box', unit_of_measurement:'%' } } },
