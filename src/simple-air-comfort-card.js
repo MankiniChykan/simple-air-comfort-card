@@ -1343,53 +1343,112 @@ class SimpleAirComfortCardEditor extends LitElement {
   // Render button UI for anchors + small ha-form for entities/misc
   render(){
     if (!this.hass || !this._config) return html``;
-    return html`<div class="wrap">
-      <div class="title">Entities & Misc</div>
-      <ha-form
-        .hass=${this.hass}
-        .data=${this._config}
-        .schema=${[
-          { name:'name', selector:{ text:{} } },
-          { name:'temperature', required:true, selector:{ entity:{ domain:'sensor', device_class:'temperature' } } },
-          { name:'temp_display_unit',
-            selector:{ select:{ mode:'dropdown', options:[
-              { value:'auto', label:'Auto (follow sensor)' },
-              { value:'c',    label:'Celsius (°C)' },
-              { value:'f',    label:'Fahrenheit (°F)' },
-            ]}} },
-          { name:'humidity',    required:true, selector:{ entity:{ domain:'sensor', device_class:'humidity' } } },
-          { name:'feels_like',
-            selector:{ select:{ mode:'dropdown', options:[
-              { value:'bom',        label:'Apparent Temperature (BoM, T+RH+Wind)' },
-              { value:'wind_chill', label:'Wind Chill (T+Wind, cold)' },
-              { value:'heat_index', label:'Heat Index (T+RH, hot)' },
-              { value:'humidex',    label:'Humidex (T+RH, hot)' },
-            ]}} },
-          { name:'windspeed', selector:{ entity:{ domain:'sensor', device_class:'wind_speed' } } },
-          { name:'default_wind_speed', selector:{ number:{
-              min:0, max:200, step:0.1, mode:'box',
-              unit_of_measurement: ({ ms:'m/s', kmh:'km/h', mph:'mph', kn:'kn' }[this._config?.wind_display_unit || 'ms'])
-          } } },
-          { name:'wind_display_unit',
-            selector:{ select:{ mode:'dropdown', options:[
-              { value:'ms',  label:'m/s'  },
-              { value:'kmh', label:'km/h' },
-              { value:'mph', label:'mph'  },
-              { value:'kn',  label:'kn'   },
-            ]}} },
-          { name:'decimals', selector:{ number:{ min:0, max:3, step:1, mode:'box' } } },
-          { name:'y_offset_pct', selector:{ number:{ min:-30, max:30, step:0.5, mode:'box', unit_of_measurement:'%' } } },
-        ]}
-        .computeLabel=${this._label}
-        .computeHelper=${this._helper}
-        @value-changed=${this._onMiscChange}>
-      </ha-form>
 
-      <div class="title">Humidity anchors (buttons)</div>
+    return html`
+      <div class="wrap">
+        <!-- Entities -->
+        <div class="title">Entities</div>
+
+        <!-- Name + Temperature entity -->
+        <ha-form
+          .hass=${this.hass}
+          .data=${this._config}
+          .schema=${[
+            { name:'name', selector:{ text:{} } },
+            { name:'temperature', required:true, selector:{ entity:{ domain:'sensor', device_class:'temperature' } } },
+          ]}
+          .computeLabel=${this._label}
+          .computeHelper=${this._helper}
+          @value-changed=${this._onMiscChange}>
+        </ha-form>
+
+        <!-- Temperature Options (after temperature) -->
+        <details class="panel">
+          <summary>Temperature Options</summary>
+          <ha-form
+            .hass=${this.hass}
+            .data=${this._config}
+            .schema=${[
+              { name:'temp_display_unit',
+                selector:{ select:{ mode:'dropdown', options:[
+                  { value:'auto', label:'Auto (follow sensor)' },
+                  { value:'c',    label:'Celsius (°C)' },
+                  { value:'f',    label:'Fahrenheit (°F)' },
+                ]}} },
+            ]}
+            .computeLabel=${this._label}
+            .computeHelper=${this._helper}
+            @value-changed=${this._onMiscChange}>
+          </ha-form>
+        </details>
+
+        <!-- Humidity + Feels Like + Wind entity + Default wind speed (under windspeed) -->
+        <ha-form
+          .hass=${this.hass}
+          .data=${this._config}
+          .schema=${[
+            { name:'humidity', required:true, selector:{ entity:{ domain:'sensor', device_class:'humidity' } } },
+            { name:'feels_like',
+              selector:{ select:{ mode:'dropdown', options:[
+                { value:'bom',        label:'Apparent Temperature (BoM, T+RH+Wind)' },
+                { value:'wind_chill', label:'Wind Chill (T+Wind, cold)' },
+                { value:'heat_index', label:'Heat Index (T+RH, hot)' },
+                { value:'humidex',    label:'Humidex (T+RH, hot)' },
+              ]}} },
+            { name:'windspeed', selector:{ entity:{ domain:'sensor', device_class:'wind_speed' } } },
+            { name:'default_wind_speed', selector:{ number:{
+                min:0, max:200, step:0.1, mode:'box',
+                unit_of_measurement: ({ ms:'m/s', kmh:'km/h', mph:'mph', kn:'kn' }[this._config?.wind_display_unit || 'ms'])
+            } } },
+          ]}
+          .computeLabel=${this._label}
+          .computeHelper=${this._helper}
+          @value-changed=${this._onMiscChange}>
+        </ha-form>
+
+        <!-- Wind Options (dropdown now contains only wind_display_unit) -->
+        <details class="panel">
+          <summary>Wind Options</summary>
+          <ha-form
+            .hass=${this.hass}
+            .data=${this._config}
+            .schema=${[
+              { name:'wind_display_unit',
+                selector:{ select:{ mode:'dropdown', options:[
+                  { value:'ms',  label:'m/s'  },
+                  { value:'kmh', label:'km/h' },
+                  { value:'mph', label:'mph'  },
+                  { value:'kn',  label:'kn'   },
+                ]}} },
+            ]}
+            .computeLabel=${this._label}
+            .computeHelper=${this._helper}
+            @value-changed=${this._onMiscChange}>
+          </ha-form>
+        </details>
+
+        <!-- Card Options dropdown -->
+        <details class="panel">
+          <summary>Card Options</summary>
+          <ha-form
+            .hass=${this.hass}
+            .data=${this._config}
+            .schema=${[
+              { name:'decimals', selector:{ number:{ min:0, max:3, step:1, mode:'box' } } },
+              { name:'y_offset_pct', selector:{ number:{ min:-30, max:30, step:0.5, mode:'box', unit_of_measurement:'%' } } },
+            ]}
+            .computeLabel=${this._label}
+            .computeHelper=${this._helper}
+            @value-changed=${this._onMiscChange}>
+          </ha-form>
+        </details>
+      </div>
+
+      <div class="title">Humidity Alert Anchors (buttons)</div>
       ${this._rhRow('rh_left_inner_pct',  'Low Humidity Alert (%)')}
       ${this._rhRow('rh_right_inner_pct', 'High Humidity Alert (%)')}
 
-      <div class="title">Temperature anchors (buttons)</div>
+      <div class="title">Temperature Anchors (buttons)</div>
       ${this._anchorRow('t_boiling_max', 'BOILING.max → Top of Card (100%)', 
         'Changes how far (HOT.max) is from the edge of the card.', false)}
       ${this._anchorRow('t_hot_max', 'HOT.max (Scales with BOILING.max)',
