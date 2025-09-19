@@ -1364,7 +1364,7 @@ class SimpleAirComfortCardEditor extends LitElement {
     return html`
       <div class="wrap">
         <!-- Entities -->
-        <div class="title">Entities</div>
+        <div class="title">Card Title</div>
 
         <!-- Name + Temperature entity -->
         <ha-form
