@@ -3,50 +3,73 @@ import { LitElement, html, css, nothing } from 'lit';
 /**
  * Simple Air Comfort Card — src/simple-air-comfort-card.js
  *
- * WHAT THIS CARD DOES (big picture)
- * ---------------------------------
- * - Renders a square dial showing a "comfort dot" positioned by:
- *    X = Relative Humidity (%) clamped 0..100, stretched across the card width
- *    Y = Temperature mapped by comfort bands (FROSTY→BOILING) to dial landmarks
- * - Shows text labels (dew point comfort, temperature band, humidity band)
- * - Colors the background & rings based on comfort text (dew point & temp)
- * - Uses a ResizeObserver to scale typography with the card’s rendered width
- * - Optionally uses a wind-speed sensor for Apparent Temperature (BoM formula)
- *
- * DESIGN NOTES
- * ------------
- * - All text sizes scale by CSS var `--sac-scale`, which the ResizeObserver
- *   updates based on the card’s actual size (so it looks crisp at any size).
- * - The circular dial is 45% of the square by default (configurable).
- * - The dot gets a pulsing red halo when outside comfort bounds.
- * 
- * EDGE POLICY (locked):
- * - Bottom of card (0%) is anchored by t_frosty_min
- * - Top of card (100%) is anchored by t_boiling_max
- * Do NOT substitute frosty_max / boiling_min for the vertical extremes.
- * These keys define the visual ladder endpoints used by the Y mapping.
- *
- * DATA REQUIREMENTS
- * -----------------
- * Required: temperature (sensor.*), humidity (sensor.*)
- * Optional: windspeed (sensor.*) – used to refine Apparent Temperature
- *
- * DEFAULTS
+ * OVERVIEW
  * --------
- * - Wind speed default = 0 m/s (indoor-friendly)
- * - Comfort bands are contiguous (no gaps/overlaps). Editor enforces 0.1 °C steps.
+ * A host-only Lovelace card that renders a square dial with a moving “comfort dot”.
+ * The dot’s position is computed from:
+ *   X = Relative Humidity (%) clamped to [0..100] and calibrated to the inner circle
+ *   Y = Temperature (°C/°F) mapped via contiguous comfort bands (FROSTY→BOILING)
+ *
+ * WHAT YOU SEE
+ * ------------
+ * - A circular dial (outer ring + inner “eye”) that tints by dew point & temp.
+ * - Corner readouts: Dew Point (TL), Feels-Like (TR), Temp (BL), RH (BR).
+ * - Axis labels that glow when hot/cold or too dry/humid.
+ * - A pulsing halo on the dot when conditions are “outside” comfort.
+ *
+ * GEOMETRY & SCALING
+ * ------------------
+ * - The stage is always 1:1 (CSS aspect-ratio), typography scales with --sac-scale.
+ * - Dial box size is `ring_pct` (default 45% of the square); inner circle `inner_pct`.
+ * - RH→X uses two inner-circle calibration points (`rh_left_inner_pct`, `rh_right_inner_pct`)
+ *   so the dot crosses the eye precisely at your chosen RH targets.
+ *
+ * EDGE POLICY (LOCKED)
+ * --------------------
+ * - Bottom of card (0%)  = t_frosty_min
+ * - Top of card (100%)   = t_boiling_max
+ * Do NOT substitute frosty_max / boiling_min for vertical extremes.
+ * The Y-mapping uses these two keys as the visual ladder endpoints.
+ *
+ * TEMPERATURE BANDS (CONTIGUOUS)
+ * ------------------------------
+ * - The editor exposes 10 anchors (with ±4 °C caps on non-edge anchors).
+ * - All neighbors are auto-derived with 0.1 °C gaps (no overlaps).
+ * - Locked landmarks for Y: FROSTY.min, MILD.min, PERFECT.min, PERFECT.max,
+ *   WARM.max, BOILING.max (with HOT.max placed proportionally near the top).
+ *
+ * INPUTS (MINIMUM)
+ * ----------------
+ * Required:
+ *   - temperature: sensor.* (°C/°F)
+ *   - humidity:    sensor.* (%)
+ * Optional:
+ *   - windspeed:   sensor.* (m/s, km/h, mph, kn supported) — used for Feels-Like
+ *
+ * FEELS-LIKE MODES
+ * ----------------
+ * - BoM Apparent Temperature (default; uses T + RH (as vapour pressure) + wind)
+ * - Wind Chill, Heat Index, or Humidex — selectable via `feels_like`.
  *
  * ACCESSIBILITY
  * -------------
- * - Adds ARIA labels on the dial and axes so screen readers have context.
+ * - ARIA labels on axes and dial for screen readers.
+ *
+ * IMPLEMENTATION NOTES
+ * --------------------
+ * - Host-only: no <ha-card> wrapper. Background provided via --sac-temp-bg.
+ * - A ResizeObserver updates --sac-scale from the rendered width (baseline 300 px).
+ * - Unit handling: temperatures accept °C/°F; wind speed converts to m/s internally.
  */
 
- /* -------------------------
-  *  Event helper for HA UI
-  * -------------------------
-  * Home Assistant’s editors and cards dispatch "config-changed" et al.
-  * This small helper mimics HA’s event signature (bubbling + composed).
-  */
+/* -----------------------------------------
+ * Event helper for HA editors & dashboards
+ * -----------------------------------------
+ * Home Assistant config UIs expect custom cards to dispatch events like
+ * "config-changed" with {bubbles:true, composed:true}. This small helper
+ * emits that shape so the parent <hui-card-editor> / Lovelace can listen
+ * and persist updates.
+ */
 const fireEvent = (node, type, detail, options) => {
   const event = new Event(type, {
     bubbles: options?.bubbles ?? true,
