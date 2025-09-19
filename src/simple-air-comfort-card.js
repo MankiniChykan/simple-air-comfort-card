@@ -1723,7 +1723,7 @@ class SimpleAirComfortCardEditor extends LitElement {
       case 'rh_right_inner_pct':
         return 'Maps RH to the inner-comfort-circle RIGHT intersection horizontally';
       case 'y_offset_pct':
-        return 'Fine-tune the dot’s vertical position in % of card height (positive moves up).';
+        return 'Fine-tune the dot’s vertical position in % of card height (positive moves up). Temperature Anchors are what positions the dot, this setting is only fine turning';
     }
 
     // Band helpers with your exact drag semantics
