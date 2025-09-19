@@ -1777,6 +1777,7 @@ class SimpleAirComfortCardEditor extends LitElement {
   // Persist only 10 anchors + public fields to YAML
   _persistKeys(cfg){
     const out = {
+      type: 'custom:simple-air-comfort-card', 
       name: cfg.name,
       temperature: cfg.temperature,
       humidity: cfg.humidity,
