@@ -1399,6 +1399,54 @@ class SimpleAirComfortCardEditor extends LitElement {
           </ha-form>
         </details>
 
+        <!-- Temperature Anchors (dropdown under Temperature entity) -->
+        <details class="panel">
+          <summary>Temperature Anchors</summary>
+
+          ${this._anchorRow('t_boiling_max', 'BOILING.max → Top of Card (100%)',
+            'Changes how far (HOT.max) is from the edge of the card.', false)}
+          ${this._anchorRow('t_hot_max', 'HOT.max (Scales with BOILING.max)',
+            'Limit ±4°C from default.', true)}
+          ${this._anchorRow('t_warm_max', 'WARM.max → Outer Ring Top ',
+            'Limit ±4°C from default.', true)}
+          ${this._anchorRow('t_perfect_max', 'PERFECT.max → Inner Comfort Circle Top',
+            'High Temperature Alert : Limit ±4°C from default.', true)}
+
+          ${(() => {
+            const center = this._centerTemp();
+            const min = Number(this._config?.t_perfect_min);
+            const max = Number(this._config?.t_perfect_max);
+            const helper = (Number.isFinite(min) && Number.isFinite(max))
+              ? `Midpoint of PERFECT band: (${min.toFixed(1)} → ${max.toFixed(1)}). Updates automatically when either edge changes.`
+              : 'Read-only. Midpoint of PERFECT band. Set PERFECT.min and PERFECT.max to compute.';
+            return html`
+              <div class="row">
+                <div class="name name--center">Calculated PERFECT midpoint</div>
+                <div class="value value--center" title=${center}>${center}</div>
+                <div class="seg seg--ghost"><button class="btn icon" aria-hidden="true"></button></div>
+                <div class="helper">${helper}</div>
+              </div>
+            `;
+          })()}
+
+          ${this._anchorRow('t_perfect_min', 'PERFECT.min → Inner Comfort Circle Bottom',
+            'Low Temperature Alert Limit : ±4°C from default.', true)}
+          ${this._anchorRow('t_mild_min', 'MILD.min → Outer Ring Bottom',
+            'Limit ±4°C from default.', true)}
+          ${this._anchorRow('t_cool_min', 'COOL.min (Scales with FROSTY.min)',
+            'Limit ±4°C from default.', true)}
+          ${this._anchorRow('t_chilly_min', 'CHILLY.min (Scales with FROSTY.min)',
+            'Limit ±4°C from default.', true)}
+          ${this._anchorRow('t_cold_min', 'COLD.min (Scales with FROSTY.min)',
+            'Limit ±4°C from default.', true)}
+          ${this._anchorRow('t_frosty_min', 'FROSTY.min → Bottom of Card (0%)',
+            'Changes how far (COOL.min → COLD.min) is from the edge of the card.', false)}
+
+          <div class="actions">
+            <button class="btn danger" @click=${this._resetDefaults}>Reset to defaults</button>
+          </div>
+        </details>
+
         <!-- Humidity + Feels Like + Wind entity + Default wind speed (under windspeed) -->
         <ha-form
           .hass=${this.hass}
@@ -1422,6 +1470,13 @@ class SimpleAirComfortCardEditor extends LitElement {
           .computeHelper=${this._helper}
           @value-changed=${this._onMiscChange}>
         </ha-form>
+
+        <!-- Humidity Alert Anchors (dropdown under Humidity entity) -->
+        <details class="panel">
+          <summary>Humidity Alert Anchors</summary>
+          ${this._rhRow('rh_left_inner_pct',  'Low Humidity Alert (%)')}
+          ${this._rhRow('rh_right_inner_pct', 'High Humidity Alert (%)')}
+        </details>
 
         <!-- Wind Options (dropdown now contains only wind_display_unit) -->
         <details class="panel">
@@ -1460,58 +1515,9 @@ class SimpleAirComfortCardEditor extends LitElement {
           </ha-form>
         </details>
       </div>
-
-      <div class="title">Humidity Alert Anchors (buttons)</div>
-      ${this._rhRow('rh_left_inner_pct',  'Low Humidity Alert (%)')}
-      ${this._rhRow('rh_right_inner_pct', 'High Humidity Alert (%)')}
-
-      <div class="title">Temperature Anchors (buttons)</div>
-      ${this._anchorRow('t_boiling_max', 'BOILING.max → Top of Card (100%)', 
-        'Changes how far (HOT.max) is from the edge of the card.', false)}
-      ${this._anchorRow('t_hot_max', 'HOT.max (Scales with BOILING.max)',
-        'Limit ±4°C from default.', true)}
-      ${this._anchorRow('t_warm_max', 'WARM.max → Outer Ring Top ',
-        'Limit ±4°C from default.', true)}
-      ${this._anchorRow('t_perfect_max', 'PERFECT.max → Inner Comfort Circle Top',
-        'High Temperature Alert : Limit ±4°C from default.', true)}
-
-      <!-- Center row (green, aligned like others) -->
-      ${(() => {
-        const center = this._centerTemp();
-
-        const min = Number(this._config?.t_perfect_min);
-        const max = Number(this._config?.t_perfect_max);
-        const helper = (Number.isFinite(min) && Number.isFinite(max))
-          ? `Midpoint of PERFECT band: (${min.toFixed(1)} → ${max.toFixed(1)}). Updates automatically when either edge changes.`
-          : 'Read-only. Midpoint of PERFECT band. Set PERFECT.min and PERFECT.max to compute.';
-
-        return html`
-          <div class="row">
-            <div class="name name--center">Calculated PERFECT midpoint</div>
-            <div class="value value--center" title=${center}>${center}</div>
-            <div class="seg seg--ghost"><button class="btn icon" aria-hidden="true"></button></div>
-            <div class="helper">${helper}</div>
-          </div>`;
-      })()}
-
-      ${this._anchorRow('t_perfect_min', 'PERFECT.min → Inner Comfort Circle Bottom',
-        'Low Temperature Alert Limit : ±4°C from default.', true)}
-      ${this._anchorRow('t_mild_min', 'MILD.min → Outer Ring Bottom',
-        'Limit ±4°C from default.', true)}
-      ${this._anchorRow('t_cool_min', 'COOL.min (Scales with FROSTY.min)',
-        'Limit ±4°C from default.', true)}
-      ${this._anchorRow('t_chilly_min', 'CHILLY.min (Scales with FROSTY.min)',
-        'Limit ±4°C from default.', true)}
-      ${this._anchorRow('t_cold_min', 'COLD.min (Scales with FROSTY.min)',
-        'Limit ±4°C from default.', true)}
-      ${this._anchorRow('t_frosty_min', 'FROSTY.min → Bottom of Card (0%)',
-        'Changes how far (COOL.min → COLD.min) is from the edge of the card.', false)}
-
-      <div class="actions">
-        <button class="btn danger" @click=${this._resetDefaults}>Reset to defaults</button>
-      </div>
-    </div>`;
+    `;
   }
+
 
 
   // Human labels for misc (non-temperature) fields in the editor
