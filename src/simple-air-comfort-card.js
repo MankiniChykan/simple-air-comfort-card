@@ -250,7 +250,7 @@ class SimpleAirComfortCard extends LitElement {
 
     /* The shiny outer ring: solid border + subtle glow */
     .outer-ring{
-      position:absolute; inset:0; border-radius:50%; border:2.5px solid #fff;
+      position:absolute; inset:0; border-radius:50%; border-style: solid; border-color: #fff; border-width: max(1px, calc(var(--sac-scale, 1) * var(--sac-ring-border-base, 2.5px)));
       background:var(--sac-dewpoint-ring,radial-gradient(circle,dimgray, 55%,rgba(100,100,100,.15),rgba(100,100,100,.15)));
       box-shadow:0 0 6px 3px rgba(0,0,0,.18), 0 0 18px 6px rgba(0,0,0,.22);
     }
