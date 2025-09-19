@@ -1886,8 +1886,8 @@ class SimpleAirComfortCardEditor extends LitElement {
       name: cfg.name,
       temperature: cfg.temperature,
       temp_display_unit: cfg.temp_display_unit,   // 'auto' | 'c' | 'f'
-      feels_like: cfg.feels_like,
       humidity: cfg.humidity,
+      feels_like: cfg.feels_like,
       windspeed: cfg.windspeed,
       wind_display_unit: cfg.wind_display_unit,   // 'ms' | 'kmh' | 'mph' | 'kn'
       default_wind_speed: cfg.default_wind_speed,
