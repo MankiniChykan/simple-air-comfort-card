@@ -58,17 +58,6 @@ const fireEvent = (node, type, detail, options) => {
   return event;
 };
 
-// --- Legacy/minor-keys detector (warn once) ---
-const LEGACY_TEMP_KEYS = [
-  't_frosty_max','t_cold_max','t_chilly_max','t_cool_max','t_mild_max',
-  't_warm_min','t_hot_min','t_boiling_min',
-  // old alias set
-  't_perf_min','t_perf_max'
-];
-let __sac_warned_legacy__ = false;
-let __sac_warned_alias_conflict__ = false;
-
-
 class SimpleAirComfortCard extends LitElement {
   /* -------------------------------
    * Reactive properties for Lit
@@ -287,33 +276,6 @@ class SimpleAirComfortCard extends LitElement {
       throw new Error('simple-air-comfort-card: "temperature" and "humidity" are required.');
     }
 
-    // ---- Console notices for legacy / conflicting keys (warn once) ----
-    if (!__sac_warned_legacy__) {
-      const present = LEGACY_TEMP_KEYS.filter(k => k in config);
-      if (present.length) {
-        console.warn(
-          'simple-air-comfort-card: Detected legacy/derived or alias keys in YAML. ' +
-          'The card now derives hidden neighbors automatically from 10 anchors.\n' +
-          'Omit these keys from YAML:', present,
-          '\nKeep only: t_frosty_min, t_cold_min, t_chilly_min, t_cool_min, t_mild_min, ' +
-          't_perfect_min, t_perfect_max, t_warm_max, t_hot_max, t_boiling_max.'
-        );
-        __sac_warned_legacy__ = true;
-      }
-    }
-    if (!__sac_warned_alias_conflict__) {
-      const hasPerfect = ('t_perfect_min' in config) || ('t_perfect_max' in config);
-      const hasPerf    = ('t_perf_min'    in config) || ('t_perf_max'    in config);
-      if (hasPerfect && hasPerf) {
-        console.warn(
-          'simple-air-comfort-card: Both alias sets present for PERFECT band. ' +
-          'Using t_perfect_min/t_perfect_max and ignoring t_perf_min/t_perf_max.'
-        );
-        __sac_warned_alias_conflict__ = true;
-      }
-    }
-
-
     // Small number parser that returns NaN for missing/blank
     const num = v => (v === undefined || v === null || v === '' ? NaN : Number(v));
 
@@ -322,10 +284,6 @@ class SimpleAirComfortCard extends LitElement {
     const inner_pct  = Number.isFinite(num(config.inner_pct)) ? num(config.inner_pct) : 46.5; // inner circle size (% of dial)
     const center_pct = 50; // fixed vertical center for the dial
     const y_offset_pct = Number.isFinite(num(config.y_offset_pct)) ? num(config.y_offset_pct) : 0; // fine vertical tweak
-
-    // Expand to a full contiguous temperature ladder from the 10 anchors
-    const ten = this.#pickTenAnchors(config);
-    const full = this.#expandFromTen(ten);
 
     // Final sanitized config object we’ll use at runtime
     this._config = {
@@ -337,16 +295,25 @@ class SimpleAirComfortCard extends LitElement {
       decimals: Number.isFinite(num(config.decimals)) ? num(config.decimals) : 1,
       default_wind_speed: Number.isFinite(num(config.default_wind_speed)) ? num(config.default_wind_speed) : 0.0,
 
-      // Comfort bands: use fully-expanded contiguous ranges
-      t_frosty_min: full.t_frosty_min, t_frosty_max: full.t_frosty_max,
-      t_cold_min:   full.t_cold_min,   t_cold_max:   full.t_cold_max,
-      t_chilly_min: full.t_chilly_min, t_chilly_max: full.t_chilly_max,
-      t_cool_min:   full.t_cool_min,   t_cool_max:   full.t_cool_max,
-      t_mild_min:   full.t_mild_min,   t_mild_max:   full.t_mild_max,
-      t_perf_min:   full.t_perf_min,   t_perf_max:   full.t_perf_max,
-      t_warm_min:   full.t_warm_min,   t_warm_max:   full.t_warm_max,
-      t_hot_min:    full.t_hot_min,    t_hot_max:    full.t_hot_max,
-      t_boiling_min:full.t_boiling_min,t_boiling_max:full.t_boiling_max,
+      // Comfort bands: contiguous ranges for label lookup; the editor enforces 0.1 °C steps
+      t_frosty_min: Number.isFinite(num(config.t_frosty_min)) ? num(config.t_frosty_min) :   0.0,
+      t_frosty_max: Number.isFinite(num(config.t_frosty_max)) ? num(config.t_frosty_max) :   2.9,
+      t_cold_min:   Number.isFinite(num(config.t_cold_min))   ? num(config.t_cold_min)   :   3.0,
+      t_cold_max:   Number.isFinite(num(config.t_cold_max))   ? num(config.t_cold_max)   :   4.9,
+      t_chilly_min: Number.isFinite(num(config.t_chilly_min)) ? num(config.t_chilly_min) :   5.0,
+      t_chilly_max: Number.isFinite(num(config.t_chilly_max)) ? num(config.t_chilly_max) :   8.9,
+      t_cool_min:   Number.isFinite(num(config.t_cool_min))   ? num(config.t_cool_min)   :   9.0,
+      t_cool_max:   Number.isFinite(num(config.t_cool_max))   ? num(config.t_cool_max)   :  13.9,
+      t_mild_min:   Number.isFinite(num(config.t_mild_min))   ? num(config.t_mild_min)   :  14.0,
+      t_mild_max:   Number.isFinite(num(config.t_mild_max))   ? num(config.t_mild_max)   :  18.9,
+      t_perf_min:   Number.isFinite(num(config.t_perf_min))   ? num(config.t_perf_min)   :  19.0,
+      t_perf_max:   Number.isFinite(num(config.t_perf_max))   ? num(config.t_perf_max)   :  23.9,
+      t_warm_min:   Number.isFinite(num(config.t_warm_min))   ? num(config.t_warm_min)   :  24.0,
+      t_warm_max:   Number.isFinite(num(config.t_warm_max))   ? num(config.t_warm_max)   :  27.9,
+      t_hot_min:    Number.isFinite(num(config.t_hot_min))    ? num(config.t_hot_min)    :  28.0,
+      t_hot_max:    Number.isFinite(num(config.t_hot_max))    ? num(config.t_hot_max)    :  34.9,
+      t_boiling_min:Number.isFinite(num(config.t_boiling_min))? num(config.t_boiling_min):  35.0,
+      t_boiling_max:Number.isFinite(num(config.t_boiling_max))? num(config.t_boiling_max):  50.0,
 
       // Geometry calibration (should match CSS)
       ring_pct, inner_pct, center_pct, y_offset_pct,
@@ -818,74 +785,6 @@ class SimpleAirComfortCard extends LitElement {
     return B;
   }
 
-  // ---- Ten-anchor helpers (card side) ----
-  #r1_(v){ return Math.round(v*10)/10; }
-  #pickTenAnchors(cfg){
-    // Prefer t_perfect_* if present, else allow legacy t_perf_* in.
-    const perfMin = ('t_perfect_min' in cfg) ? cfg.t_perfect_min : cfg.t_perf_min;
-    const perfMax = ('t_perfect_max' in cfg) ? cfg.t_perfect_max : cfg.t_perf_max;
-    return {
-      t_frosty_min:  Number(cfg.t_frosty_min  ?? 0.0),
-      t_cold_min:    Number(cfg.t_cold_min    ?? 3.0),
-      t_chilly_min:  Number(cfg.t_chilly_min  ?? 5.0),
-      t_cool_min:    Number(cfg.t_cool_min    ?? 9.0),
-      t_mild_min:    Number(cfg.t_mild_min    ??14.0),
-      t_perfect_min: Number(perfMin ?? 19.0),
-      t_perfect_max: Number(perfMax ?? 23.9),
-      t_warm_max:    Number(cfg.t_warm_max    ??27.9),
-      t_hot_max:     Number(cfg.t_hot_max     ??34.9),
-      t_boiling_max: Number(cfg.t_boiling_max ??50.0),
-    };
-  }
-  #expandFromTen(T){
-    // Rebuild full ladder with 0.1 °C gaps (same rules as the editor)
-    const r1 = this.#r1_.bind(this), step=0.1;
-    const P = {
-      frosty_min: r1(T.t_frosty_min ?? 0.0),
-      cold_min:   r1(T.t_cold_min   ?? 3.0),
-      chilly_min: r1(T.t_chilly_min ?? 5.0),
-      cool_min:   r1(T.t_cool_min   ?? 9.0),
-      mild_min:   r1(T.t_mild_min   ??14.0),
-      perf_min:   r1(T.t_perfect_min??19.0),
-      perf_max:   r1(T.t_perfect_max??23.9),
-      warm_max:   r1(T.t_warm_max   ??27.9),
-      hot_max:    r1(T.t_hot_max    ??34.9),
-      boiling_max:r1(T.t_boiling_max??50.0),
-    };
-    // neighbor clamping (defensive)
-    P.cold_min   = Math.max(r1(P.frosty_min+step), P.cold_min);
-    P.chilly_min = Math.max(r1(P.cold_min  +step), P.chilly_min);
-    P.cool_min   = Math.max(r1(P.chilly_min+step), P.cool_min);
-    P.mild_min   = Math.max(r1(P.cool_min  +step), P.mild_min);
-    P.perf_min   = Math.max(r1(P.mild_min  +step), Math.min(P.perf_min, r1(P.perf_max-step)));
-    P.perf_max   = Math.max(r1(P.perf_min  +step), Math.min(P.perf_max, r1(P.warm_max-step)));
-    P.warm_max   = Math.max(r1(P.perf_max  +step), Math.min(P.warm_max, r1(P.hot_max-step)));
-    P.hot_max    = Math.max(r1(P.warm_max  +step), Math.min(P.hot_max,  r1(P.boiling_max-step)));
-    // derived
-    const out = {
-      t_frosty_min: P.frosty_min,
-      t_cold_min:   P.cold_min,
-      t_chilly_min: P.chilly_min,
-      t_cool_min:   P.cool_min,
-      t_mild_min:   P.mild_min,
-      t_perf_min:   P.perf_min,
-      t_perf_max:   P.perf_max,
-      t_warm_max:   P.warm_max,
-      t_hot_max:    P.hot_max,
-      t_boiling_max:P.boiling_max,
-      // neighbors
-      t_frosty_max: r1(P.cold_min   - step),
-      t_cold_max:   r1(P.chilly_min - step),
-      t_chilly_max: r1(P.cool_min   - step),
-      t_cool_max:   r1(P.mild_min   - step),
-      t_mild_max:   r1(P.perf_min   - step),
-      t_warm_min:   r1(P.perf_max   + step),
-      t_hot_min:    r1(P.warm_max   + step),
-      t_boiling_min:r1(P.hot_max    + step),
-    };
-    return out;
-  } 
-
   /* -------------------------------------------
    * Geometry anchors in card %, derived from config
    * -------------------------------------------
@@ -1249,7 +1148,7 @@ class SimpleAirComfortCardEditor extends LitElement {
       t_chilly_min:   5.0, t_chilly_max:  8.9,
       t_cool_min:     9.0, t_cool_max:   13.9,
       t_mild_min:    14.0, t_mild_max:   18.9,
-      t_perfect_min: 19.0, t_perfect_max:23.9,
+      t_perf_min:    19.0, t_perf_max:   23.9,
       t_warm_min:    24.0, t_warm_max:   27.9,
       t_hot_min:     28.0, t_hot_max:    34.9,
       t_boiling_min: 35.0, t_boiling_max:50.0,
@@ -1268,11 +1167,8 @@ class SimpleAirComfortCardEditor extends LitElement {
     this._defaults = {
       hot_max: 34.9,
       warm_max: 27.9,
-      // keep both alias shapes so lookups work no matter how we normalize
       perf_max: 23.9,
       perf_min: 19.0,
-      perfect_max: 23.9,
-      perfect_min: 19.0,
       mild_min: 14.0,
       cool_min: 9.0,
       chilly_min: 5.0,
@@ -1321,15 +1217,15 @@ class SimpleAirComfortCardEditor extends LitElement {
         'Limit ±4°C from default.', true)}
       ${this._anchorRow('t_warm_max', 'WARM.max → Outer Ring Top ',
         'Limit ±4°C from default.', true)}
-      ${this._anchorRow('t_perfect_max', 'PERFECT.max → Inner Comfort Circle Top',
+      ${this._anchorRow('t_perf_max', 'PERFECT.max → Inner Comfort Circle Top',
         'High Temperature Alert : Limit ±4°C from default.', true)}
 
       <!-- Center row (green, aligned like others) -->
       ${(() => {
         const center = this._centerTemp();
 
-        const min = Number(this._config?.t_perfect_min);
-        const max = Number(this._config?.t_perfect_max);
+        const min = Number(this._config?.t_perf_min);
+        const max = Number(this._config?.t_perf_max);
         const helper = (Number.isFinite(min) && Number.isFinite(max))
           ? `Midpoint of PERFECT band: (${min.toFixed(1)} → ${max.toFixed(1)}). Updates automatically when either edge changes.`
           : 'Read-only. Midpoint of PERFECT band. Set PERFECT.min and PERFECT.max to compute.';
@@ -1343,7 +1239,7 @@ class SimpleAirComfortCardEditor extends LitElement {
           </div>`;
       })()}
 
-      ${this._anchorRow('t_perfect_min', 'PERFECT.min → Inner Comfort Circle Bottom',
+      ${this._anchorRow('t_perf_min', 'PERFECT.min → Inner Comfort Circle Bottom',
         'Low Temperature Alert Limit : ±4°C from default.', true)}
       ${this._anchorRow('t_mild_min', 'MILD.min → Outer Ring Bottom',
         'Limit ±4°C from default.', true)}
@@ -1398,8 +1294,8 @@ class SimpleAirComfortCardEditor extends LitElement {
       case 't_boiling_max': return 'boiling';
       case 't_hot_max':     return 'hot';
       case 't_warm_max':    return 'warm';
-      case 't_perfect_max':
-      case 't_perfect_min': return 'perfect';
+      case 't_perf_max':
+      case 't_perf_min':    return 'perfect';
       case 't_mild_min':    return 'mild';
       case 't_cool_min':    return 'cool';
       case 't_chilly_min':  return 'chilly';
@@ -1545,9 +1441,9 @@ class SimpleAirComfortCardEditor extends LitElement {
       return 'HOT.max. Drags BOILING.min with it up/down (BOILING.min = HOT.max+0.1). HOT.max ≤ BOILING.max−0.1 and ≥ WARM.max+0.1.';
     if (id === 't_warm_max')
       return 'WARM.max → outer-top. Drags HOT.min with it (HOT.min = WARM.max+0.1). WARM.max ≤ HOT.max−0.1 and ≥ PERFECT.max+0.1.';
-    if (id === 't_perfect_max')
+    if (id === 't_perf_max')
       return 'PERFECT.max → inner-top. Drags WARM.min (WARM.min = PERFECT.max+0.1). PERFECT.max ≤ WARM.max−0.1 and ≥ PERFECT.min+0.1.';
-    if (id === 't_perfect_min')
+    if (id === 't_perf_min')
       return 'PERFECT.min → inner-bottom. Drags MILD.max (MILD.max = PERFECT.min−0.1). PERFECT.min ≤ PERFECT.max−0.1 and ≥ MILD.min+0.1.';
     if (id === 't_mild_min')
       return 'MILD.min → outer-bottom. Drags COOL.max (COOL.max = MILD.min−0.1). MILD.min ≤ PERFECT.min and ≥ COOL.min+0.1.';
@@ -1568,8 +1464,8 @@ class SimpleAirComfortCardEditor extends LitElement {
   // --- New: exact PERFECT midpoint for display (no rounding of value itself) ---
   _centerTemp(){
     const a = this._config || {};
-    const lo = Number(a.t_perfect_min);
-    const hi = Number(a.t_perfect_max);
+    const lo = Number(a.t_perf_min);
+    const hi = Number(a.t_perf_max);
     if (!Number.isFinite(lo) || !Number.isFinite(hi)) return '—';
     return `${((lo + hi) / 2).toFixed(2)} °C`;
   }
@@ -1577,12 +1473,7 @@ class SimpleAirComfortCardEditor extends LitElement {
   // --- New: cap helper so buttons can disable at ±4°C from defaults ---
   _capFor(name){
     const defKey = name.replace('t_', '');
-    // support both perf_* and perfect_* in _defaults
-    const def =
-      this._defaults[defKey] ??
-      (defKey.startsWith('perfect_')
-        ? this._defaults[defKey.replace('perfect_', 'perf_')]
-        : undefined);
+    const def = this._defaults[defKey];
     if (def === undefined) return null; // edges: no caps
     const r1 = (x) => Math.round(x * 10) / 10;
     return { lo: r1(def - 4.0), hi: r1(def + 4.0) };
@@ -1595,19 +1486,19 @@ class SimpleAirComfortCardEditor extends LitElement {
     out.t_boiling_max = 50.0;
     out.t_hot_max     = 34.9;
     out.t_warm_max    = 27.9;
-    out.t_perfect_max = 23.9;
-    out.t_perfect_min = 19.0;
+    out.t_perf_max    = 23.9;
+    out.t_perf_min    = 19.0;
     out.t_mild_min    = 14.0;
     out.t_cool_min    =  9.0;
     out.t_chilly_min  =  5.0;
     out.t_cold_min    =  3.0;
     out.t_frosty_min  =  0.0;
     const derived = this._applyTempsRowBiDirectional(out, [
-      't_boiling_max','t_hot_max','t_warm_max','t_perfect_max','t_perfect_min',
+      't_boiling_max','t_hot_max','t_warm_max','t_perf_max','t_perf_min',
       't_mild_min','t_cool_min','t_chilly_min','t_cold_min','t_frosty_min'
     ]);
     this._config = derived;
-    fireEvent(this, 'config-changed', { config: this._persistKeys(derived) });
+    fireEvent(this, 'config-changed', { config: derived });
   };
 
   // --- New: misc handler (entities/decimals/RH/offsets) ---
@@ -1617,7 +1508,7 @@ class SimpleAirComfortCardEditor extends LitElement {
     if (!Object.keys(delta).length) return;
     const merged = { ...(this._config || {}), ...delta };
     this._config = merged;
-    fireEvent(this, 'config-changed', { config: this._persistKeys(merged) });
+    fireEvent(this, 'config-changed', { config: merged });
   };
 
   // Button click → bump a single handle by delta, apply caps & derive neighbors
@@ -1634,8 +1525,8 @@ class SimpleAirComfortCardEditor extends LitElement {
     const mapDef = {
       t_hot_max:'t_hot_max',
       t_warm_max:'t_warm_max',
-      t_perfect_max:'t_perfect_max',
-      t_perfect_min:'t_perfect_min',
+      t_perf_max:'t_perf_max',
+      t_perf_min:'t_perf_min',
       t_mild_min:'t_mild_min',
       t_cool_min:'t_cool_min',
       t_chilly_min:'t_chilly_min',
@@ -1653,7 +1544,7 @@ class SimpleAirComfortCardEditor extends LitElement {
     const merged = { ...cfg, [name]: next };
     const derived = this._applyTempsRowBiDirectional(merged, [name]);
     this._config = derived;
-    fireEvent(this, 'config-changed', { config: this._persistKeys(derived) });
+    fireEvent(this, 'config-changed', { config: derived });
   }
 
   // Clamp only the edited handles against *their local neighbors*; then update derived neighbors.
@@ -1667,8 +1558,8 @@ class SimpleAirComfortCardEditor extends LitElement {
       boiling_max: r1(cfgIn.t_boiling_max ?? 50.0),
       hot_max:     r1(cfgIn.t_hot_max     ?? 34.9),
       warm_max:    r1(cfgIn.t_warm_max    ?? 27.9),
-      perf_max:    r1(cfgIn.t_perfect_max ?? 23.9),
-      perf_min:    r1(cfgIn.t_perfect_min ?? 19.0),
+      perf_max:    r1(cfgIn.t_perf_max    ?? 23.9),
+      perf_min:    r1(cfgIn.t_perf_min    ?? 19.0),
       mild_min:    r1(cfgIn.t_mild_min    ?? 14.0),
       cool_min:    r1(cfgIn.t_cool_min    ??  9.0),
       chilly_min:  r1(cfgIn.t_chilly_min  ??  5.0),
@@ -1681,8 +1572,8 @@ class SimpleAirComfortCardEditor extends LitElement {
       t_boiling_max: 'boiling_max',
       t_hot_max:     'hot_max',
       t_warm_max:    'warm_max',
-      t_perfect_max: 'perf_max',
-      t_perfect_min: 'perf_min',
+      t_perf_max:    'perf_max',
+      t_perf_min:    'perf_min',
       t_mild_min:    'mild_min',
       t_cool_min:    'cool_min',
       t_chilly_min:  'chilly_min',
@@ -1746,8 +1637,8 @@ class SimpleAirComfortCardEditor extends LitElement {
     out.t_boiling_max = P.boiling_max;
     out.t_hot_max     = P.hot_max;
     out.t_warm_max    = P.warm_max;
-    out.t_perfect_max = P.perf_max;
-    out.t_perfect_min = P.perf_min;
+    out.t_perf_max    = P.perf_max;
+    out.t_perf_min    = P.perf_min;
     out.t_mild_min    = P.mild_min;
     out.t_cool_min    = P.cool_min;
     out.t_chilly_min  = P.chilly_min;
@@ -1774,38 +1665,7 @@ class SimpleAirComfortCardEditor extends LitElement {
     return out;
   }
 
-  // Persist only 10 anchors + public fields to YAML
-  _persistKeys(cfg){
-    const out = {
-      name: cfg.name,
-      temperature: cfg.temperature,
-      humidity: cfg.humidity,
-      windspeed: cfg.windspeed,
-      feels_like: cfg.feels_like,
-      decimals: cfg.decimals,
-      default_wind_speed: cfg.default_wind_speed,
-      y_offset_pct: cfg.y_offset_pct,
-      rh_left_inner_pct: cfg.rh_left_inner_pct,
-      rh_right_inner_pct: cfg.rh_right_inner_pct,
-      // 10 anchors (using t_perfect_*)
-      t_frosty_min: cfg.t_frosty_min,
-      t_cold_min: cfg.t_cold_min,
-      t_chilly_min: cfg.t_chilly_min,
-      t_cool_min: cfg.t_cool_min,
-      t_mild_min: cfg.t_mild_min,
-      t_perfect_min: cfg.t_perfect_min ?? cfg.t_perf_min,
-      t_perfect_max: cfg.t_perfect_max ?? cfg.t_perf_max,
-      t_warm_max: cfg.t_warm_max,
-      t_hot_max: cfg.t_hot_max,
-      t_boiling_max: cfg.t_boiling_max,
-    };
-    // Console heads-up once when the editor is pruning:
-    if (!window.__sac_editor_prune_warned__) {
-      console.info('simple-air-comfort-card-editor: Pruning derived temperature keys from YAML; the card will re-derive them at runtime from the 10 anchors.');
-      window.__sac_editor_prune_warned__ = true;
-    }
-    return out;
-  }
+
 
   // One-time auto-pick of temp/humidity if user hasn’t selected any
   _autoPicked = false;
@@ -1833,7 +1693,7 @@ class SimpleAirComfortCardEditor extends LitElement {
     }
 
     this._autoPicked = true;
-    fireEvent(this, 'config-changed', { config: this._persistKeys(this._config) });
+    fireEvent(this, 'config-changed', { config: this._config });
   }
 }
 
