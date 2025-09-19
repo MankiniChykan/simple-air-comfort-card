@@ -351,6 +351,36 @@ const v=globalThis,$=v.trustedTypes,C=$?$.createPolicy("lit-html",{createHTML:t=
           </ha-form>
         </details>
 
+        <!-- Temperature Anchors (dropdown under Temperature entity) -->
+        <details class="panel">
+          <summary>Temperature Anchors</summary>
+
+          ${this._anchorRow("t_boiling_max","BOILING.max → Top of Card (100%)","Changes how far (HOT.max) is from the edge of the card.",!1)}
+          ${this._anchorRow("t_hot_max","HOT.max (Scales with BOILING.max)","Limit ±4°C from default.",!0)}
+          ${this._anchorRow("t_warm_max","WARM.max → Outer Ring Top ","Limit ±4°C from default.",!0)}
+          ${this._anchorRow("t_perfect_max","PERFECT.max → Inner Comfort Circle Top","High Temperature Alert : Limit ±4°C from default.",!0)}
+
+          ${(()=>{const t=this._centerTemp(),e=Number(this._config?.t_perfect_min),i=Number(this._config?.t_perfect_max),n=Number.isFinite(e)&&Number.isFinite(i)?`Midpoint of PERFECT band: (${e.toFixed(1)} → ${i.toFixed(1)}). Updates automatically when either edge changes.`:"Read-only. Midpoint of PERFECT band. Set PERFECT.min and PERFECT.max to compute.";return B`
+              <div class="row">
+                <div class="name name--center">Calculated PERFECT midpoint</div>
+                <div class="value value--center" title=${t}>${t}</div>
+                <div class="seg seg--ghost"><button class="btn icon" aria-hidden="true"></button></div>
+                <div class="helper">${n}</div>
+              </div>
+            `})()}
+
+          ${this._anchorRow("t_perfect_min","PERFECT.min → Inner Comfort Circle Bottom","Low Temperature Alert Limit : ±4°C from default.",!0)}
+          ${this._anchorRow("t_mild_min","MILD.min → Outer Ring Bottom","Limit ±4°C from default.",!0)}
+          ${this._anchorRow("t_cool_min","COOL.min (Scales with FROSTY.min)","Limit ±4°C from default.",!0)}
+          ${this._anchorRow("t_chilly_min","CHILLY.min (Scales with FROSTY.min)","Limit ±4°C from default.",!0)}
+          ${this._anchorRow("t_cold_min","COLD.min (Scales with FROSTY.min)","Limit ±4°C from default.",!0)}
+          ${this._anchorRow("t_frosty_min","FROSTY.min → Bottom of Card (0%)","Changes how far (COOL.min → COLD.min) is from the edge of the card.",!1)}
+
+          <div class="actions">
+            <button class="btn danger" @click=${this._resetDefaults}>Reset to defaults</button>
+          </div>
+        </details>
+
         <!-- Humidity + Feels Like + Wind entity + Default wind speed (under windspeed) -->
         <ha-form
           .hass=${this.hass}
@@ -360,6 +390,13 @@ const v=globalThis,$=v.trustedTypes,C=$?$.createPolicy("lit-html",{createHTML:t=
           .computeHelper=${this._helper}
           @value-changed=${this._onMiscChange}>
         </ha-form>
+
+        <!-- Humidity Alert Anchors (dropdown under Humidity entity) -->
+        <details class="panel">
+          <summary>Humidity Alert Anchors</summary>
+          ${this._rhRow("rh_left_inner_pct","Low Humidity Alert (%)")}
+          ${this._rhRow("rh_right_inner_pct","High Humidity Alert (%)")}
+        </details>
 
         <!-- Wind Options (dropdown now contains only wind_display_unit) -->
         <details class="panel">
@@ -387,37 +424,7 @@ const v=globalThis,$=v.trustedTypes,C=$?$.createPolicy("lit-html",{createHTML:t=
           </ha-form>
         </details>
       </div>
-
-      <div class="title">Humidity Alert Anchors (buttons)</div>
-      ${this._rhRow("rh_left_inner_pct","Low Humidity Alert (%)")}
-      ${this._rhRow("rh_right_inner_pct","High Humidity Alert (%)")}
-
-      <div class="title">Temperature Anchors (buttons)</div>
-      ${this._anchorRow("t_boiling_max","BOILING.max → Top of Card (100%)","Changes how far (HOT.max) is from the edge of the card.",!1)}
-      ${this._anchorRow("t_hot_max","HOT.max (Scales with BOILING.max)","Limit ±4°C from default.",!0)}
-      ${this._anchorRow("t_warm_max","WARM.max → Outer Ring Top ","Limit ±4°C from default.",!0)}
-      ${this._anchorRow("t_perfect_max","PERFECT.max → Inner Comfort Circle Top","High Temperature Alert : Limit ±4°C from default.",!0)}
-
-      <!-- Center row (green, aligned like others) -->
-      ${(()=>{const t=this._centerTemp(),e=Number(this._config?.t_perfect_min),i=Number(this._config?.t_perfect_max),n=Number.isFinite(e)&&Number.isFinite(i)?`Midpoint of PERFECT band: (${e.toFixed(1)} → ${i.toFixed(1)}). Updates automatically when either edge changes.`:"Read-only. Midpoint of PERFECT band. Set PERFECT.min and PERFECT.max to compute.";return B`
-          <div class="row">
-            <div class="name name--center">Calculated PERFECT midpoint</div>
-            <div class="value value--center" title=${t}>${t}</div>
-            <div class="seg seg--ghost"><button class="btn icon" aria-hidden="true"></button></div>
-            <div class="helper">${n}</div>
-          </div>`})()}
-
-      ${this._anchorRow("t_perfect_min","PERFECT.min → Inner Comfort Circle Bottom","Low Temperature Alert Limit : ±4°C from default.",!0)}
-      ${this._anchorRow("t_mild_min","MILD.min → Outer Ring Bottom","Limit ±4°C from default.",!0)}
-      ${this._anchorRow("t_cool_min","COOL.min (Scales with FROSTY.min)","Limit ±4°C from default.",!0)}
-      ${this._anchorRow("t_chilly_min","CHILLY.min (Scales with FROSTY.min)","Limit ±4°C from default.",!0)}
-      ${this._anchorRow("t_cold_min","COLD.min (Scales with FROSTY.min)","Limit ±4°C from default.",!0)}
-      ${this._anchorRow("t_frosty_min","FROSTY.min → Bottom of Card (0%)","Changes how far (COOL.min → COLD.min) is from the edge of the card.",!1)}
-
-      <div class="actions">
-        <button class="btn danger" @click=${this._resetDefaults}>Reset to defaults</button>
-      </div>
-    </div>`:B``}_label=t=>{const e=t.name;return{name:"Name",temperature:"Temperature entity",humidity:"Humidity entity",windspeed:"Wind speed entity (optional)",feels_like:"Feels-like formula",default_wind_speed:`Default wind speed (${{ms:"m/s",kmh:"km/h",mph:"mph",kn:"kn"}[this._config?.wind_display_unit||"ms"]})`,decimals:"Decimals",rh_left_inner_pct:"Inner circle left RH (%)",rh_right_inner_pct:"Inner circle right RH (%)",y_offset_pct:"Vertical dot offset (%)"}[e]??e};_bandBaseColour(t){const e=String(t||"").toLowerCase();return"frosty"===e?"mediumblue":"cold"===e?"dodgerblue":"chilly"===e?"deepskyblue":"cool"===e?"mediumaquamarine":"mild"===e?"seagreen":"perfect"===e?"limegreen":"warm"===e?"gold":"hot"===e?"orange":"boiling"===e?"crimson":"dimgray"}_bandForAnchor(t){switch(t){case"t_boiling_max":return"boiling";case"t_hot_max":return"hot";case"t_warm_max":return"warm";case"t_perfect_max":case"t_perfect_min":return"perfect";case"t_mild_min":return"mild";case"t_cool_min":return"cool";case"t_chilly_min":return"chilly";case"t_cold_min":return"cold";case"t_frosty_min":return"frosty";default:return null}}_anchorRow(t,e,i,n){const r=Number(this._config?.[t]),s=Number.isFinite(r)?`${r.toFixed(1)} °C`:"—",a=this._bandForAnchor(t),o=a?this._bandBaseColour(a):null,l=n?this._capFor(t):null,m=!!l&&r<=l.lo,c=!!l&&r>=l.hi;return B`
+    `:B``}_label=t=>{const e=t.name;return{name:"Name",temperature:"Temperature entity",humidity:"Humidity entity",windspeed:"Wind speed entity (optional)",feels_like:"Feels-like formula",default_wind_speed:`Default wind speed (${{ms:"m/s",kmh:"km/h",mph:"mph",kn:"kn"}[this._config?.wind_display_unit||"ms"]})`,decimals:"Decimals",rh_left_inner_pct:"Inner circle left RH (%)",rh_right_inner_pct:"Inner circle right RH (%)",y_offset_pct:"Vertical dot offset (%)"}[e]??e};_bandBaseColour(t){const e=String(t||"").toLowerCase();return"frosty"===e?"mediumblue":"cold"===e?"dodgerblue":"chilly"===e?"deepskyblue":"cool"===e?"mediumaquamarine":"mild"===e?"seagreen":"perfect"===e?"limegreen":"warm"===e?"gold":"hot"===e?"orange":"boiling"===e?"crimson":"dimgray"}_bandForAnchor(t){switch(t){case"t_boiling_max":return"boiling";case"t_hot_max":return"hot";case"t_warm_max":return"warm";case"t_perfect_max":case"t_perfect_min":return"perfect";case"t_mild_min":return"mild";case"t_cool_min":return"cool";case"t_chilly_min":return"chilly";case"t_cold_min":return"cold";case"t_frosty_min":return"frosty";default:return null}}_anchorRow(t,e,i,n){const r=Number(this._config?.[t]),s=Number.isFinite(r)?`${r.toFixed(1)} °C`:"—",a=this._bandForAnchor(t),o=a?this._bandBaseColour(a):null,l=n?this._capFor(t):null,m=!!l&&r<=l.lo,c=!!l&&r>=l.hi;return B`
       <div class="row">
         <div class="name">${e}</div>
         <div class="value ${o?"coloured":""}" style=${o?`--pill-col:${o}`:z} title=${s}>${s}</div>
