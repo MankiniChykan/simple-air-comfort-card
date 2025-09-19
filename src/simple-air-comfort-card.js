@@ -306,6 +306,22 @@ class SimpleAirComfortCard extends LitElement {
    * We validate required keys, parse numbers defensively, and store defaults.
    */
   setConfig(config) {
+    // --- NEW: accept grouped YAML and flatten it for runtime ---------------
+    const asKV = (x) => {
+      if (!x) return {};
+      if (Array.isArray(x)) {
+        const out = {};
+        for (const item of x) if (item && typeof item === 'object') Object.assign(out, item);
+        return out;
+      }
+      return typeof x === 'object' ? x : {};
+    };
+    const tAnch = asKV(config?.temperature_anchors);
+    const hAnch = asKV(config?.humidity_alert_anchors);
+    const card  = asKV(config?.card_options);
+    config = { ...config, ...tAnch, ...hAnch, ...card };
+    // -----------------------------------------------------------------------
+
     // --- Normalize display-unit prefs (YAML-safe) ---
     const normTempDU = String(config?.temp_display_unit ?? 'auto').toLowerCase();
     const temp_display_unit =
@@ -1175,19 +1191,45 @@ class SimpleAirComfortCard extends LitElement {
       first((id, st) => id.startsWith('sensor.') && dc(st) === 'wind_speed') ||
       first((id, st) => id.startsWith('sensor.') && /(m\/s|km\/h|kph|mph|kn)/.test(uom(st)));
 
+
+    // --- NEW: return grouped YAML shape to match your desired editor layout
     return {
-      name: 'Area Name',
+      type: 'custom:simple-air-comfort-card',
+      name: 'Upstairs',
       temperature,
+      temp_display_unit: 'auto',
+      temperature_anchors: [
+        { t_frosty_min: 0.0 },
+        { t_cold_min: 3.0 },
+        { t_chilly_min: 5.0 },
+        { t_cool_min: 9.0 },
+        { t_mild_min: 14.0 },
+        { t_perfect_min: 19.0 },
+        { t_perfect_max: 23.9 },
+        { t_warm_max: 27.9 },
+        { t_hot_max: 34.9 },
+        { t_boiling_max: 50.0 },
+      ],
       humidity,
+      humidity_alert_anchors: [
+        { rh_left_inner_pct: 40 },
+        { rh_right_inner_pct: 60 },
+      ],
+      feels_like: 'bom',
       windspeed,
-      decimals: 1,
+      wind_display_unit: 'ms',
       default_wind_speed: 0.1,
-      // Y mapping uses bands, not temp_min/temp_max
+      card_options: [
+        { decimals: 1 },
+        { y_offset_pct: 0 },
+      ],
     };
   }
 }
 
-customElements.define('simple-air-comfort-card', SimpleAirComfortCard);
+if (!customElements.get('simple-air-comfort-card')) {
+  customElements.define('simple-air-comfort-card', SimpleAirComfortCard);
+}
 
 /* =============================================================================
  *                              GUI EDITOR (ha-form)
@@ -1311,6 +1353,22 @@ class SimpleAirComfortCardEditor extends LitElement {
 
   // Build default config and keep default anchors for ±4°C caps
   setConfig(config){
+    // --- NEW: accept grouped YAML and flatten it so the editor fields populate
+    const asKV = (x) => {
+      if (!x) return {};
+      if (Array.isArray(x)) {
+        const out = {};
+        for (const item of x) if (item && typeof item === 'object') Object.assign(out, item);
+        return out;
+      }
+      return typeof x === 'object' ? x : {};
+    };
+    const tAnch = asKV(config?.temperature_anchors);
+    const hAnch = asKV(config?.humidity_alert_anchors);
+    const card  = asKV(config?.card_options);
+    const normalized = { ...(config ?? {}), ...tAnch, ...hAnch, ...card };
+    // -----------------------------------------------------------------------
+
     this._config = {
       name:'Area Name',
       temperature: undefined, humidity: undefined, windspeed: undefined,
@@ -1337,7 +1395,7 @@ class SimpleAirComfortCardEditor extends LitElement {
       rh_left_inner_pct: 40.0,
       rh_right_inner_pct: 60.0,
 
-      ...(config ?? {}),
+      ...normalized,
     };
 
     // Capture defaults for ±4°C movement caps (non-edge anchors)
@@ -1986,37 +2044,48 @@ class SimpleAirComfortCardEditor extends LitElement {
     return out;
   }
 
-  // Persist only 10 anchors + public fields to YAML
+  // Persist in grouped YAML shape (temperature_anchors, humidity_alert_anchors, card_options)
   _persistKeys(cfg){
     const out = {
-      type: 'custom:simple-air-comfort-card', 
+      type: 'custom:simple-air-comfort-card',
       name: cfg.name,
       temperature: cfg.temperature,
-      temp_display_unit: cfg.temp_display_unit,   // 'auto' | 'c' | 'f'
+      temp_display_unit: cfg.temp_display_unit,
+
+      temperature_anchors: [
+        { t_frosty_min:  cfg.t_frosty_min },
+        { t_cold_min:    cfg.t_cold_min },
+        { t_chilly_min:  cfg.t_chilly_min },
+        { t_cool_min:    cfg.t_cool_min },
+        { t_mild_min:    cfg.t_mild_min },
+        { t_perfect_min: cfg.t_perfect_min ?? cfg.t_perf_min },
+        { t_perfect_max: cfg.t_perfect_max ?? cfg.t_perf_max },
+        { t_warm_max:    cfg.t_warm_max },
+        { t_hot_max:     cfg.t_hot_max },
+        { t_boiling_max: cfg.t_boiling_max },
+      ],
+
       humidity: cfg.humidity,
+      humidity_alert_anchors: [
+        { rh_left_inner_pct:  cfg.rh_left_inner_pct },
+        { rh_right_inner_pct: cfg.rh_right_inner_pct },
+      ],
+
       feels_like: cfg.feels_like,
       windspeed: cfg.windspeed,
-      wind_display_unit: cfg.wind_display_unit,   // 'ms' | 'kmh' | 'mph' | 'kn'
+      wind_display_unit: cfg.wind_display_unit,
       default_wind_speed: cfg.default_wind_speed,
-      decimals: cfg.decimals,
-      y_offset_pct: cfg.y_offset_pct,
-      rh_left_inner_pct: cfg.rh_left_inner_pct,
-      rh_right_inner_pct: cfg.rh_right_inner_pct,
-      // 10 anchors (using t_perfect_*)
-      t_frosty_min: cfg.t_frosty_min,
-      t_cold_min: cfg.t_cold_min,
-      t_chilly_min: cfg.t_chilly_min,
-      t_cool_min: cfg.t_cool_min,
-      t_mild_min: cfg.t_mild_min,
-      t_perfect_min: cfg.t_perfect_min ?? cfg.t_perf_min,
-      t_perfect_max: cfg.t_perfect_max ?? cfg.t_perf_max,
-      t_warm_max: cfg.t_warm_max,
-      t_hot_max: cfg.t_hot_max,
-      t_boiling_max: cfg.t_boiling_max,
+
+      card_options: [
+        { decimals:     cfg.decimals },
+        { y_offset_pct: cfg.y_offset_pct },
+      ],
     };
-    // Console heads-up once when the editor is pruning:
     if (!window.__sac_editor_prune_warned__) {
-      console.info('simple-air-comfort-card-editor: Pruning derived temperature keys from YAML; the card will re-derive them at runtime from the 10 anchors.');
+      console.info(
+        'simple-air-comfort-card-editor: Writing grouped YAML ' +
+        '(temperature_anchors, humidity_alert_anchors, card_options).'
+      );
       window.__sac_editor_prune_warned__ = true;
     }
     return out;
