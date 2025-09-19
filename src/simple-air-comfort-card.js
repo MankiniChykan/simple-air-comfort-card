@@ -70,14 +70,14 @@ import { LitElement, html, css, nothing } from 'lit';
  * emits that shape so the parent <hui-card-editor> / Lovelace can listen
  * and persist updates.
  */
-const fireEvent = (node, type, detail, options) => {
-  const event = new Event(type, {
+const fireEvent = (node, type, detail = {}, options) => {
+  const event = new CustomEvent(type, {
+    detail,
     bubbles: options?.bubbles ?? true,
     cancelable: options?.cancelable ?? false,
     composed: options?.composed ?? true,
   });
-  event.detail = detail;
-  node.dispatchEvent(event);
+  node?.dispatchEvent(event);
   return event;
 };
 
@@ -233,7 +233,7 @@ class SimpleAirComfortCard extends LitElement {
     /* The circular dial (outer ring + inner circle) sized at 45% of the stage */
     .graphic{
       position:absolute; top:50%; left:50%; transform:translate(-50%,-50%);
-      width:45%; height:45%; z-index:1;
+      width:var(--sac-ring-pct,45%); height:var(--sac-ring-pct,45%); z-index:1;
     }
 
     /* Axis labels (dim) placed just outside the dial */
@@ -251,14 +251,14 @@ class SimpleAirComfortCard extends LitElement {
     /* The shiny outer ring: solid border + subtle glow */
     .outer-ring{
       position:absolute; inset:0; border-radius:50%; border:2.5px solid #fff;
-      background:var(--sac-dewpoint-ring,radial-gradient(circle,dimgray,55%,rgba(100,100,100,.15),rgba(100,100,100,.15)));
+      background:var(--sac-dewpoint-ring,radial-gradient(circle,dimgray 55%,rgba(100,100,100,.15),rgba(100,100,100,.15)));
       box-shadow:0 0 6px 3px rgba(0,0,0,.18), 0 0 18px 6px rgba(0,0,0,.22);
     }
 
     /* Inner "eye": gradient that tints toward hot/cold/humid based on data */
     .inner-circle{
       position:absolute; left:50%; top:50%; transform:translate(-50%,-50%);
-      width:46.5%; height:46.5%; border-radius:50%;
+      width: var(--sac-inner-pct, 46.5%); height: var(--sac-inner-pct, 46.5%); border-radius:50%;
       background:var(--sac-inner-gradient,radial-gradient(circle,black 0%,black 60%));
       box-shadow:inset 0 0 12px rgba(0,0,0,.6);
     }
@@ -306,6 +306,28 @@ class SimpleAirComfortCard extends LitElement {
    * We validate required keys, parse numbers defensively, and store defaults.
    */
   setConfig(config) {
+    // --- Normalize display-unit prefs (YAML-safe) ---
+    const normTempDU = String(config?.temp_display_unit ?? 'auto').toLowerCase();
+    const temp_display_unit =
+      normTempDU === 'c' || normTempDU === '°c' ? 'c' :
+      normTempDU === 'f' || normTempDU === '°f' ? 'f' : 'auto';
+
+    // Accept legacy "m/s|km/h" but store YAML-safe tokens: ms|kmh|mph|kn
+    const normWindDUraw = String(config?.wind_display_unit ?? 'ms').toLowerCase();
+    const wind_display_unit =
+      /km\/?h/.test(normWindDUraw) ? 'kmh' :
+      normWindDUraw.includes('mph') ? 'mph' :
+      normWindDUraw.includes('kn')  ? 'kn'  : 'ms';
+
+    // Helpers to convert YAML default wind (given in the chosen token) → m/s
+    const _num = (v) => (v === undefined || v === null || v === '' ? NaN : Number(v));
+    const _toMpsByToken = (v, token) => {
+      if (!Number.isFinite(v)) return 0;
+      switch (token) { case 'kmh': return v / 3.6; case 'mph': return v * 0.44704; case 'kn': return v * 0.514444; default: return v; }
+    };
+    const defaultWindYaml = Number.isFinite(_num(config?.default_wind_speed)) ? _num(config.default_wind_speed) : 0;
+    const defaultWindMps  = _toMpsByToken(defaultWindYaml, wind_display_unit);
+
     if (!config || !config.temperature || !config.humidity) {
       throw new Error('simple-air-comfort-card: "temperature" and "humidity" are required.');
     }
@@ -358,7 +380,10 @@ class SimpleAirComfortCard extends LitElement {
       windspeed: config.windspeed,
       feels_like: (config.feels_like ?? 'bom'), // 'bom' | 'wind_chill' | 'heat_index' | 'humidex'
       decimals: Number.isFinite(num(config.decimals)) ? num(config.decimals) : 1,
-      default_wind_speed: Number.isFinite(num(config.default_wind_speed)) ? num(config.default_wind_speed) : 0.0,
+      // Display preferences (YAML-safe tokens)
+      temp_display_unit,
+      wind_display_unit,
+      default_wind_speed: Number.isFinite(defaultWindMps) ? defaultWindMps : 0.0, // stored internally as m/s
 
       // Comfort bands: use fully-expanded contiguous ranges
       t_frosty_min: full.t_frosty_min, t_frosty_max: full.t_frosty_max,
@@ -531,7 +556,12 @@ class SimpleAirComfortCard extends LitElement {
      * Keep HA’s current temp unit (°C/°F) for display, retain % for RH.
      */
     const d = this._config.decimals;
-    const outUnit = unitIn;
+    // Respect display preference: 'auto' uses sensor unit, 'c'/'f' override
+    const outUnitPref = this._config?.temp_display_unit || 'auto';
+    const outUnit =
+      outUnitPref === 'c' ? '°C' :
+      outUnitPref === 'f' ? '°F' :
+      unitIn;
     const dewOut  = this.#formatNumber(this.#fromCelsius(dpC, outUnit), d) + ` ${outUnit}`;
     const atOut   = this.#formatNumber(this.#fromCelsius(atC,  outUnit), d) + ` ${outUnit}`;
     const tempRaw = this.#formatNumber(this.#fromCelsius(Tc,  outUnit), d) + ` ${outUnit}`;
@@ -602,7 +632,11 @@ class SimpleAirComfortCard extends LitElement {
       </div>
 
       <!-- Dial (outer ring + inner eye) and labeled axes -->
-      <div class="graphic" style="--sac-dewpoint-ring:${ringGrad}; --sac-inner-gradient:${innerGrad}">
+      <div class="graphic"
+            style="--sac-ring-pct:${this._config.ring_pct}%;
+                  --sac-inner-pct:${this._config.inner_pct}%;
+                  --sac-dewpoint-ring:${ringGrad};
+                  --sac-inner-gradient:${innerGrad}">
         <div class="axis axis-top"    style=${axisTopStyle || nothing}    aria-label="Warm">Warm</div>
         <div class="axis axis-bottom" style=${axisBottomStyle || nothing} aria-label="Cold">Cold</div>
         <div class="axis axis-left"   style=${axisLeftStyle || nothing}   aria-label="Dry">Dry</div>
@@ -759,7 +793,7 @@ class SimpleAirComfortCard extends LitElement {
       'Very Dry':'deepskyblue','Dry':'mediumaquamarine','Pleasant':'limegreen','Comfortable':'yellowgreen',
       'Sticky Humid':'yellow','Muggy':'gold','Sweltering':'orange','Stifling':'crimson'
     })[text] || 'dimgray';
-    return `radial-gradient(circle, ${base}, 55%, rgba(100,100,100,0.15), rgba(100,100,100,0.15))`;
+    return `radial-gradient(circle, ${base} 55%, rgba(100,100,100,0.15), rgba(100,100,100,0.15))`;
   }
 
   #innerEyeGradient(RH, Tc, B){
@@ -1263,6 +1297,8 @@ class SimpleAirComfortCardEditor extends LitElement {
     this._config = {
       name:'Area Name',
       temperature: undefined, humidity: undefined, windspeed: undefined,
+      temp_display_unit:'auto',   // 'auto' | 'c' | 'f'
+      wind_display_unit:'ms',     // 'ms' | 'kmh' | 'mph' | 'kn'
       feels_like:'bom',
       decimals:1, default_wind_speed:0.1,
 
@@ -1317,7 +1353,24 @@ class SimpleAirComfortCardEditor extends LitElement {
           { name:'temperature', required:true, selector:{ entity:{ domain:'sensor', device_class:'temperature' } } },
           { name:'humidity',    required:true, selector:{ entity:{ domain:'sensor', device_class:'humidity' } } },
           { name:'windspeed', selector:{ entity:{ domain:'sensor', device_class:'wind_speed' } } },
-          { name:'default_wind_speed', selector:{ number:{ min:0, max:50, step:0.1, mode:'box', unit_of_measurement:'m/s' } } },
+          // Display unit prefs
+          { name:'temp_display_unit',
+            selector:{ select:{ mode:'dropdown', options:[
+              { value:'auto', label:'Auto (follow sensor)' },
+              { value:'c',    label:'Celsius (°C)' },
+              { value:'f',    label:'Fahrenheit (°F)' },
+            ]}} },
+          { name:'wind_display_unit',
+            selector:{ select:{ mode:'dropdown', options:[
+              { value:'ms',  label:'m/s'  },
+              { value:'kmh', label:'km/h' },
+              { value:'mph', label:'mph'  },
+              { value:'kn',  label:'kn'   },
+            ]}} },
+          { name:'default_wind_speed', selector:{ number:{
+              min:0, max:200, step:0.1, mode:'box',
+              unit_of_measurement: ({ ms:'m/s', kmh:'km/h', mph:'mph', kn:'kn' }[this._config?.wind_display_unit || 'ms'])
+          } } },
           { name:'feels_like',
             selector:{ select:{ mode:'dropdown', options:[
               { value:'bom',        label:'Apparent Temperature (BoM, T+RH+Wind)' },
@@ -1389,10 +1442,13 @@ class SimpleAirComfortCardEditor extends LitElement {
   // Human labels for misc (non-temperature) fields in the editor
   _label = (s) => {
     const id = s.name;
+    const windUnit = ({ ms:'m/s', kmh:'km/h', mph:'mph', kn:'kn' }[this._config?.wind_display_unit || 'ms']);
     const base = ({
       name:'Name', temperature:'Temperature entity', humidity:'Humidity entity', windspeed:'Wind speed entity (optional)',
       feels_like:'Feels-like formula',
-      default_wind_speed:'Default wind speed (m/s)', decimals:'Decimals',
+      // show label with the currently selected wind unit
+      default_wind_speed:`Default wind speed (${windUnit})`,
+      decimals:'Decimals',
       rh_left_inner_pct:'Inner circle left RH (%)',
       rh_right_inner_pct:'Inner circle right RH (%)',
       y_offset_pct:'Vertical dot offset (%)',
@@ -1542,12 +1598,16 @@ class SimpleAirComfortCardEditor extends LitElement {
         return 'Shown as the small grey title at the top of the card.';
       case 'temperature':
         return `Pick an indoor temperature sensor. ${unit('temperature') ? `Current unit: ${unit('temperature')}.` : ''}`;
+      case 'temp_display_unit':
+        return 'Choose the temperature unit used for display. Calculations always normalize internally.';
       case 'humidity':
         return `Pick a relative humidity sensor (0–100%). ${unit('humidity') ? `Current unit: ${unit('humidity')}.` : ''}`;
       case 'windspeed':
-        return 'Optional. If set, Apparent Temperature uses this wind; if empty, the “Default wind speed” below is used.';
+        return 'Optional. If set, Feels Like Temperature uses this wind; if empty, the “Default wind speed” below is used.';
+      case 'wind_display_unit':
+        return 'Unit for showing the default wind value below (YAML-safe tokens). Physics converts to m/s internally.';
       case 'default_wind_speed':
-        return 'Indoor fallback for Apparent Temperature when no wind sensor is set. Typical indoors: 0.0–0.2 m/s.';
+        return 'Indoor fallback for Feels Like Temperature when no wind sensor is set. Typical indoors: 0.0–0.2 in the chosen unit.';
       case 'feels_like':
         return 'Choose the formula for the top-right “Feels like” value. BoM uses T+RH+Wind; Wind Chill uses T+Wind (cold); Heat Index/Humidex use T+RH (hot).';
       case 'decimals':
@@ -1633,15 +1693,38 @@ class SimpleAirComfortCardEditor extends LitElement {
     fireEvent(this, 'config-changed', { config: this._persistKeys(derived) });
   };
 
-  // --- New: misc handler (entities/decimals/RH/offsets) ---
+  // --- Wind unit helpers for editor conversions (ms|kmh|mph|kn) ---
+  _toDisplayWind(v_mps, unit){
+    if (!Number.isFinite(v_mps)) return 0;
+    switch(unit){ case 'kmh': return v_mps * 3.6; case 'mph': return v_mps / 0.44704; case 'kn': return v_mps / 0.514444; default: return v_mps; }
+  }
+  _fromDisplayWind(v, unit){
+    if (!Number.isFinite(v)) return 0;
+    switch(unit){ case 'kmh': return v / 3.6; case 'mph': return v * 0.44704; case 'kn': return v * 0.514444; default: return v; }
+  }
+
+  // Adjust default_wind_speed value when wind_display_unit changes (preserve physical value)
   _onMiscChange = (ev) => {
     ev.stopPropagation();
     const delta = { ...(ev.detail?.value || {}) };
     if (!Object.keys(delta).length) return;
+
+    // If unit changes, convert the numeric field to the new unit for display
+    if ('wind_display_unit' in delta && this._config?.default_wind_speed != null){
+      const prevU = this._config.wind_display_unit || 'ms';
+      const nextU = delta.wind_display_unit || prevU;
+      if (prevU !== nextU){
+        const prevVal = Number(this._config.default_wind_speed);
+        const asMps = this._fromDisplayWind(prevVal, prevU);
+        delta.default_wind_speed = this._toDisplayWind(asMps, nextU);
+      }
+    }
+
     const merged = { ...(this._config || {}), ...delta };
     this._config = merged;
     fireEvent(this, 'config-changed', { config: this._persistKeys(merged) });
   };
+
 
   // Button click → bump a single handle by delta, apply caps & derive neighbors
   _bump(name, delta, limited){
@@ -1741,19 +1824,19 @@ class SimpleAirComfortCardEditor extends LitElement {
           break;
         case 'mild_min':
           // MILD.min ∈ [COOL.min+0.1, PERFECT.min]
-          P.mild_min = Math.max(r1(P.cool_min + step), Math.min(P.mild_min, r1(P.perf_min - 0)));
+          P.mild_min = Math.max(r1(P.cool_min + step), Math.min(P.mild_min, r1(P.perf_min - step)));
           break;
         case 'cool_min':
           // COOL.min ∈ [CHILLY.min+0.1, MILD.min]
-          P.cool_min = Math.max(r1(P.chilly_min + step), Math.min(P.cool_min, r1(P.mild_min - 0)));
+          P.cool_min = Math.max(r1(P.chilly_min + step), Math.min(P.cool_min, r1(P.mild_min - step)));
           break;
         case 'chilly_min':
           // CHILLY.min ∈ [COLD.min+0.1, COOL.min]
-          P.chilly_min = Math.max(r1(P.cold_min + step), Math.min(P.chilly_min, r1(P.cool_min - 0)));
+          P.chilly_min = Math.max(r1(P.cold_min + step), Math.min(P.chilly_min, r1(P.cool_min - step)));
           break;
         case 'cold_min':
           // COLD.min ∈ [FROSTY.min+0.1, CHILLY.min]
-          P.cold_min = Math.max(r1(P.frosty_min + step), Math.min(P.cold_min, r1(P.chilly_min - 0)));
+          P.cold_min = Math.max(r1(P.frosty_min + step), Math.min(P.cold_min, r1(P.chilly_min - step)));
           break;
         case 'frosty_min':
           // FROSTY.min ≤ COLD.min − 0.1 (dragging down increases scale)
@@ -1803,11 +1886,13 @@ class SimpleAirComfortCardEditor extends LitElement {
       type: 'custom:simple-air-comfort-card', 
       name: cfg.name,
       temperature: cfg.temperature,
+      temp_display_unit: cfg.temp_display_unit,   // 'auto' | 'c' | 'f'
+      feels_like: cfg.feels_like,
       humidity: cfg.humidity,
       windspeed: cfg.windspeed,
-      feels_like: cfg.feels_like,
-      decimals: cfg.decimals,
+      wind_display_unit: cfg.wind_display_unit,   // 'ms' | 'kmh' | 'mph' | 'kn'
       default_wind_speed: cfg.default_wind_speed,
+      decimals: cfg.decimals,
       y_offset_pct: cfg.y_offset_pct,
       rh_left_inner_pct: cfg.rh_left_inner_pct,
       rh_right_inner_pct: cfg.rh_right_inner_pct,
