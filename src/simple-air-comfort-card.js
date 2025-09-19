@@ -251,7 +251,7 @@ class SimpleAirComfortCard extends LitElement {
     /* The shiny outer ring: solid border + subtle glow */
     .outer-ring{
       position:absolute; inset:0; border-radius:50%; border:2.5px solid #fff;
-      background:var(--sac-dewpoint-ring,radial-gradient(circle,dimgray 55%,rgba(100,100,100,.15),rgba(100,100,100,.15)));
+      background:var(--sac-dewpoint-ring,radial-gradient(circle,dimgray, 55%,rgba(100,100,100,.15),rgba(100,100,100,.15)));
       box-shadow:0 0 6px 3px rgba(0,0,0,.18), 0 0 18px 6px rgba(0,0,0,.22);
     }
 
@@ -793,7 +793,7 @@ class SimpleAirComfortCard extends LitElement {
       'Very Dry':'deepskyblue','Dry':'mediumaquamarine','Pleasant':'limegreen','Comfortable':'yellowgreen',
       'Sticky Humid':'yellow','Muggy':'gold','Sweltering':'orange','Stifling':'crimson'
     })[text] || 'dimgray';
-    return `radial-gradient(circle, ${base} 55%, rgba(100,100,100,0.15), rgba(100,100,100,0.15))`;
+    return `radial-gradient(circle, ${base}, 55%, rgba(100,100,100,0.15), rgba(100,100,100,0.15))`;
   }
 
   #innerEyeGradient(RH, Tc, B){
