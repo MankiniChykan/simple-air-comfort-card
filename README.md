@@ -128,10 +128,10 @@ The card accepts flat keys too; the editor writes grouped sections (temperature_
 - `rh_left_inner_pct`/`rh_right_inner_pct` — map inner circle intersections (%, default 40/60)
 - `y_offset_pct` — fine vertical offset for the dot (%, default 0)
 
-- **Wind:**
-  - `windspeed` — wind speed sensor (optional)
-  - `wind_display_unit` — ms | kmh | mph | kn (used for the editor display of default_wind_speed)
-  - `default_wind_speed` — fallback when no wind entity; shown in the chosen display unit, converted to m/s internally
+**Wind:**
+- `windspeed` — wind speed sensor (optional)
+- `wind_display_unit` — ms | kmh | mph | kn (used for the editor display of default_wind_speed)
+- `default_wind_speed` — fallback when no wind entity; shown in the chosen display unit, converted to m/s internally
 
 ### Advanced (rarely needed)
 - `ring_pct` — dial box size as % of card (default 45)
