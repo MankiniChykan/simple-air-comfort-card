@@ -1,4 +1,4 @@
-<img src="https://raw.githubusercontent.com/MankiniChykan/simple-air-comfort-card/v1.0.322/src/assets/icon.svg" width="100" height="100" alt="Icon" />
+<img src="https://raw.githubusercontent.com/MankiniChykan/simple-air-comfort-card/v1.0.322/src/assets/icon.png" width="100" height="100" alt="Icon" />
 
 # Simple Air Comfort Card
 
