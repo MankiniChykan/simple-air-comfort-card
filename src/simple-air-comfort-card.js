@@ -1479,19 +1479,19 @@ class SimpleAirComfortCardEditor extends LitElement {
           ${this._anchorRow('t_boiling_max', 'BOILING.max → Top of Card (100%)',
             'Changes how far (HOT.max) is from the edge of the card.', false)}
           ${this._anchorRow('t_hot_max', 'HOT.max (Scales with BOILING.max)',
-            html`Limit ±${capStr} from default. ${this._slimDerivedHelper('t_hot_max')}`, true)}
+            html`Cap ±${capStr} from default. ${this._slimDerivedHelper('t_hot_max')}`, true)}
           ${this._anchorRow('t_warm_max', 'WARM.max → Outer Ring Top',
-            html`Limit ±${capStr} from default. ${this._slimDerivedHelper('t_warm_max')}`, true)}
+            html`Cap ±${capStr} from default. ${this._slimDerivedHelper('t_warm_max')}`, true)}
           ${this._anchorRow('t_perfect_max', 'PERFECT.max → Inner Comfort Circle Top',
-            html`High Temperature Alert : Limit ±${capStr} from default. ${this._slimDerivedHelper('t_perfect_max')}`, true)}
+            html`High Temperature Alert :<br>Cap ±${capStr} from default. ${this._slimDerivedHelper('t_perfect_max')}`, true)}
 
           ${(() => {
             const center = this._centerTemp();
             const min = Number(this._config?.t_perfect_min);
             const max = Number(this._config?.t_perfect_max);
             const helper = (Number.isFinite(min) && Number.isFinite(max))
-              ? `Midpoint of PERFECT band: (${min.toFixed(1)} → ${max.toFixed(1)}). Updates automatically when either edge changes.`
-              : 'Read-only. Midpoint of PERFECT band. Set PERFECT.min and PERFECT.max to compute.';
+              ? html`Midpoint of PERFECT band: (${min.toFixed(1)} → ${max.toFixed(1)}).<br>Updates automatically when either edge changes.`
+              : html`Read-only. Midpoint of PERFECT band. Set PERFECT.min and PERFECT.max to compute.`;
             return html`
               <div class="row">
                 <div class="name name--center">Calculated PERFECT midpoint</div>
@@ -1503,15 +1503,15 @@ class SimpleAirComfortCardEditor extends LitElement {
           })()}
 
           ${this._anchorRow('t_perfect_min', 'PERFECT.min → Inner Comfort Circle Bottom',
-            html`Low Temperature Alert Limit : ±${capStr} from default. ${this._slimDerivedHelper('t_perfect_min')}`, true)}
+            html`Low Temperature Alert Limit :<br>Cap±${capStr} from default. ${this._slimDerivedHelper('t_perfect_min')}`, true)}
           ${this._anchorRow('t_mild_min', 'MILD.min → Outer Ring Bottom',
-            html`Limit ±${capStr} from default. ${this._slimDerivedHelper('t_mild_min')}`, true)}
+            html`Cap ±${capStr} from default. ${this._slimDerivedHelper('t_mild_min')}`, true)}
           ${this._anchorRow('t_cool_min', 'COOL.min (Scales with FROSTY.min)',
-            html`Limit ±${capStr} from default. ${this._slimDerivedHelper('t_cool_min')}`, true)}
+            html`Cap ±${capStr} from default. ${this._slimDerivedHelper('t_cool_min')}`, true)}
           ${this._anchorRow('t_chilly_min', 'CHILLY.min (Scales with FROSTY.min)',
-            html`Limit ±${capStr} from default. ${this._slimDerivedHelper('t_chilly_min')}`, true)}
+            html`Cap ±${capStr} from default. ${this._slimDerivedHelper('t_chilly_min')}`, true)}
           ${this._anchorRow('t_cold_min', 'COLD.min (Scales with FROSTY.min)',
-            html`Limit ±${capStr} from default. ${this._slimDerivedHelper('t_cold_min')}`, true)}
+            html`Cap ±${capStr} from default. ${this._slimDerivedHelper('t_cold_min')}`, true)}
           ${this._anchorRow('t_frosty_min', 'FROSTY.min → Bottom of Card (0%)',
             'Changes how far (COOL.min → COLD.min) is from the edge of the card.', false)}
 
