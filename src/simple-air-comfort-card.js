@@ -1628,7 +1628,7 @@ class SimpleAirComfortCardEditor extends LitElement {
           </ha-form>
 
           <div class="actions">
-            <button class="btn danger" @click=${this._resetDefaults}>Reset Temp Comfort Scale Preset</button>
+            <button class="btn danger" @click=${this._resetDefaults}>Default Current Preset</button>
           </div>
 
           <!-- NEW: Anchor Cap (±°C) — placed below all band rows, above Reset -->
@@ -1937,7 +1937,7 @@ class SimpleAirComfortCardEditor extends LitElement {
       case 'cap_degrees':
         return '±°C limit for the editor’s +/- buttons on non-edge anchors. Not applied to FROSTY.min or BOILING.max.';
       case 'temp_preset':
-        return 'Seed the 10 temperature anchors from Indoor or Outdoor defaults. Reset uses the currently selected preset scale. Missing/invalid → Indoor.';
+        return 'Default Current Preset. Seeds the 10 temperature anchors from Indoor or Outdoor defaults.  Missing/invalid → Indoor.';
       case 'decimals':
         return 'How many decimal places to show for temperatures and humidity.';
       case 'rh_left_inner_pct':
