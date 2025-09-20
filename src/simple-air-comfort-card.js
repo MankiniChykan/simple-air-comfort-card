@@ -100,29 +100,28 @@ let __sac_warned_alias_conflict__ = false;
 // ------------------------------------------------------------
 const TEMP_PRESETS = {
   indoor: {
-    t_frosty_min:  0.0,
-    t_cold_min:    3.0,
-    t_chilly_min:  5.0,
-    t_cool_min:    9.0,
-    t_mild_min:   14.0,
-    t_perfect_min:19.0,
-    t_perfect_max:23.9,
-    t_warm_max:   27.9,
-    t_hot_max:    34.9,
-    t_boiling_max:50.0,
+    t_boiling_max: 42.0,
+    t_hot_max:     31.0,
+    t_warm_max:    26.0,
+    t_perfect_max: 23.5,
+    t_perfect_min: 20.5,
+    t_mild_min:    18.0,
+    t_cool_min:    16.0,
+    t_chilly_min:  12.0,
+    t_cold_min:     8.0,
+    t_frosty_min:   0.0,
   },
   outdoor: {
-    // Outdoor band is shifted & widened a touch
-    t_frosty_min:  -5.0,
-    t_cold_min:     0.0,
-    t_chilly_min:   3.0,
-    t_cool_min:     8.0,
-    t_mild_min:    12.0,
-    t_perfect_min: 17.0,
-    t_perfect_max: 26.0,
-    t_warm_max:    30.0,
+    t_boiling_max: 48.0,
     t_hot_max:     36.0,
-    t_boiling_max: 45.0,
+    t_warm_max:    30.0,
+    t_perfect_max: 26.0,
+    t_perfect_min: 20.0,
+    t_mild_min:    16.0,
+    t_cool_min:    12.0,
+    t_chilly_min:   6.0,
+    t_cold_min:     2.0,
+    t_frosty_min: -10.0,
   },
 };
 const _normalizePreset = (v) => (String(v||'').toLowerCase()==='outdoor' ? 'outdoor' : 'indoor');
@@ -423,11 +422,11 @@ class SimpleAirComfortCard extends LitElement {
 
     // Expand to a full contiguous temperature ladder from the 10 anchors
     const ten = this.#pickTenAnchors(config, temp_preset);
-    const full = this.#expandFromTen(ten);
+    const full = this.#expandFromTen(ten, temp_preset);
 
     // Final sanitized config object we’ll use at runtime
     this._config = {
-      // remember preset so editor/runtime can reference it
+      // keep preset around for downstream functions/editor
       temp_preset,
       name: config.name ?? 'Air Comfort',
       temperature: config.temperature,
@@ -899,21 +898,24 @@ class SimpleAirComfortCard extends LitElement {
   #bandThresholds(){
     const C = this._config || {};
     const step = 0.1;
+    // Baseline fallbacks from the selected preset (expanded to neighbors)
+    const PRE  = TEMP_PRESETS[_normalizePreset(this._config?.temp_preset)];
+    const FALL = this.#expandFromTen(PRE, this._config?.temp_preset);
     // enforce one decimal & tolerate NaN by falling back to a default
     const r1 = (v, dflt) => {
       const n = Number.isFinite(v) ? v : dflt;
       return Math.round(n * 10) / 10;
     };
     const B = {
-      FROSTY: {min:r1(C.t_frosty_min,    0.0), max:r1(C.t_frosty_max,   2.9)},
-      COLD:   {min:r1(C.t_cold_min,      3.0), max:r1(C.t_cold_max,     4.9)},
-      CHILLY: {min:r1(C.t_chilly_min,    5.0), max:r1(C.t_chilly_max,   8.9)},
-      COOL:   {min:r1(C.t_cool_min,      9.0), max:r1(C.t_cool_max,    13.9)},
-      MILD:   {min:r1(C.t_mild_min,     14.0), max:r1(C.t_mild_max,    18.9)},
-      PERFECT:{min:r1(C.t_perf_min,     19.0), max:r1(C.t_perf_max,    23.9)},
-      WARM:   {min:r1(C.t_warm_min,     24.0), max:r1(C.t_warm_max,    27.9)},
-      HOT:    {min:r1(C.t_hot_min,      28.0), max:r1(C.t_hot_max,     34.9)},
-      BOILING:{min:r1(C.t_boiling_min,  35.0), max:r1(C.t_boiling_max, 50.0)},
+      FROSTY: {min:r1(C.t_frosty_min,    FALL.t_frosty_min),  max:r1(C.t_frosty_max,   FALL.t_frosty_max)},
+      COLD:   {min:r1(C.t_cold_min,      FALL.t_cold_min),    max:r1(C.t_cold_max,     FALL.t_cold_max)},
+      CHILLY: {min:r1(C.t_chilly_min,    FALL.t_chilly_min),  max:r1(C.t_chilly_max,   FALL.t_chilly_max)},
+      COOL:   {min:r1(C.t_cool_min,      FALL.t_cool_min),    max:r1(C.t_cool_max,     FALL.t_cool_max)},
+      MILD:   {min:r1(C.t_mild_min,      FALL.t_mild_min),    max:r1(C.t_mild_max,     FALL.t_mild_max)},
+      PERFECT:{min:r1(C.t_perf_min,      FALL.t_perf_min),    max:r1(C.t_perf_max,     FALL.t_perf_max)},
+      WARM:   {min:r1(C.t_warm_min,      FALL.t_warm_min),    max:r1(C.t_warm_max,     FALL.t_warm_max)},
+      HOT:    {min:r1(C.t_hot_min,       FALL.t_hot_min),     max:r1(C.t_hot_max,      FALL.t_hot_max)},
+      BOILING:{min:r1(C.t_boiling_min,   FALL.t_boiling_min), max:r1(C.t_boiling_max,  FALL.t_boiling_max)},
     };
     // UI + Y‑mapping invariants:
     // - “Locked” visual anchors used by the geometry map:
@@ -941,7 +943,7 @@ class SimpleAirComfortCard extends LitElement {
     const perfMax = ('t_perfect_max' in cfg) ? cfg.t_perfect_max : cfg.t_perf_max;
     const preset = TEMP_PRESETS[_normalizePreset(presetName)];
     return {
-      // Seed from preset, then override with any explicit YAML tweaks
+      // Seed from preset; let explicit YAML override any of them
       t_frosty_min:  Number(cfg.t_frosty_min  ?? preset.t_frosty_min),
       t_cold_min:    Number(cfg.t_cold_min    ?? preset.t_cold_min),
       t_chilly_min:  Number(cfg.t_chilly_min  ?? preset.t_chilly_min),
@@ -954,20 +956,21 @@ class SimpleAirComfortCard extends LitElement {
       t_boiling_max: Number(cfg.t_boiling_max ?? preset.t_boiling_max),
     };
   }
-  #expandFromTen(T){
+  #expandFromTen(T, presetName){
     // Rebuild full ladder with 0.1 °C gaps (same rules as the editor)
     const r1 = this.#r1_.bind(this), step=0.1;
+    const BASE = TEMP_PRESETS[_normalizePreset(presetName)];
     const P = {
-      frosty_min: r1(T.t_frosty_min ?? 0.0),
-      cold_min:   r1(T.t_cold_min   ?? 3.0),
-      chilly_min: r1(T.t_chilly_min ?? 5.0),
-      cool_min:   r1(T.t_cool_min   ?? 9.0),
-      mild_min:   r1(T.t_mild_min   ??14.0),
-      perf_min:   r1(T.t_perfect_min??19.0),
-      perf_max:   r1(T.t_perfect_max??23.9),
-      warm_max:   r1(T.t_warm_max   ??27.9),
-      hot_max:    r1(T.t_hot_max    ??34.9),
-      boiling_max:r1(T.t_boiling_max??50.0),
+      frosty_min: r1(T.t_frosty_min  ?? BASE.t_frosty_min),
+      cold_min:   r1(T.t_cold_min    ?? BASE.t_cold_min),
+      chilly_min: r1(T.t_chilly_min  ?? BASE.t_chilly_min),
+      cool_min:   r1(T.t_cool_min    ?? BASE.t_cool_min),
+      mild_min:   r1(T.t_mild_min    ?? BASE.t_mild_min),
+      perf_min:   r1(T.t_perfect_min ?? BASE.t_perfect_min),
+      perf_max:   r1(T.t_perfect_max ?? BASE.t_perfect_max),
+      warm_max:   r1(T.t_warm_max    ?? BASE.t_warm_max),
+      hot_max:    r1(T.t_hot_max     ?? BASE.t_hot_max),
+      boiling_max:r1(T.t_boiling_max ?? BASE.t_boiling_max),
     };
     // neighbor clamping (defensive)
     P.cold_min   = Math.max(r1(P.frosty_min+step), P.cold_min);
@@ -1244,16 +1247,16 @@ class SimpleAirComfortCard extends LitElement {
       temp_display_unit: 'auto',
       temperature_anchors: [
         { temp_preset: 'indoor' },
-        { t_frosty_min: 0.0 },
-        { t_cold_min: 3.0 },
-        { t_chilly_min: 5.0 },
-        { t_cool_min: 9.0 },
-        { t_mild_min: 14.0 },
-        { t_perfect_min: 19.0 },
-        { t_perfect_max: 23.9 },
-        { t_warm_max: 27.9 },
-        { t_hot_max: 34.9 },
-        { t_boiling_max: 50.0 },
+        { t_boiling_max: 42.0 },
+        { t_hot_max:     31.0 },
+        { t_warm_max:    26.0 },
+        { t_perfect_max: 23.5 },
+        { t_perfect_min: 20.5 },
+        { t_mild_min:    18.0 },
+        { t_cool_min:    16.0 },
+        { t_chilly_min:  12.0 },
+        { t_cold_min:     8.0 },
+        { t_frosty_min:   0.0 },
         { cap_degrees: 6.0 },
       ],
       humidity,
@@ -2066,17 +2069,18 @@ class SimpleAirComfortCardEditor extends LitElement {
     const step = 0.1;
 
     // Pull GUI fields (only the 10 exposed)
+    const BASE = TEMP_PRESETS[_normalizePreset(this._config?.temp_preset)];
     const P = {
-      boiling_max: r1(cfgIn.t_boiling_max ?? 50.0),
-      hot_max:     r1(cfgIn.t_hot_max     ?? 34.9),
-      warm_max:    r1(cfgIn.t_warm_max    ?? 27.9),
-      perf_max:    r1(cfgIn.t_perfect_max ?? 23.9),
-      perf_min:    r1(cfgIn.t_perfect_min ?? 19.0),
-      mild_min:    r1(cfgIn.t_mild_min    ?? 14.0),
-      cool_min:    r1(cfgIn.t_cool_min    ??  9.0),
-      chilly_min:  r1(cfgIn.t_chilly_min  ??  5.0),
-      cold_min:    r1(cfgIn.t_cold_min    ??  3.0),
-      frosty_min:  r1(cfgIn.t_frosty_min  ??  0.0),
+      boiling_max: r1(cfgIn.t_boiling_max ?? BASE.t_boiling_max),
+      hot_max:     r1(cfgIn.t_hot_max     ?? BASE.t_hot_max),
+      warm_max:    r1(cfgIn.t_warm_max    ?? BASE.t_warm_max),
+      perf_max:    r1(cfgIn.t_perfect_max ?? BASE.t_perfect_max),
+      perf_min:    r1(cfgIn.t_perfect_min ?? BASE.t_perfect_min),
+      mild_min:    r1(cfgIn.t_mild_min    ?? BASE.t_mild_min),
+      cool_min:    r1(cfgIn.t_cool_min    ?? BASE.t_cool_min),
+      chilly_min:  r1(cfgIn.t_chilly_min  ?? BASE.t_chilly_min),
+      cold_min:    r1(cfgIn.t_cold_min    ?? BASE.t_cold_min),
+      frosty_min:  r1(cfgIn.t_frosty_min  ?? BASE.t_frosty_min),
     };
 
     // Map config field -> our P keys
