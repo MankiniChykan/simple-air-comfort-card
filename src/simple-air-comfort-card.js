@@ -1610,6 +1610,27 @@ class SimpleAirComfortCardEditor extends LitElement {
           ${this._anchorRow('t_frosty_min', 'FROSTY.min → Bottom of Card (0%)',
             'Changes how far (COOL.min → COLD.min) is from the edge of the card.', false)}
 
+          <!-- Temperature Comfort Scale Preset (just above Reset) -->
+          <div class="title">Temperature Comfort Scale Preset</div>
+          <ha-form
+            .hass=${this.hass}
+            .data=${this._config}
+            .schema=${[
+              { name:'temp_preset',
+                selector:{ select:{ mode:'dropdown', options:[
+                  { value:'indoor',  label:'Indoor Temp Comfort Scale' },
+                  { value:'outdoor', label:'Outdoor Temp Comfort Scale' },
+                ]}} },
+            ]}
+            .computeLabel=${this._label}
+            .computeHelper=${this._helper}
+            @value-changed=${this._onMiscChange}>
+          </ha-form>
+
+          <div class="actions">
+            <button class="btn danger" @click=${this._resetDefaults}>Reset Temp Comfort Scale Preset</button>
+          </div>
+
           <!-- NEW: Anchor Cap (±°C) — placed below all band rows, above Reset -->
           <div class="title">Anchor Cap (±°C)</div>
           <ha-form
@@ -1624,27 +1645,6 @@ class SimpleAirComfortCardEditor extends LitElement {
             .computeHelper=${this._helper}
             @value-changed=${this._onMiscChange}>
           </ha-form>
-
-          <!-- Comfort Preset (just above Reset) -->
-          <div class="title">Temperature Preset</div>
-          <ha-form
-            .hass=${this.hass}
-            .data=${this._config}
-            .schema=${[
-              { name:'temp_preset',
-                selector:{ select:{ mode:'dropdown', options:[
-                  { value:'indoor',  label:'Indoor (default)' },
-                  { value:'outdoor', label:'Outdoor' },
-                ]}} },
-            ]}
-            .computeLabel=${this._label}
-            .computeHelper=${this._helper}
-            @value-changed=${this._onMiscChange}>
-          </ha-form>
-
-          <div class="actions">
-            <button class="btn danger" @click=${this._resetDefaults}>Reset to defaults</button>
-          </div>
         </details>
 
         <!-- Humidity entity ONLY (so we can place anchors directly below it) -->
@@ -1937,7 +1937,7 @@ class SimpleAirComfortCardEditor extends LitElement {
       case 'cap_degrees':
         return '±°C limit for the editor’s +/- buttons on non-edge anchors. Not applied to FROSTY.min or BOILING.max.';
       case 'temp_preset':
-        return 'Seed the 10 temperature anchors from Indoor or Outdoor defaults. Reset uses this preset. Missing/invalid → Indoor.';
+        return 'Seed the 10 temperature anchors from Indoor or Outdoor defaults. Reset uses the currently selected preset scale. Missing/invalid → Indoor.';
       case 'decimals':
         return 'How many decimal places to show for temperatures and humidity.';
       case 'rh_left_inner_pct':
