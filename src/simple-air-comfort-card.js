@@ -1477,11 +1477,11 @@ class SimpleAirComfortCardEditor extends LitElement {
           <summary>Temperature Anchors</summary>
 
           ${this._anchorRow('t_boiling_max', 'BOILING.max → Top of Card (100%)',
-            html`Changes how far (HOT.max) is from the edge of the card.<br>`${this._slimDerivedHelper('t_hot_max')}`, false)}
+            html`Changes how far (HOT.max) is from the edge of the card.<br>${this._slimDerivedHelper('t_hot_max')}`, false)}
           ${this._anchorRow('t_hot_max', 'HOT.max (Scales with BOILING.max)',
             html`Cap ±${capStr} from default. ${this._slimDerivedHelper('t_warm_max')}`, true)}
           ${this._anchorRow('t_warm_max', 'WARM.max → Outer Ring Top',
-            html`Cap ±${capStr} from default. $${this._slimDerivedHelper('t_perfect_max')}`, true)}
+            html`Cap ±${capStr} from default. ${this._slimDerivedHelper('t_perfect_max')}`, true)}
           ${this._anchorRow('t_perfect_max', 'PERFECT.max → Inner Comfort Circle Top',
             html`High Temperature Alert :<br>Cap ±${capStr} from default.`, true)}
 
