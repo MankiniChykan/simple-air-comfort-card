@@ -1479,11 +1479,11 @@ class SimpleAirComfortCardEditor extends LitElement {
           ${this._anchorRow('t_boiling_max', 'BOILING.max → Top of Card (100%)',
             'Changes how far (HOT.max) is from the edge of the card.', false)}
           ${this._anchorRow('t_hot_max', 'HOT.max (Scales with BOILING.max)',
-            `Limit ±${capStr} from default.`, true)}
+            html`Limit ±${capStr} from default. ${this._slimDerivedHelper('t_hot_max')}`, true)}
           ${this._anchorRow('t_warm_max', 'WARM.max → Outer Ring Top',
-            `Limit ±${capStr} from default.`, true)}
+            html`Limit ±${capStr} from default. ${this._slimDerivedHelper('t_warm_max')}`, true)}
           ${this._anchorRow('t_perfect_max', 'PERFECT.max → Inner Comfort Circle Top',
-            `High Temperature Alert : Limit ±${capStr} from default.`, true)}
+            html`High Temperature Alert : Limit ±${capStr} from default. ${this._slimDerivedHelper('t_perfect_max')}`, true)}
 
           ${(() => {
             const center = this._centerTemp();
@@ -1503,15 +1503,15 @@ class SimpleAirComfortCardEditor extends LitElement {
           })()}
 
           ${this._anchorRow('t_perfect_min', 'PERFECT.min → Inner Comfort Circle Bottom',
-            `Low Temperature Alert Limit : ±${capStr} from default.`, true)}
+            html`Low Temperature Alert Limit : ±${capStr} from default. ${this._slimDerivedHelper('t_perfect_min')}`, true)}
           ${this._anchorRow('t_mild_min', 'MILD.min → Outer Ring Bottom',
-            `Limit ±${capStr} from default.`, true)}
+            html`Limit ±${capStr} from default. ${this._slimDerivedHelper('t_mild_min')}`, true)}
           ${this._anchorRow('t_cool_min', 'COOL.min (Scales with FROSTY.min)',
-            `Limit ±${capStr} from default.`, true)}
+            html`Limit ±${capStr} from default. ${this._slimDerivedHelper('t_cool_min')}`, true)}
           ${this._anchorRow('t_chilly_min', 'CHILLY.min (Scales with FROSTY.min)',
-            `Limit ±${capStr} from default.`, true)}
+            html`Limit ±${capStr} from default. ${this._slimDerivedHelper('t_chilly_min')}`, true)}
           ${this._anchorRow('t_cold_min', 'COLD.min (Scales with FROSTY.min)',
-            `Limit ±${capStr} from default.`, true)}
+            html`Limit ±${capStr} from default. ${this._slimDerivedHelper('t_cold_min')}`, true)}
           ${this._anchorRow('t_frosty_min', 'FROSTY.min → Bottom of Card (0%)',
             'Changes how far (COOL.min → COLD.min) is from the edge of the card.', false)}
 
@@ -1680,6 +1680,23 @@ class SimpleAirComfortCardEditor extends LitElement {
       case 't_frosty_min':  return 'frosty';
       default:              return null;
     }
+  }
+  // Show the derived neighbor on the row that DEFINES it, e.g.:
+  // MILD.min helper also shows "COOL.max = 13.9°C"
+  _fmtC(v){ return Number.isFinite(v) ? `${Number(v).toFixed(1)}°C` : '—'; }
+  _slimDerivedHelper(anchorName){
+    const C = this._config || {};
+    const pair = ({
+      t_hot_max:     ['BOILING.min', C.t_boiling_min],
+      t_warm_max:    ['HOT.min',     C.t_hot_min],
+      t_perfect_max: ['WARM.min',    C.t_warm_min],
+      t_perfect_min: ['MILD.max',    C.t_mild_max],
+      t_mild_min:    ['COOL.max',    C.t_cool_max],
+      t_cool_min:    ['CHILLY.max',  C.t_chilly_max],
+      t_chilly_min:  ['COLD.max',    C.t_cold_max],
+      t_cold_min:    ['FROSTY.max',  C.t_frosty_max],
+    })[anchorName];
+    return pair ? html`${pair[0]} = ${this._fmtC(pair[1])}` : nothing;
   }
   // Button row factory (name, title, helper, limited?)
   _anchorRow(name, title, helper, limited){
