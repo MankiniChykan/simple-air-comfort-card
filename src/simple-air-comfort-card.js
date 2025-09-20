@@ -1480,6 +1480,48 @@ class SimpleAirComfortCardEditor extends LitElement {
     this._config = this._applyTempsRowBiDirectional(this._config);
   }
 
+   
+  // --- Helper: reseed all 10 anchors from a preset and push live update ---
+  _reseedAnchorsFromPreset(nextPreset){
+    const temp_preset = _normalizePreset(nextPreset);
+    const BASE = TEMP_PRESETS[temp_preset];
+
+    // 1) replace the 10 anchors with the preset’s baseline
+    const out = { ...(this._config || {}) };
+    out.temp_preset   = temp_preset;
+    out.t_boiling_max = BASE.t_boiling_max;
+    out.t_hot_max     = BASE.t_hot_max;
+    out.t_warm_max    = BASE.t_warm_max;
+    out.t_perfect_max = BASE.t_perfect_max;
+    out.t_perfect_min = BASE.t_perfect_min;
+    out.t_mild_min    = BASE.t_mild_min;
+    out.t_cool_min    = BASE.t_cool_min;
+    out.t_chilly_min  = BASE.t_chilly_min;
+    out.t_cold_min    = BASE.t_cold_min;
+    out.t_frosty_min  = BASE.t_frosty_min;
+
+    // 2) refresh caps center (defaults) to the new preset
+    this._defaults = {
+      hot_max: BASE.t_hot_max,
+      warm_max: BASE.t_warm_max,
+      perf_max: BASE.t_perfect_max,
+      perf_min: BASE.t_perfect_min,
+      perfect_max: BASE.t_perfect_max,
+      perfect_min: BASE.t_perfect_min,
+      mild_min: BASE.t_mild_min,
+      cool_min: BASE.t_cool_min,
+      chilly_min: BASE.t_chilly_min,
+      cold_min: BASE.t_cold_min,
+    };
+
+    // 3) re-derive neighbors (no caps here) and push to HA
+    this._config = this._applyTempsRowBiDirectional(out, [
+      't_boiling_max','t_hot_max','t_warm_max','t_perfect_max','t_perfect_min',
+      't_mild_min','t_cool_min','t_chilly_min','t_cold_min','t_frosty_min'
+    ]);
+    fireEvent(this, 'config-changed', { config: this._persistKeys(this._config) });
+  }
+
 
   // Render button UI for anchors + small ha-form for entities/misc
   render(){
@@ -1978,6 +2020,19 @@ class SimpleAirComfortCardEditor extends LitElement {
       't_boiling_max','t_hot_max','t_warm_max','t_perfect_max','t_perfect_min',
       't_mild_min','t_cool_min','t_chilly_min','t_cold_min','t_frosty_min'
     ]);
+    // Refresh defaults so caps center on the preset we reset to
+    this._defaults = {
+      hot_max: PRE.t_hot_max,
+      warm_max: PRE.t_warm_max,
+      perf_max: PRE.t_perfect_max,
+      perf_min: PRE.t_perfect_min,
+      perfect_max: PRE.t_perfect_max,
+      perfect_min: PRE.t_perfect_min,
+      mild_min: PRE.t_mild_min,
+      cool_min: PRE.t_cool_min,
+      chilly_min: PRE.t_chilly_min,
+      cold_min: PRE.t_cold_min,
+    };
     this._config = derived;
     fireEvent(this, 'config-changed', { config: this._persistKeys(derived) });
   };
@@ -1998,16 +2053,14 @@ class SimpleAirComfortCardEditor extends LitElement {
     const delta = { ...(ev.detail?.value || {}) };
     if (!Object.keys(delta).length) return;
 
-    // If the temp preset changes, update baseline caps source; keep current tweaks intact.
-    if ('temp_preset' in delta){
+    // If the preset changed → reseed anchors LIVE (ignore +/- caps) and return
+    if ('temp_preset' in delta) {
       const next = _normalizePreset(delta.temp_preset);
-      const BASE = TEMP_PRESETS[next];
-      this._defaults = {
-        hot_max: BASE.t_hot_max, warm_max: BASE.t_warm_max,
-        perf_max: BASE.t_perfect_max, perf_min: BASE.t_perfect_min,
-        perfect_max: BASE.t_perfect_max, perfect_min: BASE.t_perfect_min,
-        mild_min: BASE.t_mild_min, cool_min: BASE.t_cool_min, chilly_min: BASE.t_chilly_min, cold_min: BASE.t_cold_min,
-      };
+      const prev = _normalizePreset(this._config?.temp_preset);
+      if (next !== prev) {
+        this._reseedAnchorsFromPreset(next);
+        return; // reseed already emitted config-changed
+      }
     }
 
     // If unit changes, convert the numeric field to the new unit for display
@@ -2071,7 +2124,9 @@ class SimpleAirComfortCardEditor extends LitElement {
     const step = 0.1;
 
     // Pull GUI fields (only the 10 exposed)
-    const BASE = TEMP_PRESETS[_normalizePreset(this._config?.temp_preset)];
+    // Use the incoming cfgIn.temp_preset first (important during reseed),
+    // then fall back to current this._config.temp_preset.
+    const BASE = TEMP_PRESETS[_normalizePreset(cfgIn?.temp_preset ?? this._config?.temp_preset)];
     const P = {
       boiling_max: r1(cfgIn.t_boiling_max ?? BASE.t_boiling_max),
       hot_max:     r1(cfgIn.t_hot_max     ?? BASE.t_hot_max),
