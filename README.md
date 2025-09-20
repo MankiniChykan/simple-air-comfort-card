@@ -11,33 +11,86 @@ Dot position = **Relative Humidity** (X) + **Temperature** (Y). The card derives
 
 ---
 
-## ✨ Features (implemented)
+## UI‑First Card & YAML Policy
+
+**This is a UI‑first card.** Use the built‑in editor to configure it. The editor is the *source of truth* and will **fix/normalize any YAML** you paste or previously saved:
+
+- Writes configuration in **grouped YAML** sections:
+  - `temperature_anchors`, `humidity_alert_anchors`, `card_options`
+- **Repairs** values: rounds to **0.1 °C**, enforces **contiguous 0.1 °C gaps** between bands, and clamps editor +/- to **±`cap_degrees`** on non‑edge anchors.
+- **Derives neighbors automatically** (`*_max`/`*_min`) so you only set the **10 anchors**.
+- **Converts units** for default wind speed based on your selected `wind_display_unit` (internally uses m/s).
+- **Handles legacy keys**: logs a console warning and ignores deprecated/alias keys (e.g., `t_perf_*` when `t_perfect_*` is present).
+- **Persists grouped YAML** even if you entered flat keys — you’ll see grouped structure after saving.
+
+You *can* hand‑edit YAML, but it’s optional. If you do, simply open the editor and click **Save** — it will normalize and persist the config in the supported shape.
+
+---
+
+## Table of Contents
+
+- [Features](#features)
+- [Installation](#installation)
+- [Quick Start](#quick-start)
+- [Configuration](#configuration)
+  - [Required Sensors](#required-sensors)
+  - [Grouped YAML Structure](#grouped-yaml-structure)
+  - [Temperature Presets & Anchors](#temperature-presets--anchors)
+  - [Humidity Alert Anchors (RH → X calibration)](#humidity-alert-anchors-rh--x-calibration)
+  - [Feels‑Like Modes](#feels-like-modes)
+  - [Units & Formatting](#units--formatting)
+  - [Advanced Options](#advanced-options)
+  - [Full Example](#full-example)
+- [Geometry & Scaling](#geometry--scaling)
+- [Temperature Bands (Contiguous)](#temperature-bands-contiguous)
+- [Edge Policy (Locked)](#edge-policy-locked)
+- [Dew Point & Background Tints](#dew-point--background-tints)
+- [Editor UI](#editor-ui)
+- [Migration Guide](#migration-guide)
+- [Accessibility](#accessibility)
+- [Styling Hooks (CSS Custom Properties)](#styling-hooks-css-custom-properties)
+- [Card Size Hints](#card-size-hints)
+- [How It’s Calculated (Formulas)](#how-its-calculated-formulas)
+- [Credits & License](#credits--license)
+
+---
+
+## Features
 
 - **Comfort Dot Dial**
   - **X = RH (%)** with calibrated inner-circle intersections (so your chosen RH targets line up with the “eye”).
   - **Y = Temperature** mapped across contiguous comfort bands **FROSTY→BOILING** using geometry-aware anchors.
   - Pulsing halo when conditions are **outside** comfort (too dry/humid or outside PERFECT temp band).
 
+- **Dial UI**
+  - Outer ring + inner “comfort eye”
+  - Axis labels **glow** when too hot/cold or too dry/humid
+  - Dot **pulses** when outside temp/RH comfort zone
+
 - **Color Cues**
   - **Background** tints by temperature comfort.
   - **Outer ring** tints by dew-point comfort.
   - **Inner circle** blends humidity and “too hot/cold” signals.
 
-- **Corner Stats**
-  - **TL:** Dew point  
-  - **TR:** Feels-like (label shows formula, e.g. *BoM AT*, *Wind Chill*, *Heat Index*, *Humidex*)  
-  - **BL:** Raw temperature + comfort word  
-  - **BR:** Humidity + comfort word
+- **Corner metrics**
+  - **Top‑Left**: Dew Point
+  - **Top‑Right**: Feels‑Like (BoM **Apparent Temperature** by default; Wind Chill / Heat Index / Humidex optional)
+  - **Bottom‑Left**: Raw temperature (your display unit) + comfort word
+  - **Bottom‑Right**: Relative Humidity (%) + comfort word
 
 - **Physics & Units**
   - **Dew point:** Arden Buck saturation vapour pressure (numeric inversion).
   - **Feels-like modes:** Australian **BoM Apparent Temperature** (default), **Wind Chill**, **Heat Index**, **Humidex**.
   - **Unit handling:** Temp accepts °C/°F; wind accepts m/s, km/h, mph, kn (internally normalized).
 
-- **Responsive & Accessible**
-  - 1:1 square stage (CSS `aspect-ratio`).
-  - Typography scales with `--sac-scale` (via a `ResizeObserver`).
-  - ARIA labels on dial and axes (“Warm”, “Cold”, “Dry”, “Humid”) and glow effects when out of bounds.
+- **Smart scaling**
+  - Square stage via CSS `aspect-ratio`
+  - Typography scales with card width using `--sac-scale` (baseline 300 px)
+
+- **Sensible defaults**
+  - **Presets**: `indoor` (default) or `outdoor`
+  - **Contiguous temperature bands** with 0.1 °C gaps auto‑derived from **10 anchors**
+  - RH → X mapping that hits your inner circle exactly at the two alert anchors
 
 - **Editor (hosted in HA)**
   - Entity pickers (temperature, humidity, optional wind).
@@ -47,165 +100,392 @@ Dot position = **Relative Humidity** (X) + **Temperature** (Y). The card derives
   - **10 temperature anchors** with ±4 °C caps on non-edge anchors; neighbors auto-derived with **0.1 °C gaps**.
   - Reset-to-defaults; auto-pick first sensible entities if blank.
 
-- **Host-only Card**
-  - No `<ha-card>` wrapper. The card provides its own background via `--sac-temp-bg`.
+---
 
-## 📦 Installation
+## Installation
 
 ### HACS (recommended)
-1. Open **HACS → Frontend → Custom repositories**.
-2. Add: `https://github.com/MankiniChykan/simple-air-comfort-card`
-3. Type: **Dashboard**
-4. Install → Restart HA.
+
+1. Add this repository to HACS (Custom repositories) or install from HACS if available.
+2. Restart Home Assistant or reload Lovelace resources.
 
 ### Manual
-1. Download `dist/simple-air-comfort-card.js` from the release.
-2. Copy to `/config/www/`
-3. Add resource:
-```yaml
-resources:
-  - url: /local/simple-air-comfort-card.js?v=1
-    type: module
-```
 
-### 4. Configuration
-
-## 🧩 Lovelace Configuration
-
-**Minimum:**
-```yaml
-type: custom:simple-air-comfort-card
-name: Living Room
-temperature: sensor.living_temperature
-humidity: sensor.living_humidity
-```
-**Recommended:**
-```yaml
-type: custom:simple-air-comfort-card
-name: Living Room
-
-temperature: sensor.living_temperature
-temp_display_unit: auto            # 'auto' | 'c' | 'f'
-
-temperature_anchors:               # 10 exposed anchors (°C)
-  - t_frosty_min: 0.0
-  - t_cold_min: 3.0
-  - t_chilly_min: 5.0
-  - t_cool_min: 9.0
-  - t_mild_min: 14.0
-  - t_perfect_min: 19.0
-  - t_perfect_max: 23.9
-  - t_warm_max: 27.9
-  - t_hot_max: 34.9
-  - t_boiling_max: 50.0
-
-humidity: sensor.living_humidity
-humidity_alert_anchors:
-  - rh_left_inner_pct: 40          # inner circle left (%)
-  - rh_right_inner_pct: 60         # inner circle right (%)
-
-feels_like: bom                    # 'bom' | 'wind_chill' | 'heat_index' | 'humidex'
-
-windspeed: sensor.living_wind      # optional
-wind_display_unit: ms              # 'ms' | 'kmh' | 'mph' | 'kn'
-default_wind_speed: 0.1            # shown in the chosen display unit; converted to m/s internally
-
-card_options:
-  - decimals: 1
-  - y_offset_pct: 0                # fine vertical tweak for the dot
-```
-The card accepts flat keys too; the editor writes grouped sections (temperature_anchors, humidity_alert_anchors, card_options). Either shape is supported.
-
-## ⚙️ Configuration Options
-
-### Required
-- **temperature** — sensor entity (reports °C or °F)  
-- **humidity** — sensor entity (reports %)
-
-### Optional
-- `name` — small title at the top
-- `feels_like` — bom (default) | wind_chill | heat_index | humidex
-- `decimals` — integer 0–3 (default: 1)
-- `temp_display_unit` — auto (follow sensor), or override with c/f
-- `rh_left_inner_pct`/`rh_right_inner_pct` — map inner circle intersections (%, default 40/60)
-- `y_offset_pct` — fine vertical offset for the dot (%, default 0)
-
-**Wind:**
-- `windspeed` — wind speed sensor (optional)
-- `wind_display_unit` — ms | kmh | mph | kn (used for the editor display of default_wind_speed)
-- `default_wind_speed` — fallback when no wind entity; shown in the chosen display unit, converted to m/s internally
-
-### Advanced (rarely needed)
-- `ring_pct` — dial box size as % of card (default 45)
-- `inner_pct` — inner circle size as % of dial (default 46.5)
+1. Copy `simple-air-comfort-card.js` to:
+   ```text
+   config/www/simple-air-comfort-card.js
+   ```
+2. Add a Lovelace resource (Settings → Dashboards → ⋯ → **Resources**):
+   - **URL**: `/local/simple-air-comfort-card.js`
+   - **Type**: `Module`
 
 ---
 
-### 5. GUI Editor
+## Quick Start
 
-## 🛠️ GUI Editor
+**USE THE EDITOR TO SETUP THE CARD IT WILL WRITE THE YAML FOR YOU**
 
-- Entity pickers for temperature/humidity/wind (auto-picks sensible defaults once).
-- Choose feels-like formula; set display units for temp and default wind.
-- Inputs for decimals, RH calibration, vertical offset.
-- **Temperature anchors panel** (10 anchors). 
-  - Non-edge anchors are limited to ±4 °C from defaults; neighbors auto-derive with 0.1 °C gaps (no overlaps).
-  - Calculated PERFECT midpoint is shown read-only.
-  - Reset to defaults button.
-  - Colored value pills match each band for quick context.
+Minimal config (temperature + humidity):
 
-## 📊 Comfort Bands (defaults)
+```yaml
+type: custom:simple-air-comfort-card
+name: Upstairs
+temperature: sensor.upstairs_temperature
+humidity: sensor.upstairs_humidity
+```
 
-| Band     | Min (°C) | Max (°C) |
-|----------|----------|----------|
-| FROSTY   | -40.0    | 2.9      |
-| COLD     | 3.0      | 4.9      |
-| CHILLY   | 5.0      | 8.9      |
-| COOL     | 9.0      | 13.9     |
-| MILD     | 14.0     | 18.9     |
-| PERFECT  | 19.0     | 23.9     |
-| WARM     | 24.0     | 27.9     |
-| HOT      | 28.0     | 34.9     |
-| BOILING  | 35.0     | 60.0     |
+Add wind (sensor or fallback) to improve Feels‑Like:
 
+```yaml
+type: custom:simple-air-comfort-card
+name: Upstairs
+temperature: sensor.upstairs_temperature
+humidity: sensor.upstairs_humidity
+windspeed: sensor.lounge_wind            # optional
+default_wind_speed: 0.1                  # unit shown via wind_display_unit
+```
 
+> The editor can also auto‑pick sensible entities the first time you open it.
 
-**Humidity words**
-- DRY (< left threshold, default 40%)
-- COMFY (between left/right thresholds, default 40–60%)
-- HUMID (> right threshold, default 60%)
+---
 
-**Dew point words**
-- Very Dry, Dry, Pleasant, Comfortable, Sticky Humid, Muggy, Sweltering, Stifling
+## Configuration
 
-## 🧪 How It Works
+### Required Sensors
 
-**Buck vapour pressure (hPa)** — piecewise exponential.
-**Dew point** — numeric inversion (bisection) on Buck.
-**Feels-like (BoM)** — `AT = T + 0.33e − 0.70·WS − 4.0` (T in °C, `e` in hPa from RH, `WS` in m/s).
-- Alternative modes: Wind Chill, Heat Index, Humidex.
-**Unit handling**
-- **Temp:** accepts °C or °F (display can follow sensor or force °C/°F).
-- **Wind:** m/s, km/h, mph, kn accepted; all converted to m/s internally.
-**RH→X mapping** Humidity Alert Anchors
-- Linear across four segments so that `rh_left_inner_pct` and `rh_right_inner_pct` land exactly on the inner circle intersections while preserving 0 % at left edge and 100 % at right edge.
-**Temp→Y mapping**
-- Smooth on outer spans; linear inside the ring; locked endpoints at `t_frosty_min` and `t_boiling_max`.
+- `temperature`: `sensor.*` (°C/°F accepted; display unit configurable)
+- `humidity`: `sensor.*` (% 0–100)
+- `windspeed` (optional): `sensor.*` in m/s, km/h, mph, or kn (internally converted to m/s)
 
-## 🎨 Styling Hooks
+### Grouped YAML Structure
 
-CSS variables:
+The editor and card use **grouped YAML** for clarity:
 
-- `--sac-scale` → typography scaling
-- `--sac-temp-bg` → background gradient
-- `--sac-dewpoint-ring` → outer ring gradient
-- `--sac-inner-gradient` → inner circle gradient
+- `temperature_anchors`: the **10** temperature anchor handles (plus `temp_preset` & `cap_degrees`)
+- `humidity_alert_anchors`: the two RH alert points that also calibrate the inner circle intersections
+- `card_options`: miscellaneous UI options
 
-Palette (overridable):
-- `--sac-col-hot`
-- `--sac-col-cold`
-- `--sac-col-humid-alert`
-- `--sac-col-inband`
+> You can still write flat keys — `setConfig()` flattens grouped input — but the editor **persists** grouped YAML on save.
+
+### Temperature Presets & Anchors
+
+Two presets seed the 10 anchors:
+
+- `indoor` (default)
+- `outdoor`
+
+Anchors you set:
+
+- `t_frosty_min`, `t_cold_min`, `t_chilly_min`, `t_cool_min`, `t_mild_min`,
+- `t_perfect_min`, `t_perfect_max`, `t_warm_max`, `t_hot_max`, `t_boiling_max`
+
+Neighbors (`*_max` / `*_min`) are **derived automatically** with **0.1 °C** gaps — no overlaps.
+
+Configure via editor or YAML:
+
+```yaml
+temperature_anchors:
+  - t_boiling_max: 42.0
+  - t_hot_max: 31.0
+  - t_warm_max: 26.0
+  - t_perfect_max: 23.5
+  - t_perfect_min: 20.5
+  - t_mild_min: 18.0
+  - t_cool_min: 16.0
+  - t_chilly_min: 12.0
+  - t_cold_min: 8.0
+  - t_frosty_min: 0.0
+  - cap_degrees: 6.0         # editor +/- safety cap for non-edge anchors
+  - temp_preset: indoor      # or 'outdoor' Will change temperature anchors.
+```
+
+**Editor caps (`cap_degrees`)**  
+The editor’s +/- buttons are clamped to ±`cap_degrees` from the preset’s default for **non‑edge** anchors. This is a **UI guardrail** — not applied to the two edges (`t_frosty_min`, `t_boiling_max`).
+
+### Humidity Alert Anchors (RH → X calibration)
+
+These do double duty:
+
+1. Define “**comfy**” RH (the inner‑eye band)  
+2. Calibrate RH → X so the dot crosses the inner circle exactly at those RH values
+
+```yaml
+humidity_alert_anchors:
+  - rh_left_inner_pct: 40
+  - rh_right_inner_pct: 60
+```
+
+### Feels‑Like Modes
+
+Choose with `feels_like`:
+
+- `bom` (default): **Apparent Temperature** — T + RH (as vapour pressure) + wind
+- `wind_chill`: T + wind (cold conditions)
+- `heat_index`: T + RH (hot conditions; US NWS regression)
+- `humidex`: T + RH (hot conditions; Environment Canada)
+
+```yaml
+feels_like: bom  # bom | wind_chill | heat_index | humidex
+```
+
+### Units & Formatting
+
+- `temp_display_unit`: `auto` (use sensor unit), or force `c` / `f`
+- `wind_display_unit`: one of `ms`, `kmh`, `mph`, `kn` (used for **display** of `default_wind_speed`)
+- `default_wind_speed`: numeric fallback (internally converted to m/s)
+- `decimals`: number of fractional digits for all readouts
+
+```yaml
+temp_display_unit: auto  # auto | c | f
+wind_display_unit: ms    # ms | kmh | mph | kn
+default_wind_speed: 0.1  # shown in the chosen wind_display_unit
+
+card_options:
+  - decimals: 1
+```
+
+```
+
+### Full Example
+
+```yaml
+type: custom:simple-air-comfort-card
+name: Upstairs
+
+# Required
+temperature: sensor.upstairs_temperature
+humidity: sensor.upstairs_humidity
+
+# Optional wind + feels-like
+feels_like: bom
+windspeed: sensor.upstairs_air_movement
+wind_display_unit: ms
+default_wind_speed: 0.1
+
+# Display + fine‑tune
+temp_display_unit: auto
+card_options:
+  - decimals: 1
+  - y_offset_pct: 0
+
+# Geometry (optional)
+ring_pct: 45
+inner_pct: 46.5
+
+# Temperature anchors (10 handles) + UI cap + preset
+temperature_anchors:
+  - t_boiling_max: 42.0
+  - t_hot_max: 31.0
+  - t_warm_max: 26.0
+  - t_perfect_max: 23.5
+  - t_perfect_min: 20.5
+  - t_mild_min: 18.0
+  - t_cool_min: 16.0
+  - t_chilly_min: 12.0
+  - t_cold_min: 8.0
+  - t_frosty_min: 0.0
+  - cap_degrees: 6.0
+  - temp_preset: indoor
+
+# RH alert anchors (also calibrate X across inner circle)
+humidity_alert_anchors:
+  - rh_left_inner_pct: 40
+  - rh_right_inner_pct: 60
+```
+
+---
+
+## Geometry & Scaling
+
+- Stage is always **1:1** (`aspect-ratio`)
+- Text scales with `--sac-scale`, computed from card width (baseline 300 px)
+- **Dial sizing**
+  - `ring_pct`: dial box size (default **45%**)
+  - `inner_pct`: inner circle size (default **46.5%** of dial)
+- **RH → X mapping** (piecewise):
+  - 0% RH → left edge
+  - `rh_left_inner_pct` → inner‑circle left intersection
+  - `rh_right_inner_pct` → inner‑circle right intersection
+  - 100% RH → right edge
+
+---
+
+## Temperature Bands (Contiguous)
+
+The Y mapping uses a **contiguous** ladder derived from **10 anchors**; all neighbors are automatically spaced with **0.1 °C** gaps (no overlaps).
+
+Locked visual landmarks used by the Y mapping:
+
+- `FROSTY.min` (bottom)
+- `MILD.min` (outer‑bottom)
+- `PERFECT.min` (inner‑bottom)
+- `PERFECT.max` (inner‑top)
+- `WARM.max` (outer‑top)
+- `BOILING.max` (top)
+
+`HOT.max` is placed **proportionally** between `WARM.max` and `BOILING.max` to smooth the top segment.
+
+---
+
+## Edge Policy (Locked)
+
+- **Bottom of card (0%)** = `t_frosty_min`
+- **Top of card (100%)**  = `t_boiling_max`
+
+Do **not** substitute `frosty_max` / `boiling_min` for vertical extremes. The Y map’s endpoints are the two keys above.
+
+---
+
+## Dew Point & Background Tints
+
+- **Outer ring** tints by dew point category.
+- **Inner eye** tints by temperature (too cold/hot) and humidity (outside inner anchors).
+
+Dew point labels:
+
+| Dew Point (°C) | Label            |
+| --- | --- |
+| `< 5`          | Very Dry         |
+| `≤ 10`         | Dry              |
+| `≤ 12.79`      | Pleasant         |
+| `≤ 15.49`      | Comfortable      |
+| `≤ 18.39`      | Sticky Humid     |
+| `≤ 21.19`      | Muggy            |
+| `≤ 23.9`       | Sweltering       |
+| `> 23.9`       | Stifling         |
+
+---
+
+## Editor UI
+
+- Entities: name, temperature, humidity, optional wind
+- Temperature Display Unit: `auto` / `°C` / `°F`
+- **Temperature Anchors**: 10 handles with live derived neighbors
+  - **Calculated PERFECT midpoint** shown read‑only
+  - **Anchor Cap (±°C)** guard for the +/- buttons on non‑edge anchors
+  - **Temperature Preset**: reseeds the 10 anchors (`indoor` / `outdoor`)
+  - **Reset to defaults**: resets all 10 anchors to the **current preset**
+- Humidity Alert Anchors: `rh_left_inner_pct`, `rh_right_inner_pct`
+- Feels‑Like Formula: `bom` / `wind_chill` / `heat_index` / `humidex`
+- Wind Display Unit + Default Wind
+- Card Options: `decimals`, `y_offset_pct`
+
+> The editor **persists** using the grouped YAML layout shown above and will normalize any flat/legacy YAML.
+
+---
+
+## Migration Guide
+
+**USE THE EDITOR TO SETUP THE CARD IT WILL WRITE THE YAML FOR YOU**
+
+**What changed** (compared to older versions):
+
+1. **UI‑First + Grouped YAML**
+   - New sections: `temperature_anchors`, `humidity_alert_anchors`, `card_options`
+   - The card/editor read both grouped and flat, but the editor **writes grouped** and **normalizes** on save.
+
+2. **10‑anchor model** with **auto‑derived neighbors**
+   - Keep only these **10 keys** for temperature:  
+     `t_frosty_min, t_cold_min, t_chilly_min, t_cool_min, t_mild_min, t_perfect_min, t_perfect_max, t_warm_max, t_hot_max, t_boiling_max`
+   - Remove legacy/derived keys like `t_frosty_max`, `t_warm_min`, `t_boiling_min` (the card derives them).
+   - If both `t_perfect_*` and `t_perf_*` are present, `t_perfect_*` **wins**.
+
+3. **Presets** (`temp_preset`) replace implicit defaults.
+
+4. **Editor Caps** (`cap_degrees`) replace fixed per‑field caps.
+
+**Before (flat)**
+
+```yaml
+type: custom:simple-air-comfort-card
+t_perfect_min: 20.5
+t_perfect_max: 23.5
+t_warm_max: 26
+t_hot_max: 31
+t_boiling_max: 42
+# ...etc...
+```
+
+**After (grouped)**
+
+```yaml
+type: custom:simple-air-comfort-card
+temperature_anchors:
+  - t_boiling_max: 42.0
+  - t_hot_max: 31.0
+  - t_warm_max: 26.0
+  - t_perfect_max: 23.5
+  - t_perfect_min: 20.5
+  - t_mild_min: 18.0
+  - t_cool_min: 16.0
+  - t_chilly_min: 12.0
+  - t_cold_min: 8.0
+  - t_frosty_min: 0.0
+  - cap_degrees: 6.0
+  - temp_preset: indoor
+```
+
+The card logs a **console warning** if legacy keys are detected so you can prune them.
+
+---
+
+## Accessibility
+
+- The dial, axes, and key elements have ARIA labels.
+- Axis labels glow on breach for additional non‑numeric cues.
+
+---
+
+## Styling Hooks (CSS Custom Properties)
+
+Theme the card via CSS variables:
+
+```css
+/* Host */
+simple-air-comfort-card {
+  --sac-scale: 1;                  /* typography scale (auto set by card)           */
+  --sac-temp-bg: #2a2a2a;          /* card background (auto tints by temperature)   */
+  --sac-ring-border-base: 2.5px;   /* base thickness of outer ring border           */
+
+  /* Palette used by inner gradient and axis glows */
+  --sac-col-hot: rgba(255, 69, 0, 0.95);
+  --sac-col-cold: rgba(0, 102, 255, 0.95);
+  --sac-col-humid-alert: hotpink;
+  --sac-col-inband: dimgray;
+
+  /* Optional: center label colour used in the editor preview pill */
+  --sac-center-green: #8ef0ae;
+}
+```
+
+---
+
+## Card Size Hints
+
+The card exposes layout hints that Home Assistant may use:
+
+- `getCardSize()` → ~3 masonry rows
+- `getGridOptions()` → default 6 columns wide (12‑column grid), rows `auto`
+
+---
+
+## How It’s Calculated (Formulas)
+
+- **Saturation vapour pressure** (Arden **Buck**)
+- **Dew point**: bisection search inverts Buck to solve `es(T) = e`
+- **BoM Apparent Temperature**: `AT = T + 0.33·e − 0.70·WS − 4.0`
+  - `T` in °C, `e` in hPa, `WS` in m/s
+- **Wind Chill** (NWS/Environment Canada): °C with wind in km/h
+- **Heat Index** (Rothfusz) in °F then converted back to °C
+- **Humidex**: `T + 0.5555 · (e − 10)` with `e` in hPa
+
+All internal physics normalize units:
+
+- Temperatures in °C
+- Wind speed in m/s
+- Vapour pressure in hPa
+
+---
 
 ## 🧱 Layout Hints
 
@@ -220,6 +500,7 @@ Palette (overridable):
 
 ## 🐞 Troubleshooting
 
+- **MOST PROBLEMS** Add the card from the UI and adjust all settings in the UI. Hit Save and the UI will produce the YAML.
 - **Blank card:** Ensure `temperature` & `humidity` are set.
 - **Weird “feels like”:** Check wind sensor unit or set `default_wind_speed`.
 - **Dot vertical feels shifted:** Adjust `y_offset_pct`. But just setting your temperature map correctly will fix.
