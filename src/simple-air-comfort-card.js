@@ -92,6 +92,41 @@ const LEGACY_TEMP_KEYS = [
 let __sac_warned_legacy__ = false;
 let __sac_warned_alias_conflict__ = false;
 
+// ------------------------------------------------------------
+// Temperature Presets (baseline defaults for the 10 anchors)
+// - These replace previous implicit "defaults". Editor caps and
+//   the Reset button both use the selected preset as the base.
+// - If temp_preset is missing/invalid → 'indoor'.
+// ------------------------------------------------------------
+const TEMP_PRESETS = {
+  indoor: {
+    t_frosty_min:  0.0,
+    t_cold_min:    3.0,
+    t_chilly_min:  5.0,
+    t_cool_min:    9.0,
+    t_mild_min:   14.0,
+    t_perfect_min:19.0,
+    t_perfect_max:23.9,
+    t_warm_max:   27.9,
+    t_hot_max:    34.9,
+    t_boiling_max:50.0,
+  },
+  outdoor: {
+    // Outdoor band is shifted & widened a touch
+    t_frosty_min:  -5.0,
+    t_cold_min:     0.0,
+    t_chilly_min:   3.0,
+    t_cool_min:     8.0,
+    t_mild_min:    12.0,
+    t_perfect_min: 17.0,
+    t_perfect_max: 26.0,
+    t_warm_max:    30.0,
+    t_hot_max:     36.0,
+    t_boiling_max: 45.0,
+  },
+};
+const _normalizePreset = (v) => (String(v||'').toLowerCase()==='outdoor' ? 'outdoor' : 'indoor');
+
 
 class SimpleAirComfortCard extends LitElement {
   /* -------------------------------
@@ -321,6 +356,7 @@ class SimpleAirComfortCard extends LitElement {
     const hAnch = asKV(config?.humidity_alert_anchors);
     const card  = asKV(config?.card_options);
     config = { ...config, ...tAnch, ...hAnch, ...card };
+    const temp_preset = _normalizePreset(config?.temp_preset);
     // -----------------------------------------------------------------------
 
     // --- Normalize display-unit prefs (YAML-safe) ---
@@ -386,11 +422,13 @@ class SimpleAirComfortCard extends LitElement {
     const y_offset_pct = Number.isFinite(num(config.y_offset_pct)) ? num(config.y_offset_pct) : 0; // fine vertical tweak
 
     // Expand to a full contiguous temperature ladder from the 10 anchors
-    const ten = this.#pickTenAnchors(config);
+    const ten = this.#pickTenAnchors(config, temp_preset);
     const full = this.#expandFromTen(ten);
 
     // Final sanitized config object we’ll use at runtime
     this._config = {
+      // remember preset so editor/runtime can reference it
+      temp_preset,
       name: config.name ?? 'Air Comfort',
       temperature: config.temperature,
       humidity: config.humidity,
@@ -897,21 +935,23 @@ class SimpleAirComfortCard extends LitElement {
 
   // ---- Ten-anchor helpers (card side) ----
   #r1_(v){ return Math.round(v*10)/10; }
-  #pickTenAnchors(cfg){
+  #pickTenAnchors(cfg, presetName){
     // Prefer t_perfect_* if present, else allow legacy t_perf_* in.
     const perfMin = ('t_perfect_min' in cfg) ? cfg.t_perfect_min : cfg.t_perf_min;
     const perfMax = ('t_perfect_max' in cfg) ? cfg.t_perfect_max : cfg.t_perf_max;
+    const preset = TEMP_PRESETS[_normalizePreset(presetName)];
     return {
-      t_frosty_min:  Number(cfg.t_frosty_min  ?? 0.0),
-      t_cold_min:    Number(cfg.t_cold_min    ?? 3.0),
-      t_chilly_min:  Number(cfg.t_chilly_min  ?? 5.0),
-      t_cool_min:    Number(cfg.t_cool_min    ?? 9.0),
-      t_mild_min:    Number(cfg.t_mild_min    ??14.0),
-      t_perfect_min: Number(perfMin ?? 19.0),
-      t_perfect_max: Number(perfMax ?? 23.9),
-      t_warm_max:    Number(cfg.t_warm_max    ??27.9),
-      t_hot_max:     Number(cfg.t_hot_max     ??34.9),
-      t_boiling_max: Number(cfg.t_boiling_max ??50.0),
+      // Seed from preset, then override with any explicit YAML tweaks
+      t_frosty_min:  Number(cfg.t_frosty_min  ?? preset.t_frosty_min),
+      t_cold_min:    Number(cfg.t_cold_min    ?? preset.t_cold_min),
+      t_chilly_min:  Number(cfg.t_chilly_min  ?? preset.t_chilly_min),
+      t_cool_min:    Number(cfg.t_cool_min    ?? preset.t_cool_min),
+      t_mild_min:    Number(cfg.t_mild_min    ?? preset.t_mild_min),
+      t_perfect_min: Number(perfMin ?? preset.t_perfect_min),
+      t_perfect_max: Number(perfMax ?? preset.t_perfect_max),
+      t_warm_max:    Number(cfg.t_warm_max    ?? preset.t_warm_max),
+      t_hot_max:     Number(cfg.t_hot_max     ?? preset.t_hot_max),
+      t_boiling_max: Number(cfg.t_boiling_max ?? preset.t_boiling_max),
     };
   }
   #expandFromTen(T){
@@ -1203,6 +1243,7 @@ class SimpleAirComfortCard extends LitElement {
       temperature,
       temp_display_unit: 'auto',
       temperature_anchors: [
+        { temp_preset: 'indoor' },
         { t_frosty_min: 0.0 },
         { t_cold_min: 3.0 },
         { t_chilly_min: 5.0 },
@@ -1247,6 +1288,7 @@ class SimpleAirComfortCardEditor extends LitElement {
   static styles = css`
     .wrap{ padding:12px 12px 16px; }
     .row{
+      /* title | value | buttons */
       display:grid;
       grid-template-columns:1fr auto auto; /* title | value | button group */
       align-items:center;
@@ -1379,6 +1421,8 @@ class SimpleAirComfortCardEditor extends LitElement {
     const hAnch = asKV(config?.humidity_alert_anchors);
     const card  = asKV(config?.card_options);
     const normalized = { ...(config ?? {}), ...tAnch, ...hAnch, ...card };
+    const temp_preset = _normalizePreset(normalized?.temp_preset);
+    const BASE = TEMP_PRESETS[temp_preset];
     // -----------------------------------------------------------------------
 
     this._config = {
@@ -1389,17 +1433,19 @@ class SimpleAirComfortCardEditor extends LitElement {
       feels_like:'bom',
       decimals:1, default_wind_speed:0.1,
       cap_degrees:6.0,
+      temp_preset,
 
-      // Comfort bands — mins & maxes (°C), 0.1 steps
-      t_frosty_min:   0.0, t_frosty_max:  2.9,
-      t_cold_min:     3.0, t_cold_max:    4.9,
-      t_chilly_min:   5.0, t_chilly_max:  8.9,
-      t_cool_min:     9.0, t_cool_max:   13.9,
-      t_mild_min:    14.0, t_mild_max:   18.9,
-      t_perfect_min: 19.0, t_perfect_max:23.9,
-      t_warm_min:    24.0, t_warm_max:   27.9,
-      t_hot_min:     28.0, t_hot_max:    34.9,
-      t_boiling_min: 35.0, t_boiling_max:50.0,
+      // Comfort anchors (seed from preset; neighbors are derived below)
+      t_frosty_min:  BASE.t_frosty_min,
+      t_cold_min:    BASE.t_cold_min,
+      t_chilly_min:  BASE.t_chilly_min,
+      t_cool_min:    BASE.t_cool_min,
+      t_mild_min:    BASE.t_mild_min,
+      t_perfect_min: BASE.t_perfect_min,
+      t_perfect_max: BASE.t_perfect_max,
+      t_warm_max:    BASE.t_warm_max,
+      t_hot_max:     BASE.t_hot_max,
+      t_boiling_max: BASE.t_boiling_max,
 
       // Optional geometry calibration
       y_offset_pct: 0,
@@ -1412,19 +1458,21 @@ class SimpleAirComfortCardEditor extends LitElement {
     };
 
     // Capture defaults for default ±6°C movement cap_degrees (non-edge anchors)
+    // Replace defaults with the chosen preset’s baseline
     this._defaults = {
-      hot_max: 34.9,
-      warm_max: 27.9,
-      // keep both alias shapes so lookups work no matter how we normalize
-      perf_max: 23.9,
-      perf_min: 19.0,
-      perfect_max: 23.9,
-      perfect_min: 19.0,
-      mild_min: 14.0,
-      cool_min: 9.0,
-      chilly_min: 5.0,
-      cold_min: 3.0,
+      hot_max: BASE.t_hot_max,
+      warm_max: BASE.t_warm_max,
+      perf_max: BASE.t_perfect_max,
+      perf_min: BASE.t_perfect_min,
+      perfect_max: BASE.t_perfect_max,
+      perfect_min: BASE.t_perfect_min,
+      mild_min: BASE.t_mild_min,
+      cool_min: BASE.t_cool_min,
+      chilly_min: BASE.t_chilly_min,
+      cold_min: BASE.t_cold_min,
     };
+    // Derive neighbors for helpers (min/max with 0.1 °C gaps)
+    this._config = this._applyTempsRowBiDirectional(this._config);
   }
 
 
@@ -1524,6 +1572,23 @@ class SimpleAirComfortCardEditor extends LitElement {
               { name:'cap_degrees',
                 selector:{ number:{ min:0, max:20, step:0.5, mode:'box', unit_of_measurement:'°C' } }
               },
+            ]}
+            .computeLabel=${this._label}
+            .computeHelper=${this._helper}
+            @value-changed=${this._onMiscChange}>
+          </ha-form>
+
+          <!-- Comfort Preset (just above Reset) -->
+          <div class="title">Temperature Preset</div>
+          <ha-form
+            .hass=${this.hass}
+            .data=${this._config}
+            .schema=${[
+              { name:'temp_preset',
+                selector:{ select:{ mode:'dropdown', options:[
+                  { value:'indoor',  label:'Indoor (default)' },
+                  { value:'outdoor', label:'Outdoor' },
+                ]}} },
             ]}
             .computeLabel=${this._label}
             .computeHelper=${this._helper}
@@ -1640,6 +1705,7 @@ class SimpleAirComfortCardEditor extends LitElement {
     const base = ({
       name:'Name', temperature:'Temperature entity', humidity:'Humidity entity', windspeed:'Wind speed entity (optional)',
       feels_like:'Feels-like formula',
+      temp_preset:'Temperature preset',
       // show label with the currently selected wind unit
       default_wind_speed:`Default wind speed (${windUnit})`,
       decimals:'Decimals',
@@ -1821,6 +1887,10 @@ class SimpleAirComfortCardEditor extends LitElement {
         return 'Indoor fallback for Feels Like Temperature when no wind sensor is set. Typical indoors: 0.0–0.2 in the chosen unit.';
       case 'feels_like':
         return 'Choose the formula for the top-right “Feels like” value. BoM uses T+RH+Wind; Wind Chill uses T+Wind (cold); Heat Index/Humidex use T+RH (hot).';
+      case 'cap_degrees':
+        return '±°C limit for the editor’s +/- buttons on non-edge anchors. Not applied to FROSTY.min or BOILING.max.';
+      case 'temp_preset':
+        return 'Seed the 10 temperature anchors from Indoor or Outdoor defaults. Reset uses this preset. Missing/invalid → Indoor.';
       case 'decimals':
         return 'How many decimal places to show for temperatures and humidity.';
       case 'rh_left_inner_pct':
@@ -1829,8 +1899,6 @@ class SimpleAirComfortCardEditor extends LitElement {
         return 'Maps RH to the inner-comfort-circle RIGHT intersection horizontally';
       case 'y_offset_pct':
         return 'Fine-tune the dot’s vertical position in % of card height (positive moves up). Temperature Anchors are what positions the dot, this setting is only fine tuning';
-      case 'cap_degrees':
-        return '±°C limit for the editor’s +/- buttons on non-edge anchors. Not applied to FROSTY.min or BOILING.max.';
 
     }
 
@@ -1889,17 +1957,18 @@ class SimpleAirComfortCardEditor extends LitElement {
   // Reset visible anchors to defaults, re-derive neighbors, emit
   _resetDefaults = () => {
     const out = { ...(this._config || {}) };
-    // Restore the 10 exposed handles to their schema defaults
-    out.t_boiling_max = 50.0;
-    out.t_hot_max     = 34.9;
-    out.t_warm_max    = 27.9;
-    out.t_perfect_max = 23.9;
-    out.t_perfect_min = 19.0;
-    out.t_mild_min    = 14.0;
-    out.t_cool_min    =  9.0;
-    out.t_chilly_min  =  5.0;
-    out.t_cold_min    =  3.0;
-    out.t_frosty_min  =  0.0;
+    // Restore the 10 exposed handles to the *selected preset* defaults
+    const PRE = TEMP_PRESETS[_normalizePreset(this._config?.temp_preset)];
+    out.t_boiling_max = PRE.t_boiling_max;
+    out.t_hot_max     = PRE.t_hot_max;
+    out.t_warm_max    = PRE.t_warm_max;
+    out.t_perfect_max = PRE.t_perfect_max;
+    out.t_perfect_min = PRE.t_perfect_min;
+    out.t_mild_min    = PRE.t_mild_min;
+    out.t_cool_min    = PRE.t_cool_min;
+    out.t_chilly_min  = PRE.t_chilly_min;
+    out.t_cold_min    = PRE.t_cold_min;
+    out.t_frosty_min  = PRE.t_frosty_min;
     const derived = this._applyTempsRowBiDirectional(out, [
       't_boiling_max','t_hot_max','t_warm_max','t_perfect_max','t_perfect_min',
       't_mild_min','t_cool_min','t_chilly_min','t_cold_min','t_frosty_min'
@@ -1923,6 +1992,18 @@ class SimpleAirComfortCardEditor extends LitElement {
     ev.stopPropagation();
     const delta = { ...(ev.detail?.value || {}) };
     if (!Object.keys(delta).length) return;
+
+    // If the temp preset changes, update baseline caps source; keep current tweaks intact.
+    if ('temp_preset' in delta){
+      const next = _normalizePreset(delta.temp_preset);
+      const BASE = TEMP_PRESETS[next];
+      this._defaults = {
+        hot_max: BASE.t_hot_max, warm_max: BASE.t_warm_max,
+        perf_max: BASE.t_perfect_max, perf_min: BASE.t_perfect_min,
+        perfect_max: BASE.t_perfect_max, perfect_min: BASE.t_perfect_min,
+        mild_min: BASE.t_mild_min, cool_min: BASE.t_cool_min, chilly_min: BASE.t_chilly_min, cold_min: BASE.t_cold_min,
+      };
+    }
 
     // If unit changes, convert the numeric field to the new unit for display
     if ('wind_display_unit' in delta && this._config?.default_wind_speed != null){
@@ -2116,6 +2197,8 @@ class SimpleAirComfortCardEditor extends LitElement {
         { t_cold_min:    cfg.t_cold_min },
         { t_frosty_min:  cfg.t_frosty_min },
         ...(cfg.cap_degrees != null ? [{ cap_degrees: cfg.cap_degrees }] : []),
+        // keep preset WITH the anchors (mirrors editor placement)
+        { temp_preset: _normalizePreset(cfg.temp_preset) },
       ],
 
       humidity: cfg.humidity,
