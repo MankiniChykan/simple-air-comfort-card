@@ -1216,6 +1216,8 @@ class SimpleAirComfortCard extends LitElement {
     // Back-compat: sometimes HA passes no hass here; try global if so
     const ha = hass ?? document.querySelector('home-assistant')?.hass;
     const states = ha?.states ?? {};
+    const temp_preset = 'indoor'; // or 'outdoor' if you prefer as default
+    const BASE = TEMP_PRESETS[temp_preset];
 
     const first = (pred) => {
       for (const [id, st] of Object.entries(states)) if (pred(id, st)) return id;
@@ -1246,17 +1248,17 @@ class SimpleAirComfortCard extends LitElement {
       temperature,
       temp_display_unit: 'auto',
       temperature_anchors: [
-        { temp_preset: 'indoor' },
-        { t_boiling_max: 42.0 },
-        { t_hot_max:     31.0 },
-        { t_warm_max:    26.0 },
-        { t_perfect_max: 23.5 },
-        { t_perfect_min: 20.5 },
-        { t_mild_min:    18.0 },
-        { t_cool_min:    16.0 },
-        { t_chilly_min:  12.0 },
-        { t_cold_min:     8.0 },
-        { t_frosty_min:   0.0 },
+        { temp_preset },
+        { t_boiling_max: BASE.t_boiling_max },
+        { t_hot_max:     BASE.t_hot_max     },
+        { t_warm_max:    BASE.t_warm_max    },
+        { t_perfect_max: BASE.t_perfect_max },
+        { t_perfect_min: BASE.t_perfect_min },
+        { t_mild_min:    BASE.t_mild_min    },
+        { t_cool_min:    BASE.t_cool_min    },
+        { t_chilly_min:  BASE.t_chilly_min  },
+        { t_cold_min:    BASE.t_cold_min    },
+        { t_frosty_min:  BASE.t_frosty_min  },
         { cap_degrees: 6.0 },
       ],
       humidity,
