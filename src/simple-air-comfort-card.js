@@ -33,7 +33,8 @@ import { LitElement, html, css, nothing } from 'lit';
  *
  * TEMPERATURE BANDS (CONTIGUOUS)
  * ------------------------------
- * - The editor exposes 10 anchors (with ±4 °C caps on non-edge anchors).
+ * - The editor exposes 10 anchors (with ±6 °C default caps on non-edge anchors).
+ * - cap_degrees changes the default cap in editor and yaml.
  * - All neighbors are auto-derived with 0.1 °C gaps (no overlaps).
  * - Locked landmarks for Y: FROSTY.min, MILD.min, PERFECT.min, PERFECT.max,
  *   WARM.max, BOILING.max (with HOT.max placed proportionally near the top).
@@ -400,6 +401,9 @@ class SimpleAirComfortCard extends LitElement {
       temp_display_unit,
       wind_display_unit,
       default_wind_speed: Number.isFinite(defaultWindMps) ? defaultWindMps : 0.0, // stored internally as m/s
+
+      // Editor-only guardrail (not used by runtime physics)
+      cap_degrees: Number.isFinite(num(config.cap_degrees)) ? num(config.cap_degrees) : 6.0,
 
       // Comfort bands: use fully-expanded contiguous ranges
       t_frosty_min: full.t_frosty_min, t_frosty_max: full.t_frosty_max,
@@ -1209,6 +1213,7 @@ class SimpleAirComfortCard extends LitElement {
         { t_warm_max: 27.9 },
         { t_hot_max: 34.9 },
         { t_boiling_max: 50.0 },
+        { cap_degrees: 6.0 },
       ],
       humidity,
       humidity_alert_anchors: [
@@ -1344,6 +1349,13 @@ class SimpleAirComfortCardEditor extends LitElement {
   connectedCallback(){ super.connectedCallback(); window.loadCardHelpers?.().catch(()=>{}); }
 
   // When HA injects hass, we try to auto-pick temperature & humidity once
+  // --- NEW: editor cap degrees (default ±6 °C); overridable via cap_degrees
+  _capDegrees() {
+    const v = Number(this._config?.cap_degrees);
+    // clamp to a sensible range to avoid silly values
+    return Number.isFinite(v) ? Math.max(0, Math.min(20, v)) : 6.0;
+  }
+
   set hass(h){
     this._hass = h;
     this._autoFillDefaults(); // fill only if empty, only once
@@ -1351,7 +1363,7 @@ class SimpleAirComfortCardEditor extends LitElement {
   }
   get hass(){ return this._hass; }
 
-  // Build default config and keep default anchors for ±4°C caps
+  // Build default config and keep default anchors for default ±6°C cap_degrees
   setConfig(config){
     // --- NEW: accept grouped YAML and flatten it so the editor fields populate
     const asKV = (x) => {
@@ -1376,6 +1388,7 @@ class SimpleAirComfortCardEditor extends LitElement {
       wind_display_unit:'ms',     // 'ms' | 'kmh' | 'mph' | 'kn'
       feels_like:'bom',
       decimals:1, default_wind_speed:0.1,
+      cap_degrees:6.0,
 
       // Comfort bands — mins & maxes (°C), 0.1 steps
       t_frosty_min:   0.0, t_frosty_max:  2.9,
@@ -1398,7 +1411,7 @@ class SimpleAirComfortCardEditor extends LitElement {
       ...normalized,
     };
 
-    // Capture defaults for ±4°C movement caps (non-edge anchors)
+    // Capture defaults for default ±6°C movement cap_degrees (non-edge anchors)
     this._defaults = {
       hot_max: 34.9,
       warm_max: 27.9,
@@ -1418,6 +1431,8 @@ class SimpleAirComfortCardEditor extends LitElement {
   // Render button UI for anchors + small ha-form for entities/misc
   render(){
     if (!this.hass || !this._config) return html``;
+
+    const capStr = `${this._capDegrees().toFixed(1)}°C`;
 
     return html`
       <div class="wrap">
@@ -1464,11 +1479,11 @@ class SimpleAirComfortCardEditor extends LitElement {
           ${this._anchorRow('t_boiling_max', 'BOILING.max → Top of Card (100%)',
             'Changes how far (HOT.max) is from the edge of the card.', false)}
           ${this._anchorRow('t_hot_max', 'HOT.max (Scales with BOILING.max)',
-            'Limit ±4°C from default.', true)}
-          ${this._anchorRow('t_warm_max', 'WARM.max → Outer Ring Top ',
-            'Limit ±4°C from default.', true)}
+            `Limit ±${capStr} from default.`, true)}
+          ${this._anchorRow('t_warm_max', 'WARM.max → Outer Ring Top',
+            `Limit ±${capStr} from default.`, true)}
           ${this._anchorRow('t_perfect_max', 'PERFECT.max → Inner Comfort Circle Top',
-            'High Temperature Alert : Limit ±4°C from default.', true)}
+            `High Temperature Alert : Limit ±${capStr} from default.`, true)}
 
           ${(() => {
             const center = this._centerTemp();
@@ -1488,17 +1503,32 @@ class SimpleAirComfortCardEditor extends LitElement {
           })()}
 
           ${this._anchorRow('t_perfect_min', 'PERFECT.min → Inner Comfort Circle Bottom',
-            'Low Temperature Alert Limit : ±4°C from default.', true)}
+            `Low Temperature Alert Limit : ±${capStr} from default.`, true)}
           ${this._anchorRow('t_mild_min', 'MILD.min → Outer Ring Bottom',
-            'Limit ±4°C from default.', true)}
+            `Limit ±${capStr} from default.`, true)}
           ${this._anchorRow('t_cool_min', 'COOL.min (Scales with FROSTY.min)',
-            'Limit ±4°C from default.', true)}
+            `Limit ±${capStr} from default.`, true)}
           ${this._anchorRow('t_chilly_min', 'CHILLY.min (Scales with FROSTY.min)',
-            'Limit ±4°C from default.', true)}
+            `Limit ±${capStr} from default.`, true)}
           ${this._anchorRow('t_cold_min', 'COLD.min (Scales with FROSTY.min)',
-            'Limit ±4°C from default.', true)}
+            `Limit ±${capStr} from default.`, true)}
           ${this._anchorRow('t_frosty_min', 'FROSTY.min → Bottom of Card (0%)',
             'Changes how far (COOL.min → COLD.min) is from the edge of the card.', false)}
+
+          <!-- NEW: Anchor Cap (±°C) — placed below all band rows, above Reset -->
+          <div class="title">Anchor Cap (±°C)</div>
+          <ha-form
+            .hass=${this.hass}
+            .data=${this._config}
+            .schema=${[
+              { name:'cap_degrees',
+                selector:{ number:{ min:0, max:20, step:0.5, mode:'box', unit_of_measurement:'°C' } }
+              },
+            ]}
+            .computeLabel=${this._label}
+            .computeHelper=${this._helper}
+            @value-changed=${this._onMiscChange}>
+          </ha-form>
 
           <div class="actions">
             <button class="btn danger" @click=${this._resetDefaults}>Reset to defaults</button>
@@ -1781,7 +1811,10 @@ class SimpleAirComfortCardEditor extends LitElement {
       case 'rh_right_inner_pct':
         return 'Maps RH to the inner-comfort-circle RIGHT intersection horizontally';
       case 'y_offset_pct':
-        return 'Fine-tune the dot’s vertical position in % of card height (positive moves up). Temperature Anchors are what positions the dot, this setting is only fine turning';
+        return 'Fine-tune the dot’s vertical position in % of card height (positive moves up). Temperature Anchors are what positions the dot, this setting is only fine tuning';
+      case 'cap_degrees':
+        return '±°C limit for the editor’s +/- buttons on non-edge anchors. Not applied to FROSTY.min or BOILING.max.';
+
     }
 
     // Band helpers with your exact drag semantics
@@ -1821,7 +1854,7 @@ class SimpleAirComfortCardEditor extends LitElement {
     return `${((lo + hi) / 2).toFixed(2)} °C`;
   }
 
-  // --- New: cap helper so buttons can disable at ±4°C from defaults ---
+  // --- New: cap helper so buttons disable at ±cap_degrees°C from defaults ---
   _capFor(name){
     const defKey = name.replace('t_', '');
     // support both perf_* and perfect_* in _defaults
@@ -1830,9 +1863,10 @@ class SimpleAirComfortCardEditor extends LitElement {
       (defKey.startsWith('perfect_')
         ? this._defaults[defKey.replace('perfect_', 'perf_')]
         : undefined);
-    if (def === undefined) return null; // edges: no caps
+    if (def === undefined) return null; // edges (t_boiling_max, t_frosty_min): no caps
     const r1 = (x) => Math.round(x * 10) / 10;
-    return { lo: r1(def - 4.0), hi: r1(def + 4.0) };
+    const CAP = this._capDegrees(); // use UI-configurable cap instead of fixed 4.0
+    return { lo: r1(def - CAP), hi: r1(def + CAP) };
   }
 
   // Reset visible anchors to defaults, re-derive neighbors, emit
@@ -1897,7 +1931,7 @@ class SimpleAirComfortCardEditor extends LitElement {
     const before = Number(cfg[name]);
     if (!Number.isFinite(before)) return;
 
-    // ±4°C caps for limited anchors based on defaults
+    // ±cap_degrees caps for limited anchors based on defaults
     let next = r1(before + delta);
 
     // Map to defaults keys (we stored without 't_'; build a lookup)
@@ -1914,8 +1948,9 @@ class SimpleAirComfortCardEditor extends LitElement {
     if (limited && mapDef[name]){
       const defVal = this._defaults[mapDef[name].replace('t_','')];
       if (Number.isFinite(defVal)){
-        const lo = r1(defVal - 4.0);
-        const hi = r1(defVal + 4.0);
+        const CAP = this._capDegrees(); // dynamic ±cap (e.g., 6.0)
+        const lo = r1(defVal - CAP);
+        const hi = r1(defVal + CAP);
         next = Math.min(hi, Math.max(lo, next));
       }
     }
@@ -2063,6 +2098,7 @@ class SimpleAirComfortCardEditor extends LitElement {
         { t_warm_max:    cfg.t_warm_max },
         { t_hot_max:     cfg.t_hot_max },
         { t_boiling_max: cfg.t_boiling_max },
+        ...(cfg.cap_degrees != null ? [{ cap_degrees: cfg.cap_degrees }] : []),
       ],
 
       humidity: cfg.humidity,
