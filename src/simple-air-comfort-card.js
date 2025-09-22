@@ -297,6 +297,32 @@ class SimpleAirComfortCard extends LitElement {
       background:var(--sac-inner-gradient,radial-gradient(circle,black 0%,black 60%));
       box-shadow:inset 0 0 12px rgba(0,0,0,.6);
     }
+
+    /* ------------------------------------------------------
+     * Temperature-tinted icon puck
+     * - Paint order target: ABOVE host bg, BELOW all content
+     * - Achieved via z-index:-1 and being a child of .ratio
+     * ------------------------------------------------------ */
+    .icon-puck{
+      position:absolute;
+      left:10%;
+      top:50%;
+      width:50%;
+      transform: translate(-50%, -50%) scale(0.7);
+      aspect-ratio: 1 / 1;
+      border-radius:50%;
+      /* default is overwritten at render with the temp-based gradient */
+      background: radial-gradient(circle, rgba(255,215,0,0.5) 0%, rgba(0,0,0,0) 78%);
+      display:flex; align-items:center; justify-content:center;
+      pointer-events:none;
+      /* host bg → z<0 → z=0 → z>0; keep this beneath all content */
+      z-index:-1;
+    }
+    .icon-puck ha-icon{
+      --mdc-icon-size: calc(var(--sac-scale,1) * 42px);
+      color: rgba(255,255,255,0.5);
+      filter: drop-shadow(0 1px 2px rgba(0,0,0,.45));
+    }
   `;
 
   /* ================================
@@ -554,6 +580,7 @@ class SimpleAirComfortCard extends LitElement {
     const ringGrad  = this.#dewpointRingGradientFromText(dewText);
     const B         = this.#bandThresholds();                   // contiguous bands
     const innerGrad = this.#innerEyeGradient(RH, Tc, B);
+    const iconGrad  = this.#iconBackgroundGradientForTemp(Tc);
 
     /* ---------------------------
      * Axis highlight logic
@@ -628,6 +655,13 @@ class SimpleAirComfortCard extends LitElement {
     this.style.setProperty('--sac-temp-bg', cardBg);
     return html`
       <div class="ratio" role="img" aria-label="Air comfort dial">
+        <!-- Temperature-tinted icon puck: sits below all content (z:-1), above host bg -->
+        ${Number.isFinite(Tc) ? html`
+          <div class="icon-puck" style="background:${iconGrad};">
+            <ha-icon icon="mdi:stairs-up"></ha-icon>
+          </div>
+        ` : nothing}
+
         <div class="canvas">
           ${this.#face({
             // underlying numbers available if you later want to expose them
@@ -874,6 +908,35 @@ class SimpleAirComfortCard extends LitElement {
     }
     return `radial-gradient(circle, ${humidityColor} 0%, black, ${temperatureColor} 70%)`;
   }
+
+  /* ================================
+   *  Icon puck gradient (temp-matched)
+   * ================================
+   * First gradient stop must match the card’s temperature background colour.
+   * Uses the same band → colour mapping as #backgroundGradientForTempC.
+   */
+  #iconBackgroundGradientForTemp(Tc){
+    const bandText = this.#temperatureComfortTextForBg(Tc); // 'frosty'...'boiling' or 'n/a'
+    const base = this.#_bgColourFromText(bandText);         // named CSS colour
+
+    // Prefer color-mix when supported for a clean 50% alpha blend
+    if (typeof this.__supportsColorMix === 'undefined') {
+      this.__supportsColorMix = CSS?.supports?.('color: color-mix(in srgb, red 50%, transparent)') ?? false;
+    }
+    if (this.__supportsColorMix){
+      return `radial-gradient(circle, color-mix(in srgb, ${base} 50%, transparent) 0%, rgba(0,0,0,0) 78%)`;
+    }
+
+    // Fallback: map named colour → RGB → rgba(...,0.5)
+    const RGB = {
+      mediumblue:[0,0,205], dodgerblue:[30,144,255], deepskyblue:[0,191,255],
+      mediumaquamarine:[102,205,170], seagreen:[46,139,87], limegreen:[50,205,50],
+      gold:[255,215,0], orange:[255,165,0], crimson:[220,20,60], dimgray:[105,105,105]
+    }[String(base).toLowerCase()] || [105,105,105];
+    const rgba = `rgba(${RGB[0]},${RGB[1]},${RGB[2]},0.5)`;
+    return `radial-gradient(circle, ${rgba} 0%, rgba(0,0,0,0) 78%)`;
+  }
+
 
   /* ================================
    *             HELPERS
