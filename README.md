@@ -76,7 +76,7 @@ You *can* hand‑edit YAML, but it’s optional. If you do, simply open the edit
   - A new circular **“puck” layer** is drawn between the card background and all other elements.  
   - The puck glows with a **radial gradient** where the **first color stop matches the card’s current temperature background color**, so the glow always harmonizes with the climate band (Frosty → Boiling).
   - The puck can be positioned in three preset locations: left (default), right, bottom
-  - An **MDI icon** is rendered inside the puck.
+  - An **MDI icon** is rendered inside the puck..
 
 - **Selectable Icon**
   - The icon inside the puck can now be set via YAML or the UI editor.
