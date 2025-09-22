@@ -382,6 +382,7 @@ class SimpleAirComfortCard extends LitElement {
     const card  = asKV(config?.card_options);
     config = { ...config, ...tAnch, ...hAnch, ...card };
     const temp_preset = _normalizePreset(config?.temp_preset);
+    const icon = (config?.icon && String(config.icon)) || 'mdi:home-account';
     // -----------------------------------------------------------------------
 
     // --- Normalize display-unit prefs (YAML-safe) ---
@@ -464,7 +465,7 @@ class SimpleAirComfortCard extends LitElement {
       temp_display_unit,
       wind_display_unit,
       default_wind_speed: Number.isFinite(defaultWindMps) ? defaultWindMps : 0.0, // stored internally as m/s
-
+      icon, // ← user-selectable MDI icon (YAML + editor)
       // Editor-only guardrail (not used by runtime physics)
       cap_degrees: Number.isFinite(num(config.cap_degrees)) ? num(config.cap_degrees) : 6.0,
 
@@ -658,7 +659,7 @@ class SimpleAirComfortCard extends LitElement {
         <!-- Temperature-tinted icon puck: sits below all content (z:-1), above host bg -->
         ${Number.isFinite(Tc) ? html`
           <div class="icon-puck" style="background:${iconGrad};">
-            <ha-icon icon="mdi:stairs-up"></ha-icon>
+            <ha-icon .icon=${this._config.icon}></ha-icon>
           </div>
         ` : nothing}
 
@@ -1334,6 +1335,7 @@ class SimpleAirComfortCard extends LitElement {
       wind_display_unit: 'ms',
       default_wind_speed: 0.1,
       card_options: [
+        { icon: 'mdi:home-account' },
         { decimals: 1 },
         { y_offset_pct: 0 },
       ],
@@ -1794,6 +1796,7 @@ class SimpleAirComfortCardEditor extends LitElement {
             .hass=${this.hass}
             .data=${this._config}
             .schema=${[
+              { name:'icon', selector:{ icon:{} } },
               { name:'decimals', selector:{ number:{ min:0, max:3, step:1, mode:'box' } } },
               { name:'y_offset_pct', selector:{ number:{ min:-30, max:30, step:0.5, mode:'box', unit_of_measurement:'%' } } },
             ]}
@@ -1821,6 +1824,7 @@ class SimpleAirComfortCardEditor extends LitElement {
       decimals:'Decimals',
       rh_left_inner_pct:'Inner circle left RH (%)',
       rh_right_inner_pct:'Inner circle right RH (%)',
+      icon:'Icon',
       y_offset_pct:'Vertical dot offset (%)',
     })[id];
     return base ?? id;
@@ -2007,6 +2011,8 @@ class SimpleAirComfortCardEditor extends LitElement {
         return 'Maps RH to the inner-comfort-circle LEFT intersection horizontally';
       case 'rh_right_inner_pct':
         return 'Maps RH to the inner-comfort-circle RIGHT intersection horizontally';
+      case 'icon':
+        return 'Select the MDI icon rendered in the temp-tinted puck layer. Example: mdi:home-account';
       case 'y_offset_pct':
         return 'Fine-tune the dot’s vertical position in % of card height (positive moves up). Temperature Anchors are what positions the dot, this setting is only fine tuning';
 
@@ -2339,6 +2345,7 @@ class SimpleAirComfortCardEditor extends LitElement {
       card_options: [
         { decimals:     cfg.decimals },
         { y_offset_pct: cfg.y_offset_pct },
+        ...(cfg.icon ? [{ icon: cfg.icon }] : []),
       ],
     };
     if (!window.__sac_editor_prune_warned__) {
