@@ -175,7 +175,7 @@ const $=globalThis,v=$.trustedTypes,C=v?v.createPolicy("lit-html",{createHTML:t=
       left:10%;
       top:50%;
       width:50%;
-      transform: translate(-50%, -50%) scale(0.7);
+      transform: translate(-50%, -50%) scale(0.8);
       aspect-ratio: 1 / 1;
       border-radius:50%;
       /* default is overwritten at render with the temp-based gradient */
@@ -186,7 +186,7 @@ const $=globalThis,v=$.trustedTypes,C=v?v.createPolicy("lit-html",{createHTML:t=
       z-index:-1;
     }
     .icon-puck ha-icon{
-      --mdc-icon-size: calc(var(--sac-scale,1) * 42px);
+      --mdc-icon-size: calc(var(--sac-scale,1) * 60px);
       color: rgba(255,255,255,0.5);
       filter: drop-shadow(0 1px 2px rgba(0,0,0,.45));
     }
