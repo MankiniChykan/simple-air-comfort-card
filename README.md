@@ -72,6 +72,16 @@ You *can* hand‑edit YAML, but it’s optional. If you do, simply open the edit
   - **Outer ring** tints by dew-point comfort.
   - **Inner circle** blends humidity and “too hot/cold” signals.
 
+- **Temperature-Tinted Icon Puck**
+  - A new circular **“puck” layer** is drawn between the card background and all other elements.  
+  - The puck glows with a **radial gradient** where the **first color stop matches the card’s current temperature background color**, so the glow always harmonizes with the climate band (Frosty → Boiling).
+  - The puck can be positioned in three preset locations: left (default), right, bottom
+  - An **MDI icon** is rendered inside the puck.
+
+- **Selectable Icon**
+  - The icon inside the puck can now be set via YAML or the UI editor.
+  - Default: `mdi:home-account`.
+
 - **Corner metrics**
   - **Top‑Left**: Dew Point
   - **Top‑Right**: Feels‑Like (BoM **Apparent Temperature** by default; Wind Chill / Heat Index / Humidex optional)
@@ -132,6 +142,11 @@ type: custom:simple-air-comfort-card
 name: Upstairs
 temperature: sensor.upstairs_temperature
 humidity: sensor.upstairs_humidity
+
+# Optional conveniences
+card_options:
+  - icon: mdi:home-account
+  - icon_position: left   # left | right | bottom
 ```
 
 Add wind (sensor or fallback) to improve Feels‑Like:
@@ -166,6 +181,22 @@ The editor and card use **grouped YAML** for clarity:
 - `card_options`: miscellaneous UI options
 
 > You can still write flat keys — `setConfig()` flattens grouped input — but the editor **persists** grouped YAML on save.
+
+| Option               | Type              |       Default | Description                                                      |
+| -------------------- | ----------------- | ------------: | ---------------------------------------------------------------- |
+| `type`               | string (required) |             — | Must be `custom:simple-air-comfort-card`.                        |
+| `name`               | string            | `Air Comfort` | Title shown above the dial.                                      |
+| `temperature`        | entity (required) |             — | Temperature sensor (°C/°F).                                      |
+| `humidity`           | entity (required) |             — | Relative humidity sensor (0–100%).                               |
+| `windspeed`          | entity            |             — | Wind speed sensor (optional).                                    |
+| `feels_like`         | enum              |         `bom` | `bom`, `wind_chill`, `heat_index`, or `humidex`.                 |
+| `temp_display_unit`  | enum              |        `auto` | `auto`, `c`, or `f` (display only).                              |
+| `wind_display_unit`  | enum              |          `ms` | Display token for wind: `ms`, `kmh`, `mph`, `kn`.                |
+| `default_wind_speed` | number            |         `0.1` | Fallback wind if no entity; interpreted via `wind_display_unit`. |
+| `decimals`           | integer           |           `1` | Decimal places for temps and RH.                                 |
+| `ring_pct`           | number (0–100)    |          `45` | Dial diameter as % of card.                                      |
+| `inner_pct`          | number (0–100)    |        `46.5` | Inner circle diameter as % of dial.                              |
+| `y_offset_pct`       | number            |           `0` | Fine vertical tweak (%) after temp mapping.                      |
 
 ### Temperature Presets & Anchors
 
@@ -202,6 +233,21 @@ temperature_anchors:
 **Editor caps (`cap_degrees`)**  
 The editor’s +/- buttons are clamped to ±`cap_degrees` from the preset’s default for **non‑edge** anchors. This is a **UI guardrail** — not applied to the two edges (`t_frosty_min`, `t_boiling_max`).
 
+| Item key            | Type        | Default (by preset) | Description                                   |
+| ------------------- | ----------- | ------------------: | --------------------------------------------- |
+| `{ temp_preset }`   | enum        |            `indoor` | Seeds all anchors. `indoor` / `outdoor`.      |
+| `{ t_boiling_max }` | number (°C) |              preset | Top of card (100%).                           |
+| `{ t_hot_max }`     | number (°C) |              preset | Upper HOT edge.                               |
+| `{ t_warm_max }`    | number (°C) |              preset | Upper WARM edge → **outer-top**.              |
+| `{ t_perfect_max }` | number (°C) |              preset | Upper PERFECT edge → **inner-top**.           |
+| `{ t_perfect_min }` | number (°C) |              preset | Lower PERFECT edge → **inner-bottom**.        |
+| `{ t_mild_min }`    | number (°C) |              preset | Lower MILD edge → **outer-bottom**.           |
+| `{ t_cool_min }`    | number (°C) |              preset | Lower COOL edge.                              |
+| `{ t_chilly_min }`  | number (°C) |              preset | Lower CHILLY edge.                            |
+| `{ t_cold_min }`    | number (°C) |              preset | Lower COLD edge.                              |
+| `{ t_frosty_min }`  | number (°C) |              preset | Bottom of card (0%).                          |
+| `{ cap_degrees }`   | number      |               `6.0` | **Editor only**: ±°C cap for the +/- buttons. |
+
 ### Humidity Alert Anchors (RH → X calibration)
 
 These do double duty:
@@ -214,6 +260,11 @@ humidity_alert_anchors:
   - rh_left_inner_pct: 40
   - rh_right_inner_pct: 60
 ```
+
+| Item key                 | Type           | Default | Description                                |
+| ------------------------ | -------------- | ------: | ------------------------------------------ |
+| `{ rh_left_inner_pct }`  | number (0–100) |    `40` | RH at **left** inner-circle intersection.  |
+| `{ rh_right_inner_pct }` | number (0–100) |    `60` | RH at **right** inner-circle intersection. |
 
 ### Feels‑Like Modes
 
@@ -244,7 +295,12 @@ card_options:
   - decimals: 1
 ```
 
-```
+| Item key            | Type    |            Default | Description                                            |
+| ------------------- | ------- | -----------------: | ------------------------------------------------------ |
+| `{ icon }`          | string  | `mdi:home-account` | MDI icon drawn in the tinted puck.                     |
+| `{ icon_position }` | enum    |             `left` | `left`, `right`, or `bottom`.                          |
+| `{ decimals }`      | integer |                `1` | Same as top-level `decimals` (either place works).     |
+| `{ y_offset_pct }`  | number  |                `0` | Same as top-level `y_offset_pct` (either place works). |
 
 ### Full Example
 
@@ -252,28 +308,22 @@ card_options:
 type: custom:simple-air-comfort-card
 name: Upstairs
 
-# Required
+# Required entities
 temperature: sensor.upstairs_temperature
 humidity: sensor.upstairs_humidity
 
-# Optional wind + feels-like
-feels_like: bom
-windspeed: sensor.upstairs_air_movement
-wind_display_unit: ms
-default_wind_speed: 0.1
+# Optional feels-like + wind
+feels_like: bom            # bom | wind_chill | heat_index | humidex
+windspeed: sensor.upstairs_wind_speed   # optional
+wind_display_unit: ms      # ms | kmh | mph | kn
+default_wind_speed: 0.1    # used if windspeed sensor is not set
 
-# Display + fine‑tune
-temp_display_unit: auto
-card_options:
-  - decimals: 1
-  - y_offset_pct: 0
+# Display preferences
+temp_display_unit: auto    # auto | c | f
 
-# Geometry (optional)
-ring_pct: 45
-inner_pct: 46.5
-
-# Temperature anchors (10 handles) + UI cap + preset
+# Temperature anchor preset + handles (grouped)
 temperature_anchors:
+  - temp_preset: indoor    # indoor | outdoor (seeds the defaults below)
   - t_boiling_max: 42.0
   - t_hot_max: 31.0
   - t_warm_max: 26.0
@@ -284,13 +334,19 @@ temperature_anchors:
   - t_chilly_min: 12.0
   - t_cold_min: 8.0
   - t_frosty_min: 0.0
-  - cap_degrees: 6.0
-  - temp_preset: indoor
+  - cap_degrees: 6.0       # UI editor ±°C cap for non-edge anchors
 
-# RH alert anchors (also calibrate X across inner circle)
+# Humidity alert thresholds (inner circle intersections)
 humidity_alert_anchors:
-  - rh_left_inner_pct: 40
-  - rh_right_inner_pct: 60
+  - rh_left_inner_pct: 40  # % where inner circle crosses on the left
+  - rh_right_inner_pct: 60 # % where inner circle crosses on the right
+
+# Card options group (visual/formatting)
+card_options:
+  - icon_position: left          # left | right | bottom
+  - icon: mdi:home-account       # MDI icon shown in the puck
+  - decimals: 1                  # decimals for temps/RH readouts
+  - y_offset_pct: 0              # fine vertical dot tweak (-30..30)
 ```
 
 ---
@@ -368,7 +424,7 @@ Dew point labels:
 - Humidity Alert Anchors: `rh_left_inner_pct`, `rh_right_inner_pct`
 - Feels‑Like Formula: `bom` / `wind_chill` / `heat_index` / `humidex`
 - Wind Display Unit + Default Wind
-- Card Options: `decimals`, `y_offset_pct`
+- Card Options: `icon`, `icon_position`, `decimals`, `y_offset_pct`
 
 > The editor **persists** using the grouped YAML layout shown above and will normalize any flat/legacy YAML.
 
