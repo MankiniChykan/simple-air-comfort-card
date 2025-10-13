@@ -9,11 +9,15 @@
     "dist/"
   ],
   "scripts": {
-    "clean": "rimraf dist",
-    "prebuild": "npm run clean",
+    "clean": "rimraf dist build",
+    "compile": "tsc --project tsconfig.json",
+    "prebuild": "npm run clean && npm run compile",
     "build": "rollup -c",
+    "test": "npm run compile && node --experimental-specifier-resolution=node build/tests/anchors.spec.js",
     "postbuild": "gzip -kf dist/simple-air-comfort-card.js && gzip -kf dist/sac_background_overlay.svg",
-    "watch": "rollup -c -w",
+    "watch": "npm-run-all --parallel compile:watch rollup:watch",
+    "compile:watch": "tsc --project tsconfig.json --watch --preserveWatchOutput",
+    "rollup:watch": "rollup -c -w",
     "serve": "http-server . -c-1 -p 5173",
     "dev": "npm-run-all --parallel watch serve",
     "release": "node github-release-helper.js",
