@@ -50,6 +50,7 @@ You *can* hand‑edit YAML, but it’s optional. If you do, simply open the edit
 - [Accessibility](#accessibility)
 - [Styling Hooks (CSS Custom Properties)](#styling-hooks-css-custom-properties)
 - [Card Size Hints](#card-size-hints)
+- [Developer Notes](#developer-notes)
 - [How It’s Calculated (Formulas)](#how-its-calculated-formulas)
 - [Credits & License](#credits--license)
 
@@ -522,6 +523,16 @@ The card exposes layout hints that Home Assistant may use:
 
 - `getCardSize()` → ~3 masonry rows
 - `getGridOptions()` → default 6 columns wide (12‑column grid), rows `auto`
+
+---
+
+## Developer Notes
+
+- `src/simple-air-comfort-card.ts` is the Rollup entry point that wires the card and editor together and registers the custom elements.
+- The card implementation lives in `src/card/` (dial physics, rendering, shared styles, and helpers).
+- The GUI editor lives in `src/editor/` and imports the shared helpers so UI tweaks stay isolated from the runtime card.
+- The build now compiles the TypeScript sources to `build/` via `npm run compile` (automatically executed by `npm run build`) before bundling with Rollup. The generated `dist/` bundle is git‑ignored so pull requests stay source-only, but the release workflow still ships plain JavaScript compatible with Home Assistant.
+- Release commands (`npm run build && npm run release:dev -- <version>` and `npm run build && npm run release -- <version>`) use `github-release-helper.js`, which stages the source/docs changes and uploads the freshly built `dist/` assets to GitHub releases, so no extra steps are required.
 
 ---
 
