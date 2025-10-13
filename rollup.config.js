@@ -6,14 +6,14 @@ import copy from 'rollup-plugin-copy';
 import gzipPlugin from 'rollup-plugin-gzip';
 
 export default {
-  input: 'src/simple-air-comfort-card.js',
+  input: 'build/simple-air-comfort-card.js',
   output: {
     file: 'dist/simple-air-comfort-card.js',
     format: 'es',
     sourcemap: true,
   },
   plugins: [
-    resolve({ browser: true }),
+    resolve({ browser: true, extensions: ['.ts', '.js'] }),
     commonjs(),
 
     // Inject version + NODE_ENV

@@ -18,16 +18,9 @@ temp/
 *.log
 
 # ─────────────────────────────────────────────────────────────
-# dist/ contents: ignore by default, unignore the files we ship
+# dist/ contents are generated during the build/release flow
 # ─────────────────────────────────────────────────────────────
 dist/*
-# …but keep the shipped artifacts:
-!dist/simple-air-comfort-card.js
-!dist/simple-air-comfort-card.js.gz
-!dist/sac_background_overlay.svg
-!dist/simple-air-comfort-card.js.map
-# If you also want to ship the manifest, uncomment:
-# !dist/checksums.txt
 
 # ─────────────────────────────────────────────────────────────
 # OS junk
